@@ -1,0 +1,1325 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Eval Review</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;600&family=Lora:wght@400;500&display=swap" rel="stylesheet">
+  <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js" integrity="sha384-EnyY0/GSHQGSxSgMwaIPzSESbqoOLSexfnSMN2AP+39Ckmn92stwABZynq1JyzdT" crossorigin="anonymous"></script>
+  <style>
+    :root {
+      --bg: #faf9f5;
+      --surface: #ffffff;
+      --border: #e8e6dc;
+      --text: #141413;
+      --text-muted: #b0aea5;
+      --accent: #d97757;
+      --accent-hover: #c4613f;
+      --green: #788c5d;
+      --green-bg: #eef2e8;
+      --red: #c44;
+      --red-bg: #fceaea;
+      --header-bg: #141413;
+      --header-text: #faf9f5;
+      --radius: 6px;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Lora', Georgia, serif;
+      background: var(--bg);
+      color: var(--text);
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* ---- Header ---- */
+    .header {
+      background: var(--header-bg);
+      color: var(--header-text);
+      padding: 1rem 2rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-shrink: 0;
+    }
+    .header h1 {
+      font-family: 'Poppins', sans-serif;
+      font-size: 1.25rem;
+      font-weight: 600;
+    }
+    .header .instructions {
+      font-size: 0.8rem;
+      opacity: 0.7;
+      margin-top: 0.25rem;
+    }
+    .header .progress {
+      font-size: 0.875rem;
+      opacity: 0.8;
+      text-align: right;
+    }
+
+    /* ---- Main content ---- */
+    .main {
+      flex: 1;
+      overflow-y: auto;
+      padding: 1.5rem 2rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1.25rem;
+    }
+
+    /* ---- Sections ---- */
+    .section {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      flex-shrink: 0;
+    }
+    .section-header {
+      font-family: 'Poppins', sans-serif;
+      padding: 0.75rem 1rem;
+      font-size: 0.75rem;
+      font-weight: 500;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text-muted);
+      border-bottom: 1px solid var(--border);
+      background: var(--bg);
+    }
+    .section-body {
+      padding: 1rem;
+    }
+
+    /* ---- Config badge ---- */
+    .config-badge {
+      display: inline-block;
+      padding: 0.2rem 0.625rem;
+      border-radius: 9999px;
+      font-family: 'Poppins', sans-serif;
+      font-size: 0.6875rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+      margin-left: 0.75rem;
+      vertical-align: middle;
+    }
+    .config-badge.config-primary {
+      background: rgba(33, 150, 243, 0.12);
+      color: #1976d2;
+    }
+    .config-badge.config-baseline {
+      background: rgba(255, 193, 7, 0.15);
+      color: #f57f17;
+    }
+
+    /* ---- Prompt ---- */
+    .prompt-text {
+      white-space: pre-wrap;
+      font-size: 0.9375rem;
+      line-height: 1.6;
+    }
+
+    /* ---- Outputs ---- */
+    .output-file {
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+    }
+    .output-file + .output-file {
+      margin-top: 1rem;
+    }
+    .output-file-header {
+      padding: 0.5rem 0.75rem;
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      background: var(--bg);
+      border-bottom: 1px solid var(--border);
+      font-family: 'SF Mono', SFMono-Regular, Consolas, 'Liberation Mono', Menlo, monospace;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .output-file-header .dl-btn {
+      font-size: 0.7rem;
+      color: var(--accent);
+      text-decoration: none;
+      cursor: pointer;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      font-weight: 500;
+      opacity: 0.8;
+    }
+    .output-file-header .dl-btn:hover {
+      opacity: 1;
+      text-decoration: underline;
+    }
+    .output-file-content {
+      padding: 0.75rem;
+      overflow-x: auto;
+    }
+    .output-file-content pre {
+      font-size: 0.8125rem;
+      line-height: 1.5;
+      white-space: pre-wrap;
+      word-break: break-word;
+      font-family: 'SF Mono', SFMono-Regular, Consolas, 'Liberation Mono', Menlo, monospace;
+    }
+    .output-file-content img {
+      max-width: 100%;
+      height: auto;
+      border-radius: 4px;
+    }
+    .output-file-content iframe {
+      width: 100%;
+      height: 600px;
+      border: none;
+    }
+    .output-file-content table {
+      border-collapse: collapse;
+      font-size: 0.8125rem;
+      width: 100%;
+    }
+    .output-file-content table td,
+    .output-file-content table th {
+      border: 1px solid var(--border);
+      padding: 0.375rem 0.5rem;
+      text-align: left;
+    }
+    .output-file-content table th {
+      background: var(--bg);
+      font-weight: 600;
+    }
+    .output-file-content .download-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.5rem 1rem;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      color: var(--accent);
+      text-decoration: none;
+      font-size: 0.875rem;
+      cursor: pointer;
+    }
+    .output-file-content .download-link:hover {
+      background: var(--border);
+    }
+    .empty-state {
+      color: var(--text-muted);
+      font-style: italic;
+      padding: 2rem;
+      text-align: center;
+    }
+
+    /* ---- Feedback ---- */
+    .prev-feedback {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 0.625rem 0.75rem;
+      margin-top: 0.75rem;
+      font-size: 0.8125rem;
+      color: var(--text-muted);
+      line-height: 1.5;
+    }
+    .prev-feedback-label {
+      font-size: 0.7rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      margin-bottom: 0.25rem;
+      color: var(--text-muted);
+    }
+    .feedback-textarea {
+      width: 100%;
+      min-height: 100px;
+      padding: 0.75rem;
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      font-family: inherit;
+      font-size: 0.9375rem;
+      line-height: 1.5;
+      resize: vertical;
+      color: var(--text);
+    }
+    .feedback-textarea:focus {
+      outline: none;
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+    }
+    .feedback-status {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      margin-top: 0.5rem;
+      min-height: 1.1em;
+    }
+
+    /* ---- Grades (collapsible) ---- */
+    .grades-toggle {
+      display: flex;
+      align-items: center;
+      cursor: pointer;
+      user-select: none;
+    }
+    .grades-toggle:hover {
+      color: var(--accent);
+    }
+    .grades-toggle .arrow {
+      margin-right: 0.5rem;
+      transition: transform 0.15s;
+      font-size: 0.75rem;
+    }
+    .grades-toggle .arrow.open {
+      transform: rotate(90deg);
+    }
+    .grades-content {
+      display: none;
+      margin-top: 0.75rem;
+    }
+    .grades-content.open {
+      display: block;
+    }
+    .grades-summary {
+      font-size: 0.875rem;
+      margin-bottom: 0.75rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    .grade-badge {
+      display: inline-block;
+      padding: 0.125rem 0.5rem;
+      border-radius: 9999px;
+      font-size: 0.75rem;
+      font-weight: 600;
+    }
+    .grade-pass { background: var(--green-bg); color: var(--green); }
+    .grade-fail { background: var(--red-bg); color: var(--red); }
+    .assertion-list {
+      list-style: none;
+    }
+    .assertion-item {
+      padding: 0.625rem 0;
+      border-bottom: 1px solid var(--border);
+      font-size: 0.8125rem;
+    }
+    .assertion-item:last-child { border-bottom: none; }
+    .assertion-status {
+      font-weight: 600;
+      margin-right: 0.5rem;
+    }
+    .assertion-status.pass { color: var(--green); }
+    .assertion-status.fail { color: var(--red); }
+    .assertion-evidence {
+      color: var(--text-muted);
+      font-size: 0.75rem;
+      margin-top: 0.25rem;
+      padding-left: 1.5rem;
+    }
+
+    /* ---- View tabs ---- */
+    .view-tabs {
+      display: flex;
+      gap: 0;
+      padding: 0 2rem;
+      background: var(--bg);
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+    .view-tab {
+      font-family: 'Poppins', sans-serif;
+      padding: 0.625rem 1.25rem;
+      font-size: 0.8125rem;
+      font-weight: 500;
+      cursor: pointer;
+      border: none;
+      background: none;
+      color: var(--text-muted);
+      border-bottom: 2px solid transparent;
+      transition: all 0.15s;
+    }
+    .view-tab:hover { color: var(--text); }
+    .view-tab.active {
+      color: var(--accent);
+      border-bottom-color: var(--accent);
+    }
+    .view-panel { display: none; }
+    .view-panel.active { display: flex; flex-direction: column; flex: 1; overflow: hidden; }
+
+    /* ---- Benchmark view ---- */
+    .benchmark-view {
+      padding: 1.5rem 2rem;
+      overflow-y: auto;
+      flex: 1;
+    }
+    .benchmark-table {
+      border-collapse: collapse;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      font-size: 0.8125rem;
+      width: 100%;
+      margin-bottom: 1.5rem;
+    }
+    .benchmark-table th, .benchmark-table td {
+      padding: 0.625rem 0.75rem;
+      text-align: left;
+      border: 1px solid var(--border);
+    }
+    .benchmark-table th {
+      font-family: 'Poppins', sans-serif;
+      background: var(--header-bg);
+      color: var(--header-text);
+      font-weight: 500;
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+    .benchmark-table tr:hover { background: var(--bg); }
+    .benchmark-table tr.benchmark-row-with { background: rgba(33, 150, 243, 0.06); }
+    .benchmark-table tr.benchmark-row-without { background: rgba(255, 193, 7, 0.06); }
+    .benchmark-table tr.benchmark-row-with:hover { background: rgba(33, 150, 243, 0.12); }
+    .benchmark-table tr.benchmark-row-without:hover { background: rgba(255, 193, 7, 0.12); }
+    .benchmark-table tr.benchmark-row-avg { font-weight: 600; border-top: 2px solid var(--border); }
+    .benchmark-table tr.benchmark-row-avg.benchmark-row-with { background: rgba(33, 150, 243, 0.12); }
+    .benchmark-table tr.benchmark-row-avg.benchmark-row-without { background: rgba(255, 193, 7, 0.12); }
+    .benchmark-delta-positive { color: var(--green); font-weight: 600; }
+    .benchmark-delta-negative { color: var(--red); font-weight: 600; }
+    .benchmark-notes {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1rem;
+    }
+    .benchmark-notes h3 {
+      font-family: 'Poppins', sans-serif;
+      font-size: 0.875rem;
+      margin-bottom: 0.75rem;
+    }
+    .benchmark-notes ul {
+      list-style: disc;
+      padding-left: 1.25rem;
+    }
+    .benchmark-notes li {
+      font-size: 0.8125rem;
+      line-height: 1.6;
+      margin-bottom: 0.375rem;
+    }
+    .benchmark-empty {
+      color: var(--text-muted);
+      font-style: italic;
+      text-align: center;
+      padding: 3rem;
+    }
+
+    /* ---- Navigation ---- */
+    .nav {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 1rem 2rem;
+      border-top: 1px solid var(--border);
+      background: var(--surface);
+      flex-shrink: 0;
+    }
+    .nav-btn {
+      font-family: 'Poppins', sans-serif;
+      padding: 0.5rem 1.25rem;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      background: var(--surface);
+      cursor: pointer;
+      font-size: 0.875rem;
+      font-weight: 500;
+      color: var(--text);
+      transition: all 0.15s;
+    }
+    .nav-btn:hover:not(:disabled) {
+      background: var(--bg);
+      border-color: var(--text-muted);
+    }
+    .nav-btn:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
+    .done-btn {
+      font-family: 'Poppins', sans-serif;
+      padding: 0.5rem 1.5rem;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      background: var(--surface);
+      color: var(--text);
+      cursor: pointer;
+      font-size: 0.875rem;
+      font-weight: 500;
+      transition: all 0.15s;
+    }
+    .done-btn:hover {
+      background: var(--bg);
+      border-color: var(--text-muted);
+    }
+    .done-btn.ready {
+      border: none;
+      background: var(--accent);
+      color: white;
+      font-weight: 600;
+    }
+    .done-btn.ready:hover {
+      background: var(--accent-hover);
+    }
+    /* ---- Done overlay ---- */
+    .done-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.5);
+      z-index: 100;
+      justify-content: center;
+      align-items: center;
+    }
+    .done-overlay.visible {
+      display: flex;
+    }
+    .done-card {
+      background: var(--surface);
+      border-radius: 12px;
+      padding: 2rem 3rem;
+      text-align: center;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+      max-width: 500px;
+    }
+    .done-card h2 {
+      font-size: 1.5rem;
+      margin-bottom: 0.5rem;
+    }
+    .done-card p {
+      color: var(--text-muted);
+      margin-bottom: 1.5rem;
+      line-height: 1.5;
+    }
+    .done-card .btn-row {
+      display: flex;
+      gap: 0.5rem;
+      justify-content: center;
+    }
+    .done-card button {
+      padding: 0.5rem 1.25rem;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      background: var(--surface);
+      cursor: pointer;
+      font-size: 0.875rem;
+    }
+    .done-card button:hover {
+      background: var(--bg);
+    }
+    /* ---- Toast ---- */
+    .toast {
+      position: fixed;
+      bottom: 5rem;
+      left: 50%;
+      transform: translateX(-50%);
+      background: var(--header-bg);
+      color: var(--header-text);
+      padding: 0.625rem 1.25rem;
+      border-radius: var(--radius);
+      font-size: 0.875rem;
+      opacity: 0;
+      transition: opacity 0.3s;
+      pointer-events: none;
+      z-index: 200;
+    }
+    .toast.visible {
+      opacity: 1;
+    }
+  </style>
+</head>
+<body>
+  <div id="app" style="height:100vh; display:flex; flex-direction:column;">
+    <div class="header">
+      <div>
+        <h1>Eval Review: <span id="skill-name"></span></h1>
+        <div class="instructions">Review each output and leave feedback below. Navigate with arrow keys or buttons. When done, copy feedback and paste into Claude Code.</div>
+      </div>
+      <div class="progress" id="progress"></div>
+    </div>
+
+    <!-- View tabs (only shown when benchmark data exists) -->
+    <div class="view-tabs" id="view-tabs" style="display:none;">
+      <button class="view-tab active" onclick="switchView('outputs')">Outputs</button>
+      <button class="view-tab" onclick="switchView('benchmark')">Benchmark</button>
+    </div>
+
+    <!-- Outputs panel (qualitative review) -->
+    <div class="view-panel active" id="panel-outputs">
+    <div class="main">
+      <!-- Prompt -->
+      <div class="section">
+        <div class="section-header">Prompt <span class="config-badge" id="config-badge" style="display:none;"></span></div>
+        <div class="section-body">
+          <div class="prompt-text" id="prompt-text"></div>
+        </div>
+      </div>
+
+      <!-- Outputs -->
+      <div class="section">
+        <div class="section-header">Output</div>
+        <div class="section-body" id="outputs-body">
+          <div class="empty-state">No output files found</div>
+        </div>
+      </div>
+
+      <!-- Previous Output (collapsible) -->
+      <div class="section" id="prev-outputs-section" style="display:none;">
+        <div class="section-header">
+          <div class="grades-toggle" onclick="togglePrevOutputs()">
+            <span class="arrow" id="prev-outputs-arrow">&#9654;</span>
+            Previous Output
+          </div>
+        </div>
+        <div class="grades-content" id="prev-outputs-content"></div>
+      </div>
+
+      <!-- Grades (collapsible) -->
+      <div class="section" id="grades-section" style="display:none;">
+        <div class="section-header">
+          <div class="grades-toggle" onclick="toggleGrades()">
+            <span class="arrow" id="grades-arrow">&#9654;</span>
+            Formal Grades
+          </div>
+        </div>
+        <div class="grades-content" id="grades-content"></div>
+      </div>
+
+      <!-- Feedback -->
+      <div class="section">
+        <div class="section-header">Your Feedback</div>
+        <div class="section-body">
+          <textarea
+            class="feedback-textarea"
+            id="feedback"
+            placeholder="What do you think of this output? Any issues, suggestions, or things that look great?"
+          ></textarea>
+          <div class="feedback-status" id="feedback-status"></div>
+          <div class="prev-feedback" id="prev-feedback" style="display:none;">
+            <div class="prev-feedback-label">Previous feedback</div>
+            <div id="prev-feedback-text"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="nav" id="outputs-nav">
+      <button class="nav-btn" id="prev-btn" onclick="navigate(-1)">&#8592; Previous</button>
+      <button class="done-btn" id="done-btn" onclick="showDoneDialog()">Submit All Reviews</button>
+      <button class="nav-btn" id="next-btn" onclick="navigate(1)">Next &#8594;</button>
+    </div>
+    </div><!-- end panel-outputs -->
+
+    <!-- Benchmark panel (quantitative stats) -->
+    <div class="view-panel" id="panel-benchmark">
+      <div class="benchmark-view" id="benchmark-content">
+        <div class="benchmark-empty">No benchmark data available. Run a benchmark to see quantitative results here.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Done overlay -->
+  <div class="done-overlay" id="done-overlay">
+    <div class="done-card">
+      <h2>Review Complete</h2>
+      <p>Your feedback has been saved. Go back to your Claude Code session and tell Claude you're done reviewing.</p>
+      <div class="btn-row">
+        <button onclick="closeDoneDialog()">OK</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast -->
+  <div class="toast" id="toast"></div>
+
+  <script>
+    // ---- Embedded data (injected by generate_review.py) ----
+    const EMBEDDED_DATA = {"skill_name": "async-rust-reviewer", "runs": [{"id": "eval-1-spawn-in-domain-with_skill", "prompt": "Review this async Rust code for correctness and performance issues. The code is in a hypothetical project with crates/domain/, crates/app/, crates/infra/, and crates/api/.\n\n```rust\n// crates/domain/order_processor.rs\nuse std::sync::{Arc, Mutex};\n\npub async fn process_orders(orders: Vec<Order>) -> Result<Vec<ProcessedOrder>, AppError> {\n    let results = Arc::new(Mutex::new(Vec::new()));\n    let mut handles = Vec::new();\n\n    for order in orders {\n        let results_clone = Arc::clone(&results);\n        let handle = tokio::spawn(async move {\n            let validated = validate_order(&order)?;\n            let priced = price_order(&validated);\n            let saved = save_to_db(&priced).await?;\n            let mut guard = results_clone.lock().unwrap();\n            guard.push(saved);\n            Ok(saved)\n        });\n        handles.push(handle);\n    }\n\n    for handle in handles {\n        handle.await.map_err(|_| AppError::TaskFailed)??;\n    }\n\n    let guard = results.lock().unwrap();\n    Ok(guard.clone())\n}\n```", "eval_id": 1, "outputs": [{"name": "review.md", "type": "text", "content": "# Async Rust Review: crates/domain/order_processor.rs\n**Mode**: SNIPPET | **Date**: 2026-04-03\n\n## VERDICT: REJECTED\n\nThis code fails on nearly every axis of async Rust discipline. The domain crate has no business containing `tokio::spawn`, `.await`, `Arc<Mutex<>>`, or any async runtime concern. The architecture is inverted, the concurrency is unbounded, the error handling is unsound, and there is zero observability. Reject immediately.\n\n---\n\n## LETHAL FINDINGS (7)\n\n1. **[spawn_at_edge_only] `crates/domain/order_processor.rs:9`** -- `tokio::spawn` inside domain crate code. Spawn is an Action in the Data-Calc-Actions hierarchy and MUST live exclusively at the architecture edge (HTTP handlers, infra adapters, main). Domain logic must be pure, synchronous, and testable without a runtime. Move all spawn logic to the presentation or infrastructure layer. See `references/spawn-discipline.md`.\n\n2. **[no_await_in_calc] `crates/domain/order_processor.rs:1`** -- The entire `process_orders` function is declared `async fn` and lives in the domain crate. The domain crate MUST NOT contain async functions. Domain logic is pure synchronous computation -- it should not await anything. The async shell (presentation/infra layers) calls sync domain functions and awaits infrastructure I/O. See `references/hexagonal-boundaries.md`.\n\n3. **[domain_zero_async_deps] `crates/domain/order_processor.rs:1`** -- This file imports `std::sync::{Arc, Mutex}` and calls `tokio::spawn`, meaning the domain crate must depend on `tokio`. The domain crate MUST NOT depend on tokio, futures, async-std, or any async runtime. Domain must compile and test with zero async dependencies. See `references/hexagonal-boundaries.md`.\n\n4. **[bounded_concurrency] `crates/domain/order_processor.rs:8-15`** -- Unbounded spawn loop: `for order in orders { tokio::spawn(...) }` creates one task per order with no bound. If `orders` contains 100,000 entries, this spawns 100,000 concurrent tasks -- a denial-of-service vector that will OOM the service under load. Use `for_each_concurrent(N, ...)` or `buffer_unordered(N)` with an explicit concurrency bound. See `references/stream-patterns.md`.\n\n5. **[no_imperative_concurrency] `crates/domain/order_processor.rs:8-17`** -- Manual `Vec<JoinHandle>` bookkeeping with `for h in handles { h.await }`. This is an imperative anti-pattern. Use structured concurrency primitives: `tokio::task::JoinSet` or `futures::stream::FuturesUnordered`. JoinSet provides proper cleanup (aborts remaining tasks on drop) and cleaner result collection. See `references/stream-patterns.md`.\n\n6. **[arc_over_rc] `crates/domain/order_processor.rs:3,11,13`** -- `Arc<Mutex<Vec<...>>>` used as shared mutable state across spawned tasks. This serializes access and defeats parallelism. Worse, `std::sync::Mutex` is used, not `tokio::sync::Mutex`, and while the lock is not held across an `.await` point here (the `.lock().unwrap()` / `.push()` is sync), the entire pattern is unnecessary. Use ownership transfer (move results out of each task via return value) or message passing (mpsc channel). The ownership priority ladder was not consulted. See `references/send-sync-ownership.md`.\n\n7. **[cancellation_safe_design] `crates/domain/order_processor.rs:10-14`** -- If any spawned task panics or is cancelled between `save_to_db` (line 12) and the `guard.push(saved)` (line 13), the saved data exists in the database but is lost from the in-memory results collection. The state is inconsistent -- the DB has data that the caller never sees. Design atomic state transitions: either collect results via return values from JoinHandle, or use a channel. See `references/cancellation-safety.md`.\n\n---\n\n## MAJOR FINDINGS (5)\n\n1. **[avoid_arc_mutex_default] `crates/domain/order_processor.rs:3`** -- `Arc<Mutex<Vec<ProcessedOrder>>>` is used as the default concurrency pattern with zero justification. The priority ladder was ignored: (1) ownership transfer would work here since each task produces exactly one result, (2) message passing via mpsc channel would also work, (3) no attempt at atomics or concurrent maps was considered. See `references/send-sync-ownership.md`.\n\n2. **[tracing_instrument] `crates/domain/order_processor.rs:3`** -- The async function `process_orders` has no `#[tracing::instrument]` annotation. Every async function in the shell MUST have instrumentation. Bare `.await` without surrounding span context makes production debugging impossible. See `references/observability-reference.md`.\n\n3. **[span_propagation_in_spawn] `crates/domain/order_processor.rs:9`** -- `tokio::spawn(async move { ... })` spawns a task with no span propagation. The spawned task starts fresh with no trace correlation to the parent. This means you cannot trace an order from request to completion across the spawn boundary. Use `.instrument(tracing::info_span!(\"process_order\", order_id = ...))` on the spawned future. See `references/observability-reference.md`.\n\n4. **[async_error_chain] `crates/domain/order_processor.rs:16`** -- `handle.await.map_err(|_| AppError::TaskFailed)??` uses a closure that discards the JoinError context entirely (`|_| AppError::TaskFailed`). The original error (panic message, cancellation reason) is silently destroyed. Use `.map_err(|e| AppError::TaskFailed(e.to_string()))` or similar to preserve the causal chain. See `references/observability-reference.md`.\n\n5. **[workload_routing] `crates/domain/order_processor.rs:10-11`** -- `validate_order` and `price_order` are synchronous CPU-bound operations mixed into an async context without any consideration of workload routing. If these are CPU-heavy (validation logic, pricing calculations), they should not run on the async runtime. However, since the entire function should not exist in the domain crate in the first place, the correct fix is to extract these as sync domain functions and call them from the shell. See `references/spawn-discipline.md`.\n\n---\n\n## DELEGATED FINDINGS (4)\n\n1. **DELEGATED**: `.unwrap()` at line 13 (`results_clone.lock().unwrap()`) and line 18 (`results.lock().unwrap()`) -- panicked mutex guard. Handled by functional-rust zero-unwrap rule.\n\n2. **DELEGATED**: `guard.push(saved)` at line 13 -- mutation via `push`. Handled by functional-rust no-mut rule.\n\n3. **DELEGATED**: `guard.clone()` at line 19 -- unnecessary clone of the entire results vector. Handled by functional-rust zero-copy/performance rules.\n\n4. **DELEGATED**: Missing type definitions for `Order`, `ProcessedOrder`, `AppError`, `validate_order`, `price_order`, `save_to_db` -- cannot verify domain type purity. Handled by functional-rust DDD types rules.\n\n---\n\n## CRITICAL FINDINGS (2)\n\n1. **[bench_async_vs_sync / bench_throughput_baseline]** No benchmark evidence exists for this async hot path. There are no criterion benchmarks comparing sync domain processing vs the async spawned version, no throughput baselines, and no concurrency scaling tests at N=1, N=8, N=64. Performance claims are unverifiable. See `references/benchmark-patterns.md`.\n\n2. **[tokio_console_required]** No tokio-console or console-subscriber configuration is present. The unbounded spawn loop with shared mutex state is exactly the kind of pattern that would show catastrophic busy/scheduled time metrics under load. Without tokio-console, this will be diagnosed by guesswork in production. See `references/observability-reference.md`.\n\n---\n\n## STATIC ANALYSIS\n\nMode: SNIPPET (no Cargo.toml on disk). All results are static scan predictions, not execution evidence.\n\n### Pattern Scan Results\n\n| Pattern | Location | Match | Severity |\n|---------|----------|-------|----------|\n| `tokio::spawn` | Line 9 | MATCH | LETHAL: spawn in domain crate |\n| `.await` | Lines 12, 16 | MATCH (2 occurrences) | LETHAL: await in domain |\n| `Arc::new(Mutex::new(` | Line 3 | MATCH | MAJOR: Arc-Mutex as default |\n| `.lock().unwrap()` | Lines 13, 18 | MATCH (2 occurrences) | DELEGATED: unwrap usage |\n| `Vec::new()` (unbounded) | Line 3 | MATCH | LETHAL: unbounded concurrency |\n| `Vec<JoinHandle>` | Line 7 | MATCH | LETHAL: imperative concurrency |\n| `for ... in handles` | Line 16 | MATCH | LETHAL: manual join loop |\n| `#[tracing::instrument]` | Absent | NO MATCH | MAJOR: missing instrumentation |\n| `.instrument(` | Absent | NO MATCH | MAJOR: missing span propagation |\n| `println!` / `eprintln!` | Absent | NO MATCH | OK |\n| `Rc<` / `RefCell<` | Absent | NO MATCH | OK |\n| `buffer_unordered` | Absent | NO MATCH | Context: should be used instead |\n| `for_each_concurrent` | Absent | NO MATCH | Context: should be used instead |\n| `JoinSet` | Absent | NO MATCH | Context: should be used instead |\n\n### Predicted Clippy Lint Outcomes\n\n| Lint | Prediction | Reasoning |\n|------|-----------|-----------|\n| `clippy::await_holding_lock` | WOULD NOT fire | The `MutexGuard` is obtained and dropped within the sync portion of the spawned task (lines 13-14), not held across an `.await`. The `.lock().unwrap()` and `.push()` are sync operations. However, the `.await` at line 12 (`save_to_db`) does not hold the lock. |\n| `clippy::unused_async` | WOULD NOT fire | The function does contain `.await` points (lines 12, 16), so it is not \"unused\" async. |\n| `clippy::large_futures` | MIGHT fire | The spawned async block captures `order` (moved), `results_clone` (Arc clone), and contains the full state machine for validate/price/save. Depends on the size of `Order` and `ProcessedOrder`. Worth investigating if Order is large. |\n| `clippy::unwrap_used` | WOULD fire | Lines 13 and 18 both use `.lock().unwrap()`. Under functional-rust rules this is denied. |\n\n### Architecture Boundary Scan (Predicted)\n\n```\nSCAN: crates/domain/order_processor.rs for async patterns\n  .await          -> MATCH at lines 12, 16   -> FAIL: .await in domain\n  tokio::spawn    -> MATCH at line 9          -> FAIL: spawn in domain\n  Arc<Mutex<>>    -> MATCH at line 3          -> FAIL: shared mutable state in domain\n  async fn        -> MATCH at line 3          -> FAIL: async in domain\nResult: domain boundary VIOLATED on all axes\n```\n\n---\n\n## MANDATE\n\nThis code is REJECTED. The following changes are required, in order:\n\n1. **Extract domain logic to sync functions.** `validate_order` and `price_order` are synchronous domain calculations. They must be plain `fn` in the domain crate with zero async dependencies. No `Arc`, no `Mutex`, no `tokio`. See `references/hexagonal-boundaries.md` for the layer structure.\n\n2. **Move the orchestration to the presentation/infra layer.** The HTTP handler or infrastructure adapter is where `async fn`, `tokio::spawn`, and `.await` belong. The handler calls the sync domain functions and awaits the infrastructure I/O. See `references/hexagonal-boundaries.md` for the adapter_owns_async rule.\n\n3. **Replace the unbounded spawn loop with bounded concurrency.** Use `futures::stream::iter(orders).map(|order| async move { ... }).buffer_unordered(32)` or `for_each_concurrent(32, ...)` with an explicit concurrency bound. Never spawn one task per item without a bound. See `references/stream-patterns.md` for the buffer_unordered and for_each_concurrent examples.\n\n4. **Replace `Arc<Mutex<Vec<>>>` with ownership transfer or channels.** Each task returns its `ProcessedOrder` via the `JoinHandle` return value. Collect results from `JoinSet::join_next()` or `buffer_unordered().collect()`. No shared mutable state needed. See `references/send-sync-ownership.md` for the ownership priority ladder.\n\n5. **Add `#[tracing::instrument]` to the async shell function** and propagate spans into any spawned tasks with `.instrument(info_span!(...))`. See `references/observability-reference.md`.\n\n6. **Preserve error context** -- do not discard `JoinError` with `|_| AppError::TaskFailed`. Map to a meaningful error that preserves the original cause. See `references/observability-reference.md`.\n\n7. **Add criterion benchmarks** for the order processing pipeline at N=1, N=8, N=64 concurrency to verify scaling and establish throughput baselines. See `references/benchmark-patterns.md`.\n\n### Correct Architecture Sketch\n\n```\ncrates/domain/order.rs (sync, no async deps):\n  pub fn validate_order(order: &Order) -> Result<ValidatedOrder, DomainError>\n  pub fn price_order(order: &ValidatedOrder) -> PricedOrder\n\ncrates/infra/order_repo.rs (async, depends on domain):\n  pub async fn save_to_db(order: &PricedOrder) -> Result<SavedOrder, InfraError>\n\ncrates/api/handlers.rs (async shell, depends on app + infra):\n  #[tracing::instrument(skip(repo))]\n  pub async fn process_orders(orders: Vec<Order>, repo: &dyn OrderRepo) -> Result<Vec<ProcessedOrder>, AppError> {\n      futures::stream::iter(orders)\n          .map(|order| async {\n              let validated = validate_order(&order)?;       // sync domain\n              let priced = price_order(&validated);          // sync domain\n              let saved = save_to_db(&priced).await?;        // async infra\n              Ok(saved)\n          })\n          .buffer_unordered(32)\n          .try_collect()\n          .await\n  }\n```\n"}], "grading": null}, {"id": "eval-1-spawn-in-domain-without_skill", "prompt": "Review this async Rust code for correctness and performance issues. The code is in a hypothetical project with crates/domain/, crates/app/, crates/infra/, and crates/api/.\n\n```rust\n// crates/domain/order_processor.rs\nuse std::sync::{Arc, Mutex};\n\npub async fn process_orders(orders: Vec<Order>) -> Result<Vec<ProcessedOrder>, AppError> {\n    let results = Arc::new(Mutex::new(Vec::new()));\n    let mut handles = Vec::new();\n\n    for order in orders {\n        let results_clone = Arc::clone(&results);\n        let handle = tokio::spawn(async move {\n            let validated = validate_order(&order)?;\n            let priced = price_order(&validated);\n            let saved = save_to_db(&priced).await?;\n            let mut guard = results_clone.lock().unwrap();\n            guard.push(saved);\n            Ok(saved)\n        });\n        handles.push(handle);\n    }\n\n    for handle in handles {\n        handle.await.map_err(|_| AppError::TaskFailed)??;\n    }\n\n    let guard = results.lock().unwrap();\n    Ok(guard.clone())\n}\n```", "eval_id": 1, "outputs": [{"name": "review.md", "type": "text", "content": "# Async Rust Code Review: `process_orders`\n\n## Summary\n\nThis function has multiple correctness bugs, a performance anti-pattern, a deadlock risk, and a critical architectural violation. It should not be merged.\n\n---\n\n## Correctness Issues\n\n### 1. Double-error extraction on JoinHandle result (Bug)\n\n```rust\nhandle.await.map_err(|_| AppError::TaskFailed)??;\n```\n\n`handle.await` returns `Result<Result<ProcessedOrder, AppError>, JoinError>`. The `??` does two levels of unwrap: first the `JoinError`, then the inner `AppError`. This is actually valid for extracting the final error. However, there is a subtle correctness problem: the `.unwrap()` inside the spawned task (see below) can panic, in which case `handle.await` returns `Err(JoinError)` \u2014 and the original `AppError` from the inner `save_to_db` or `validate_order` is **lost**. The `.map_err(|_| AppError::TaskFailed)` discards the `JoinError`, which may contain panic information useful for debugging.\n\n### 2. `.unwrap()` on Mutex in spawned tasks (Potential Panic / Lost Errors)\n\n```rust\nlet mut guard = results_clone.lock().unwrap();\nguard.push(saved);\n```\n\nIf a task panics while holding the mutex (e.g., any prior `?` propagation combined with a panic elsewhere), `lock().unwrap()` will re-panic on the poisoned mutex. This cascades failures across all spawned tasks. In async code, `unwrap` on a mutex lock is a correctness hazard \u2014 use `lock().map_err(...)` or `poison::catch_unwind` patterns, or restructure to avoid the shared mutex entirely.\n\n### 3. Mutex poisoning can lose all accumulated results\n\nIf **any** spawned task panics while holding the lock, the mutex becomes poisoned. All subsequent `lock().unwrap()` calls will panic, and the final `results.lock().unwrap()` will also panic, losing all successfully processed orders.\n\n### 4. Missing type definitions\n\nThe code references `Order`, `ProcessedOrder`, `AppError`, and functions `validate_order`, `price_order`, `save_to_db` without showing their definitions. The review assumes these exist and are correct, but the `save_to_db` call takes `&priced` by reference \u2014 if `price_order` returns an owned value, `saved` must outlive the borrow. This is fine within the async block, but worth noting for completeness.\n\n---\n\n## Performance Issues\n\n### 5. `Arc<Mutex<Vec<_>>>` is an anti-pattern for concurrent accumulation\n\nUsing `Arc<Mutex<Vec<_>>>` to collect results from spawned tasks forces every task to:\n1. Acquire the mutex lock (contention point).\n2. Hold the lock while pushing (serializes what should be parallel work).\n\n**Better approach**: Each task returns its result directly. Collect results via the `JoinHandle`:\n\n```rust\nlet handles: Vec<JoinHandle<Result<ProcessedOrder, AppError>>> = orders\n    .into_iter()\n    .map(|order| {\n        tokio::spawn(async move {\n            let validated = validate_order(&order)?;\n            let priced = price_order(&validated);\n            save_to_db(&priced).await\n        })\n    })\n    .collect();\n\nlet results: Vec<ProcessedOrder> = handles\n    .into_iter()\n    .map(|h| h.await)\n    .collect::<Result<Vec<_>, _>>()?\n    .into_iter()\n    .collect::<Result<Vec<_>, _>>()?;\n```\n\nThis eliminates the shared mutable state entirely, removes lock contention, and is idiomatic async Rust.\n\n### 6. Unbounded task spawning\n\nIf `orders` contains thousands of items, this spawns thousands of concurrent tokio tasks. This can:\n- Exhaust database connection pools (every task calls `save_to_db`).\n- Cause high memory usage.\n- Lead to contention on the database side.\n\n**Better approach**: Use `tokio::sync::Semaphore` or `futures::stream::buffered()` to limit concurrency:\n\n```rust\nuse futures::stream::{self, StreamExt};\n\nlet results: Vec<ProcessedOrder> = stream::iter(orders)\n    .map(|order| async {\n        let validated = validate_order(&order)?;\n        let priced = price_order(&validated);\n        save_to_db(&priced).await\n    })\n    .buffer_unordered(MAX_CONCURRENT_DB_OPS)\n    .collect::<Vec<_>>()\n    .await\n    .into_iter()\n    .collect::<Result<Vec<_>, _>>()?;\n```\n\n### 7. Cloning the entire results vector at the end\n\n```rust\nOk(guard.clone())\n```\n\nThis clones the full `Vec<ProcessedOrder>` unnecessarily. If the accumulator pattern is restructured as suggested above, this clone is eliminated entirely.\n\n---\n\n## Deadlock Risk\n\n### 8. Async code holding a std::sync::Mutex across an await point\n\nWhile the `.lock().unwrap()` and `.push()` happen before the next `.await` in the current code (after `save_to_db`), using `std::sync::Mutex` in async contexts is dangerous. If someone later adds an `.await` while the guard is held, it can deadlock the tokio runtime. Use `tokio::sync::Mutex` if a mutex is truly needed in async code, or better yet, avoid the shared state altogether.\n\n---\n\n## Architectural Issues\n\n### 9. Domain layer should not spawn tasks\n\nThis file is located at `crates/domain/order_processor.rs`. The domain layer in a DDD architecture should contain pure business logic \u2014 it should not know about `tokio::spawn`, databases (`save_to_db`), or async runtime details. The domain should expose a synchronous `process_order` function, and the application/infrastructure layer should handle task spawning and persistence.\n\n**Violations**:\n- `tokio::spawn` in domain \u2014 runtime concern.\n- `save_to_db` in domain \u2014 infrastructure/persistence concern.\n- `Arc<Mutex<...>>` for coordination \u2014 application orchestration concern.\n\n**Recommended structure**:\n- Domain: pure functions `validate_order`, `price_order` (no async, no I/O).\n- Application: orchestrates the workflow, spawns tasks, handles errors.\n- Infrastructure: implements `save_to_db` behind a trait, manages DB connections.\n\n---\n\n## Minor Issues\n\n### 10. Non-atomic result collection\n\nEven if all tasks succeed at the DB level, the function returns all results. If some tasks fail, the error is propagated but previously successful saves are already committed to the database. There is no transaction boundary or saga pattern here \u2014 partial failures leave the system in an inconsistent state.\n\n### 11. No cancellation handling\n\nIf the outer function is cancelled (e.g., the caller drops the future), all spawned tasks continue running independently. `tokio::spawn` detaches tasks from the caller's lifecycle. This may cause \"ghost\" database writes after the caller has moved on.\n\n---\n\n## Verdict\n\n**Do not merge.** The code has a correctness risk from mutex poisoning, a performance bottleneck from unnecessary shared state, unbounded concurrency, and a fundamental architectural violation (task spawning in the domain layer). The fix is to restructure so each task returns its result through the `JoinHandle`, use bounded concurrency, and move orchestration out of the domain crate.\n"}], "grading": null}, {"id": "eval-2-imperative-stream-loop-with_skill", "prompt": "Review this async stream processing code for correctness and performance:\n\n```rust\n// crates/infra/src/event_processor.rs\nuse futures::StreamExt;\nuse std::rc::Rc;\n\npub async fn process_event_stream(mut stream: impl Stream<Item = Event> + Unpin) {\n    let context = Rc::new(ProcessingContext::default());\n    let mut results = Vec::new();\n\n    while let Some(event) = stream.next().await {\n        if event.is_relevant() {\n            let enriched = context.enrich(event);\n            let result = process(enriched).await;\n            results.push(result);\n        }\n    }\n\n    Ok(results)\n}\n```", "eval_id": 2, "outputs": [{"name": "review.md", "type": "text", "content": "# Async Rust Review: crates/infra/src/event_processor.rs\n**Mode**: SNIPPET | **Date**: 2026-04-03\n\n## VERDICT: REJECTED\n\n## LETHAL FINDINGS (3)\n\n1. **[streams_over_loops] crates/infra/src/event_processor.rs:7** -- Imperative stream loop `while let Some(event) = stream.next().await`. This is the exact banned pattern from rule `streams_over_loops`. Streams are the async counterpart to Iterators; they MUST be consumed via combinator pipelines (`.filter()`, `.map()`, `.buffer_unordered(N)`, `.for_each_concurrent(N)`), not hand-rolled while loops. This loop processes events one at a time, entirely wasting I/O concurrency. Replace with a functional pipeline. See `references/stream-patterns.md` for the combinator cookbook.\n\n2. **[bounded_concurrency] crates/infra/src/event_processor.rs:7-12** -- No concurrency bound exists anywhere in this function. Even after refactoring away the imperative loop, there is no `buffer_unordered(N)`, no `for_each_concurrent(N)`, no semaphore. Unbounded concurrency on a dynamic collection is a denial-of-service vector that will OOM the service under load. Every concurrent operation MUST have an explicit bound. See `references/stream-patterns.md` for the concurrency primitive decision matrix.\n\n3. **[arc_over_rc] crates/infra/src/event_processor.rs:5** -- `Rc<ProcessingContext>` is held across `.await` points at lines 7 and 9. `Rc<T>` is `!Send`. The future generated by this `async fn` will therefore be `!Send`, which fails to compile on Tokio's multi-threaded runtime. Even on a single-threaded runtime, `Rc` across `.await` is banned by `clippy::await_holding_refcell_ref` category. Replace with `Arc<ProcessingContext>`. See `references/send-sync-ownership.md` for the Arc vs Rc decision table.\n\n## MAJOR FINDINGS (4)\n\n1. **[tracing_instrument] crates/infra/src/event_processor.rs:4** -- This async infrastructure function has no `#[tracing::instrument]` and no explicit span creation. Bare `.await` without surrounding span loses the causal chain across async boundaries. Every async function in the shell MUST be instrumented. See `references/observability-reference.md` for `#[instrument]` patterns.\n\n2. **[async_error_chain] crates/infra/src/event_processor.rs:9** -- `process(enriched).await` produces a result that is blindly pushed into the `results` Vec with no error inspection. If `process` is an I/O operation (which it almost certainly is at the infra layer), it can fail. Errors are silently accumulated without context. Use `.map_err()` or `?` propagation. See `references/observability-reference.md` for error chain preservation patterns.\n\n3. **[cancellation_safe_design] crates/infra/src/event_processor.rs:8-9** -- `context.enrich(event)` runs synchronously, then `process(enriched).await` suspends. If the future is dropped at that `.await`, the enriched event has been created but never processed. Whether this matters depends on whether `enrich` has side effects, but the pattern of \"prepare sync, then await\" without a documented recovery plan violates cancellation-safe design. See `references/cancellation-safety.md` for two-phase commit patterns.\n\n4. **[no_imperative_concurrency / Async Sniff Test] crates/infra/src/event_processor.rs:7-12** -- The function processes events sequentially. The async stream provides zero concurrency benefit. Either use bounded concurrency via combinators, or justify why strict ordering is required. A sync function iterating a `Vec<Event>` would be simpler and equally correct if ordering is the goal. See `references/stream-patterns.md` for `buffer_unordered` and `for_each_concurrent` examples.\n\n## DELEGATED FINDINGS (3)\n\n1. `mut results` at line 6 and `results.push(result)` at line 11 -- mutable accumulation via push loop. Handled by functional-rust (no-mut rule). The combinator pipeline via `.collect()` eliminates this entirely.\n\n2. Return type mismatch: function signature declares no return type (implicitly `()`), but body ends with `Ok(results)` which requires `Result<Vec<_>, _>`. This code does not compile as written. Handled by functional-rust (type correctness).\n\n3. `event.is_relevant()` at line 8 is a sync call inside an async function -- acceptable if fast, but no timing evidence provided. Handled by functional-rust (sync/async boundary).\n\n## CRITICAL FINDINGS (1)\n\n1. No benchmark evidence exists for this async hot path. No `cargo bench` output, no criterion throughput baselines, no concurrency scaling numbers at N=1, N=8, N=64. Stream processing pipelines MUST have baseline benchmarks. Performance claims without criterion output are worthless. Rule: `benchmarks_or_no_merge`. See `references/benchmark-patterns.md` for criterion async benchmark templates.\n\n## EXECUTION EVIDENCE / STATIC ANALYSIS\n\nMode: SNIPPET (no Cargo.toml on disk). All findings below are STATIC ANALYSIS, not EXECUTION.\n\n### Static Pattern Scans\n\n| Pattern | Result | Finding |\n|---------|--------|---------|\n| `while let Some(_) = stream.next().await` | MATCH at line 7 | LETHAL: imperative stream loop |\n| `Rc<` | MATCH at line 5 (`Rc::new(ProcessingContext::default())`) | LETHAL: !Send type across .await |\n| `#[tracing::instrument` | NO MATCH | MAJOR: missing instrumentation |\n| `println!\\|eprintln!` | NO MATCH | Clean |\n| `let _ =` | NO MATCH | Clean (no swallowed JoinError) |\n| `buffer_unordered\\|for_each_concurrent` | NO MATCH | LETHAL: no concurrency bound |\n| `tokio::spawn` | NO MATCH | Clean (no spawn in wrong layer) |\n| `.await` count | 2 (lines 7, 9) | Within max 3 limit |\n| Function line count | ~12 lines | Within max 60 limit |\n\n### Predicted Clippy Lint Outcomes\n\n| Lint | Prediction | Reasoning |\n|------|-----------|-----------|\n| `clippy::unused_async` | WOULD NOT FIRE | Function contains `.await` points |\n| `clippy::await_holding_refcell_ref` | WOULD FIRE | `Rc<ProcessingContext>` is held across `.await` points (lines 7, 9). Rc uses non-atomic ref counting; the borrow lives across yield points. |\n| `clippy::large_futures` | DEPENDS ON EVENT SIZE | Cannot determine without knowing Event/ProcessingContext size |\n| `clippy::await_holding_lock` | WOULD NOT FIRE | No std::sync::Mutex present |\n\n### Compilation Check (PREDICTED)\n\nThe code as submitted does NOT compile:\n\n- Line 4: `pub async fn process_event_stream(mut stream: impl Stream<Item = Event> + Unpin)` -- no return type annotation, implicitly returns `()`\n- Line 25: `Ok(results)` -- returns `Result<Vec<_>, _>`\n\nThis is a type mismatch. The signature must declare `-> Result<Vec<ProcessResult>, SomeError>`.\n\n## MANDATE\n\n1. **Replace `Rc` with `Arc`** -- Change `use std::rc::Rc` to `use std::sync::Arc` and `Rc::new(...)` to `Arc::new(...)`. Non-negotiable for multi-threaded Tokio. See `references/send-sync-ownership.md`.\n\n2. **Replace the imperative loop with a combinator pipeline** -- Remove `while let Some(event) = stream.next().await`. Use `stream.filter().map().buffer_unordered(N)` or `.for_each_concurrent(N, ...)` with an explicit concurrency bound (e.g., N=32). See `references/stream-patterns.md` for the combinator cookbook and decision matrix.\n\n3. **Fix the return type** -- Add `-> Result<Vec<ProcessResult>, SomeError>` to the function signature.\n\n4. **Add `#[tracing::instrument]`** -- Annotate with `#[tracing::instrument(skip(stream))]` or equivalent. See `references/observability-reference.md`.\n\n5. **Handle errors from `process(enriched).await`** -- Propagate with `?` or explicitly handle with `.map_err()`. Never silently collect results without error inspection. See `references/observability-reference.md` for error chain preservation.\n\n6. **Add criterion benchmarks** -- Create throughput baselines at N=1, N=8, N=64 concurrency levels. No numbers = no merge. See `references/benchmark-patterns.md` for async benchmark templates.\n\n7. **Verify cancellation safety** -- Document what happens if the future is dropped mid-enrichment or mid-processing. Use two-phase commit if side effects are involved. See `references/cancellation-safety.md`.\n"}], "grading": null}, {"id": "eval-2-imperative-stream-loop-without_skill", "prompt": "Review this async stream processing code for correctness and performance:\n\n```rust\n// crates/infra/src/event_processor.rs\nuse futures::StreamExt;\nuse std::rc::Rc;\n\npub async fn process_event_stream(mut stream: impl Stream<Item = Event> + Unpin) {\n    let context = Rc::new(ProcessingContext::default());\n    let mut results = Vec::new();\n\n    while let Some(event) = stream.next().await {\n        if event.is_relevant() {\n            let enriched = context.enrich(event);\n            let result = process(enriched).await;\n            results.push(result);\n        }\n    }\n\n    Ok(results)\n}\n```", "eval_id": 2, "outputs": [{"name": "review.md", "type": "text", "content": "# Code Review: `process_event_stream`\n\n## Summary\n\nThis function processes a stream of events, filtering relevant ones, enriching them with a shared context, and collecting the results. The code has several correctness issues and performance concerns.\n\n---\n\n## Correctness Issues\n\n### 1. Return Type Mismatch (CRITICAL - Won't Compile)\n\nThe function signature declares `-> ()` (no return type), but the body ends with `Ok(results)`. This function either needs to return `Result<Vec<ProcessResult>, SomeError>` or the `Ok(results)` line is erroneous. As written, this code will not compile.\n\n### 2. `Rc` is Not `Send` (CRITICAL - Won't Work in Async Contexts)\n\n`Rc<ProcessingContext>` is `!Send`. Many async runtimes (tokio, async-std) require futures to be `Send` when spawning tasks or when the future crosses `.await` points in certain contexts. The `process(enriched).await` call means this future holds `context` (via the `Rc`) across an `.await` point. If this function is ever used with `tokio::spawn` or within a `Send`-requiring context, it will fail at compile time.\n\n**Fix**: Replace `Rc` with `Arc`:\n```rust\nuse std::sync::Arc;\nlet context = Arc::new(ProcessingContext::default());\n```\n\nIf `ProcessingContext` needs interior mutability, use `Arc<Mutex<ProcessingContext>>` or `Arc<RwLock<ProcessingContext>>` depending on the read/write pattern.\n\n### 3. `context` is Shared but Never Mutated (Design Smell)\n\nThe `Rc<ProcessingContext>` is created but never cloned or shared with anything else. If `enrich()` only needs `&self`, there is no reason to heap-allocate it with `Rc` at all. A simple stack-allocated value would suffice:\n\n```rust\nlet context = ProcessingContext::default();\n```\n\nIf `enrich()` needs `&mut self`, the code has a deeper problem since `Rc` does not allow mutable access without `RefCell`, which is not present here.\n\n### 4. `results` Grows Unbounded\n\nThe `results` vector grows without any limit. For a long-running or infinite stream, this will eventually exhaust memory. Consider:\n\n- Processing results as they are arrive (e.g., batching or writing to a sink)\n- Imposing a capacity limit with backpressure\n- Using `Vec::with_capacity()` if a reasonable upper bound is known\n\n---\n\n## Performance Issues\n\n### 1. Sequential `await` in the Loop Body\n\nEach relevant event blocks on `process(enriched).await` before the next event is pulled from the stream. This means processing is fully sequential with no concurrency. If `process()` involves I/O (network, disk), this leaves throughput on the table.\n\n**Improvement**: Use `stream::buffer_unordered()` or `FuturesUnordered` to process multiple events concurrently:\n\n```rust\nuse futures::stream::FuturesUnordered;\n\nlet mut futures = FuturesUnordered::new();\n\nwhile let Some(event) = stream.next().await {\n    if event.is_relevant() {\n        let enriched = context.enrich(event);\n        futures.push(process(enriched));\n    }\n\n    // Collect completed results\n    while let Some(result) = futures.next().await {\n        results.push(result);\n    }\n}\n// Drain remaining futures\nwhile let Some(result) = futures.next().await {\n    results.push(result);\n}\n```\n\nOr more idiomatically with stream combinators:\n\n```rust\nstream\n    .filter(|event| event.is_relevant())\n    .map(|event| context.enrich(event))\n    .buffer_unordered(concurrency_limit)\n    .collect::<Vec<_>>()\n    .await\n```\n\n### 2. No `Vec::with_capacity()`\n\nIf there is any estimate of how many results to expect, pre-allocating with `Vec::with_capacity(n)` avoids repeated re-allocations as the vector grows.\n\n### 3. Filtering is Not Overlapped with Processing\n\nThe `is_relevant()` check and `enrich()` call happen synchronously before the `.await`, which is fine. However, the entire loop body is serialized. There is an opportunity to prefetch or pipeline enrichment while awaiting the previous `process()` call.\n\n---\n\n## Style and Robustness Concerns\n\n### 1. No Error Handling\n\nThe `process(enriched).await` call presumably returns a `Result`, but there is no `.?` or `match` on it. Errors are silently collected into `results` (if `results` is `Vec<Result<...>>`) or the type doesn't line up. Either way, the code lacks explicit error handling or logging.\n\n### 2. The `stream` Parameter Could Be More Explicit\n\nUsing `impl Stream<Item = Event> + Unpin` is fine for a generic function, but consider whether a bounded channel or a specific stream type would be more appropriate for the calling context.\n\n### 3. Missing Imports and Types\n\nSeveral types are referenced but not defined in the snippet (`Event`, `ProcessingContext`, `ProcessResult`, `process()`). This is expected for a snippet, but the review assumes standard patterns for these.\n\n---\n\n## Suggested Rewrite\n\nAddressing the above issues:\n\n```rust\nuse futures::StreamExt;\nuse std::sync::Arc;\n\nconst MAX_CONCURRENCY: usize = 32;\n\npub async fn process_event_stream(\n    stream: impl Stream<Item = Event> + Unpin,\n) -> Result<Vec<ProcessResult>, ProcessingError> {\n    let context = ProcessingContext::default(); // stack-allocated, no Rc needed\n\n    let results: Vec<ProcessResult> = stream\n        .filter(|event| event.is_relevant())\n        .map(|event| context.enrich(event))\n        .map(|enriched| process(enriched))\n        .buffer_unordered(MAX_CONCURRENCY)\n        .collect::<Vec<_>>()\n        .await\n        .into_iter()\n        .collect::<Result<Vec<_>, _>>()?;\n\n    Ok(results)\n}\n```\n\nThis version:\n- Uses `Arc` instead of `Rc` if sharing is needed (or plain stack value if not)\n- Returns a proper `Result` type\n- Processes events concurrently with bounded parallelism\n- Propagates errors explicitly\n- Is more idiomatic Rust using stream combinators\n\n---\n\n## Severity Summary\n\n| Issue | Severity |\n|---|---|\n| Return type mismatch (`Ok(results)` with `-> ()`) | **Compile error** |\n| `Rc` across `.await` (not `Send`) | **Compile error in many contexts** |\n| No error handling on `process()` result | **Bug / Silent failure** |\n| Unbounded `results` growth | **Performance / OOM risk** |\n| Fully sequential async processing | **Performance** |\n| Unnecessary `Rc` allocation | **Minor / Style** |\n"}], "grading": null}, {"id": "eval-3-correct-async-shell-with_skill", "prompt": "Review this well-structured async Rust service for any issues or suggestions:\n\n```rust\n// crates/domain/order.rs\npub struct OrderId(String);\npub struct CustomerId(String);\n\npub enum Order { Draft(Draft), Validated(Validated), Priced(Priced) }\n\npub struct Draft { pub customer_id: CustomerId, pub items: smallvec::SmallVec<[String; 4]> }\npub struct Validated { pub customer_id: CustomerId, pub items: smallvec::SmallVec<[String; 4]> }\npub struct Priced { pub customer_id: CustomerId, pub total: Cents }\n\npub fn validate_order(draft: Draft) -> Result<Validated, DomainError> {\n    if draft.items.is_empty() { return Err(DomainError::NoItems); }\n    Ok(Validated { customer_id: draft.customer_id, items: draft.items })\n}\n\n// crates/domain/repo.rs\npub trait OrderRepo { async fn save(&self, order: &Order) -> Result<(), DomainError>; }\n\n// crates/api/handlers.rs\n#[tracing::instrument(skip(repo), fields(user_id = %cmd.customer_id))]\npub async fn handle_create(\n    cmd: CreateOrderCmd,\n    repo: &dyn OrderRepo,\n) -> Result<OrderResponse, AppError> {\n    let draft = Order::Draft { customer_id: cmd.customer_id, items: cmd.items };\n    let validated = validate_order(draft)?;\n    repo.save(&Order::Validated(validated)).await?;\n    Ok(OrderResponse::from(validated))\n}\n```", "eval_id": 3, "outputs": [{"name": "review.md", "type": "text", "content": "# Async Rust Review: Order Service (Domain Types, Port Trait, HTTP Handler)\n\n**Mode**: SNIPPET | **Date**: 2026-04-03\n**Code**: Inline submission -- `crates/domain/order.rs`, `crates/domain/repo.rs`, `crates/api/handlers.rs`\n**Reviewer**: async-rust-reviewer skill v1.0.0\n\n---\n\n## VERDICT: APPROVED\n\nThis is a textbook example of the sync-core/async-shell pattern. The code correctly separates synchronous domain logic from asynchronous infrastructure orchestration. Zero lethal findings.\n\n---\n\n## LETHAL FINDINGS (0)\n\nNone.\n\n---\n\n## MAJOR FINDINGS (0)\n\nNone.\n\n---\n\n## DELEGATED FINDINGS (0)\n\nNone that are visible in the submitted snippet. The domain types use owned `String` in newtype wrappers without `#[derive(...)]` visible, but that is a functional-rust concern, not an async concern.\n\n---\n\n## CRITICAL FINDINGS (1)\n\n1. **No benchmark evidence for async hot path** (`crates/api/handlers.rs`, `handle_create`): The `handle_create` handler is an async hot path -- an HTTP endpoint performing I/O-bound persistence. No criterion benchmarks were provided. Per `benchmarks_or_no_merge` principle and rules `bench_throughput_baseline` / `bench_async_vs_sync`, throughput baselines must be established for this endpoint before production deployment. In snippet mode this is expected (no project on disk), but the mandate stands for any real crate: create `benches/async_perf.rs` with criterion benchmarks comparing sync-core vs async-shell throughput. See `references/benchmark-patterns.md` for the correct setup.\n\n---\n\n## PHASE 1: Spawn Discipline & Runtime Hygiene\n\n**PASS**\n\n| Check | Result |\n|-------|--------|\n| `tokio::spawn` in domain crate | NO MATCH -- clean |\n| `tokio::spawn` in handlers | NO MATCH -- no spawn anywhere |\n| `async fn` in domain crate | NO MATCH -- `validate_order` is `pub fn`, not `pub async fn` |\n| Unnecessary async (`async fn` with zero `.await`) | NO MATCH -- `handle_create` has exactly 1 `.await` |\n| CPU-bound work misrouted as async | NO MATCH -- `validate_order` is sync, checks `items.is_empty()` and moves data |\n| Blocking operations in async context | NO MATCH -- no sync I/O or CPU loops in `handle_create` |\n\n**Analysis**:\n\n- `validate_order` in `crates/domain/order.rs` is a synchronous `fn` returning `Result<Validated, DomainError>`. It performs a single check (`draft.items.is_empty()`) and moves data. This is correct: domain logic is pure, synchronous, testable without a runtime.\n\n- `handle_create` in `crates/api/handlers.rs` is `async fn` with exactly one `.await` point: `repo.save(&Order::Validated(validated)).await?`. The async is justified -- it awaits an I/O-bound repository operation. No async wrapper around sync work.\n\n- The sync-core/async-shell boundary is clean: `validate_order` is the sync core, `repo.save()` is the async shell.\n\n- No `tokio::spawn` anywhere. Spawn discipline is trivially satisfied.\n\n**Rule references**: `spawn_at_edge_only`, `no_await_in_calc`, `sync_over_async`, `no_unnecessary_async`, `never_block_runtime`\n\n---\n\n## PHASE 2: Stream Combinators & Concurrency Primitives\n\n**N/A -- no streams present**\n\n| Check | Result |\n|-------|--------|\n| Imperative async loops (`while let Some(_) = stream.next().await`) | NO MATCH |\n| Unbounded `join_all` | NO MATCH |\n| `Vec<JoinHandle>` bookkeeping | NO MATCH |\n| `buffer_unordered` without capacity | NO MATCH |\n\nNo stream processing in the submitted code. The handler performs a single sequential async operation. Nothing to evaluate for combinator discipline.\n\n---\n\n## PHASE 3: Send + Sync Hygiene & Ownership Design\n\n**PASS**\n\n| Check | Result |\n|-------|--------|\n| `Rc<T>` in async context | NO MATCH |\n| `RefCell<T>` in async context | NO MATCH |\n| `std::sync::Mutex` across `.await` | NO MATCH |\n| `Arc<Mutex<T>>` without ladder justification | NO MATCH -- no `Arc<Mutex>` present |\n| Borrowed references across spawn boundaries | NO MATCH -- no spawn |\n| Non-Send state crossing `.await` | NO MATCH |\n\n**Analysis**:\n\n- `OrderId(String)` and `CustomerId(String)` are `Send + Sync`. `String` is `Send + Sync`, and unit-like tuple-struct wrappers inherit those bounds.\n- `smallvec::SmallVec<[String; 4]>` is `Send + Sync` (it stores data inline on the stack for N<=4, falling back to heap; both paths are `Send + Sync`).\n- `handle_create` takes `&dyn OrderRepo` -- a borrowed trait object. No spawning, no `'static` requirements.\n- All types crossing the single `.await` point (`Order::Validated(validated)`) are fully owned and `Send`.\n\n---\n\n## PHASE 4: Cancellation Safety & Pin Awareness\n\n**PASS**\n\n| Check | Result |\n|-------|--------|\n| State mutation before `.await` without recovery | NO MATCH |\n| Partial writes / non-atomic check-then-act | NO MATCH |\n| Unnecessary `Box::pin` | NO MATCH |\n| Self-referential structs without Pin docs | NO MATCH |\n\n**Analysis**:\n\nThe `handle_create` function has a single `.await` point at `repo.save()`. The state before `.await`:\n\n1. `draft` is constructed from `cmd` (sync, instant).\n2. `validated` is produced by `validate_order(draft)?` (sync, pure).\n3. `repo.save(&Order::Validated(validated)).await?` is the only yield point.\n\nIf the Future is dropped at the `.await`:\n- Before `repo.save` completes: the order was never persisted. No corrupted state. The validated value is simply lost -- the caller can retry.\n- After `repo.save` completes: the operation is atomic at the repository level. The adapter implementation is responsible for ensuring atomic writes.\n\nThis matches the canonical \"prepare sync, then single atomic await\" pattern from `references/cancellation-safety.md`. No self-referential futures, no `Pin` concerns, no recursive async.\n\n---\n\n## PHASE 5: Observability & Error Propagation\n\n**PASS**\n\n| Check | Result |\n|-------|--------|\n| `async fn` in shell without `#[instrument]` | NO MATCH -- `handle_create` has `#[tracing::instrument(skip(repo), fields(user_id = %cmd.customer_id))]` |\n| `println!` / `eprintln!` in async | NO MATCH |\n| `tokio::spawn` without span propagation | NO MATCH -- no spawn |\n| `let _ = join_handle.await` | NO MATCH -- no JoinHandle |\n| Error context lost via bare `?` without `.context()` | SEE NOTE below |\n\n**Analysis**:\n\n- `#[tracing::instrument(skip(repo), fields(user_id = %cmd.customer_id))]` is correctly applied:\n  - Skips `repo` (not `Debug`).\n  - Adds structured `user_id` field for trace correlation across async boundaries.\n  - The span covers the entire handler execution, including the `.await`.\n\n- Error propagation uses `?` operator: `validate_order(draft)?` and `repo.save(...).await?`. The error chain is preserved through the `?` operator -- `DomainError` propagates from domain, `AppError` wraps at the shell boundary.\n\n**Minor note (non-blocking)**: The `repo.save()` error propagates via `?` but is not wrapped with `.context()` or `.map_err()` to add handler-level context. Whether this matters depends on how `AppError` and `DomainError` are defined. If `AppError` already preserves the full causal chain, this is fine. If not, consider `.map_err(|e| AppError::persistence(\"failed to persist validated order\", e))?` for richer error chains at the shell boundary. This is a suggestion, not a finding.\n\n---\n\n## PHASE 6: Hexagonal Architecture Boundaries\n\n**PASS (well-structured)**\n\n| Check | Result |\n|-------|--------|\n| Domain crate async deps (`tokio`, `futures`, `async-std`, `async-trait`) | STATIC: not present in snippet -- domain has no async imports |\n| `.await` in domain source | NO MATCH |\n| `spawn` in domain source | NO MATCH |\n| Port trait defined in domain crate | YES -- `OrderRepo` is in `crates/domain/repo.rs` |\n| Only infra adapters contain `.await` | YES -- only `handle_create` in `crates/api/handlers.rs` has `.await` |\n\n**Analysis**:\n\n- **Domain crate** (`crates/domain/order.rs`): Contains `OrderId`, `CustomerId`, `Order` enum with state variants (`Draft`, `Validated`, `Priced`), and a pure sync `validate_order` function. No async dependencies, no `.await`, no `tokio`. Textbook correct.\n\n- **Port trait** (`crates/domain/repo.rs`): `OrderRepo` with `async fn save`. Defined in the domain crate where the domain types live. This is correct placement -- the domain owns the port contract. The `async fn` in the trait is fine with native async fn in traits (stable); no `async-trait` crate needed. The domain crate does not depend on any async runtime.\n\n- **Handler** (`crates/api/handlers.rs`): The presentation layer calls sync domain logic (`validate_order(draft)?`), then awaits the infra adapter (`repo.save(&Order::Validated(validated)).await?`). This matches the canonical pattern from `references/hexagonal-boundaries.md`:\n\n  ```\n  handler: async fn create(req) -> Result<Response, AppError> {\n      let cmd = parse(req)?;\n      let order = use_case.execute(cmd)?;    // sync domain\n      repo.save(&order).await?;               // async infra\n      Ok(response)\n  }\n  ```\n\n- **Dependency direction**: Domain -> no deps. Application -> domain. Infra -> domain. Presentation -> application + infra. Correct.\n\n- **Type-state pattern**: `Order` enum with `Draft`, `Validated`, `Priced` variants enforces the state machine at the type level. `validate_order` consumes `Draft` and produces `Validated` -- you cannot persist an unvalidated order. This is excellent DDD discipline.\n\n---\n\n## PHASE 7: Ruthless Async Simplicity\n\n**PASS**\n\n| Check | Result |\n|-------|--------|\n| Async function > 60 lines | NO -- `handle_create` is ~4 lines of logic |\n| > 3 `.await` points per function | NO -- exactly 1 `.await` |\n| > 1 `tokio::spawn` per handler | NO -- 0 spawns |\n| Speculative concurrency / YAGNI violations | NO -- no concurrency primitives at all |\n| Async sniff test: would sync be simpler? | NO -- `repo.save()` requires async I/O |\n\n**Analysis**:\n\nThe code is boring and obvious. That is the highest compliment for async Rust. The handler does exactly three things: construct a draft, validate it synchronously, persist it asynchronously. No cleverness, no over-engineering, no speculative concurrency.\n\n---\n\n## STATIC ANALYSIS\n\nThe submitted code is an inline snippet with no Cargo.toml on disk. The verification gate commands cannot be executed. All evidence below is STATIC ANALYSIS, not EXECUTION.\n\n### Pattern Scans\n\n| Pattern | Scan Result |\n|---------|------------|\n| `.await` | 1 occurrence: `repo.save(&Order::Validated(validated)).await?` in `crates/api/handlers.rs` |\n| `.await` in `crates/domain/` | NO MATCH |\n| `tokio::spawn` | NO MATCH anywhere |\n| `spawn_local` / `spawn_blocking` | NO MATCH anywhere |\n| `Rc<` | NO MATCH |\n| `RefCell` | NO MATCH |\n| `std::sync::Mutex` | NO MATCH |\n| `Arc<Mutex<` | NO MATCH |\n| `println!` / `eprintln!` | NO MATCH |\n| `while let Some(_) = stream.next().await` | NO MATCH |\n| `join_all` | NO MATCH |\n| `Vec<JoinHandle>` | NO MATCH |\n| `Box::pin` | NO MATCH |\n| `#[tracing::instrument]` | 1 occurrence: on `handle_create` |\n\n### Predicted Clippy Outcomes\n\n| Lint | Prediction | Reasoning |\n|------|-----------|-----------|\n| `clippy::unused_async` | WOULD NOT FIRE | `handle_create` has exactly 1 `.await` -- async is used |\n| `clippy::await_holding_lock` | WOULD NOT FIRE | No locks held across `.await` |\n| `clippy::await_holding_refcell_ref` | WOULD NOT FIRE | No `RefCell` borrows across `.await` |\n| `clippy::large_futures` | WOULD NOT FIRE | Future is small: one `.await`, simple stack types |\n| `clippy::pedantic` | POSSIBLE WARNINGS | Newtype wrappers without `Debug`/`Display` derives, but these are functional-rust concerns |\n\n### Verification Gate (Predicted)\n\n| Layer | Predicted Result | Reasoning |\n|-------|-----------------|-----------|\n| Layer 1: Async clippy lints | PASS | No banned patterns detected |\n| Layer 2: Domain zero async deps | PASS | No async imports in domain snippet |\n| Layer 3: No `.await`/spawn in domain | PASS | Static scan confirms clean |\n| Layer 4: Functional-rust sync gate | UNKNOWN | Depends on code not shown (derive macros, formatting) |\n| Layer 5: Tests | UNKNOWN | No tests provided in snippet |\n| Layer 6: Benchmarks | CRITICAL GAP | No benchmarks provided -- see Critical Finding #1 |\n| Layer 7: tokio-console | UNKNOWN | No project to inspect |\n\n---\n\n## MANDATE\n\nNone required. No changes needed.\n\nThis code is a reference implementation of the sync-core/async-shell architecture:\n\n- Domain logic is pure, synchronous, and has zero async dependencies.\n- The port trait (`OrderRepo`) is defined in the domain crate with `async fn` (correct -- the domain owns the contract, not the implementation).\n- The handler is a thin async shell: call sync domain, await infra adapter, return response.\n- `#[tracing::instrument]` is correctly applied with appropriate skips and structured fields.\n- Cancellation safety is inherent: single atomic `.await` after pure sync preparation.\n- Send+Sync hygiene is clean: no `Rc`, no `RefCell`, no `Mutex` across `.await`.\n- Type-state pattern (`Draft` -> `Validated` -> `Priced`) enforces business invariants at compile time.\n\n**Recommendation**: Use this code as a template for all handlers in the project.\n"}], "grading": null}, {"id": "eval-3-correct-async-shell-without_skill", "prompt": "Review this well-structured async Rust service for any issues or suggestions:\n\n```rust\n// crates/domain/order.rs\npub struct OrderId(String);\npub struct CustomerId(String);\n\npub enum Order { Draft(Draft), Validated(Validated), Priced(Priced) }\n\npub struct Draft { pub customer_id: CustomerId, pub items: smallvec::SmallVec<[String; 4]> }\npub struct Validated { pub customer_id: CustomerId, pub items: smallvec::SmallVec<[String; 4]> }\npub struct Priced { pub customer_id: CustomerId, pub total: Cents }\n\npub fn validate_order(draft: Draft) -> Result<Validated, DomainError> {\n    if draft.items.is_empty() { return Err(DomainError::NoItems); }\n    Ok(Validated { customer_id: draft.customer_id, items: draft.items })\n}\n\n// crates/domain/repo.rs\npub trait OrderRepo { async fn save(&self, order: &Order) -> Result<(), DomainError>; }\n\n// crates/api/handlers.rs\n#[tracing::instrument(skip(repo), fields(user_id = %cmd.customer_id))]\npub async fn handle_create(\n    cmd: CreateOrderCmd,\n    repo: &dyn OrderRepo,\n) -> Result<OrderResponse, AppError> {\n    let draft = Order::Draft { customer_id: cmd.customer_id, items: cmd.items };\n    let validated = validate_order(draft)?;\n    repo.save(&Order::Validated(validated)).await?;\n    Ok(OrderResponse::from(validated))\n}\n```", "eval_id": 3, "outputs": [{"name": "review.md", "type": "text", "content": "# Code Review: Async Rust Order Service\n\n## Overall Assessment\n\nThe code demonstrates a solid grasp of type-state modeling for order lifecycle transitions. The use of `Draft -> Validated -> Priced` as distinct types within an enum is a good pattern for enforcing domain invariants at compile time. Below are findings organized by severity.\n\n---\n\n## Critical Issues\n\n### 1. `Draft` variant construction does not go through `Order::Draft` correctly\n\nIn `handle_create`, the line:\n\n```rust\nlet draft = Order::Draft { customer_id: cmd.customer_id, items: cmd.items };\n```\n\nThis uses struct literal syntax on an enum variant, which is valid in Rust (since `Order::Draft` is a tuple-variant-like path to `Draft`). However, the actual type of `draft` here is `Draft`, not `Order`. Then `validate_order` takes a `Draft` and returns `Result<Validated, DomainError>`, which is correct. The real issue is the next line:\n\n```rust\nrepo.save(&Order::Validated(validated)).await?;\n```\n\n`validated` is of type `Validated`, and `Order::Validated(validated)` constructs the enum variant. This works, but it means the `Order` enum is only being used as a wrapper at the boundary of `repo.save`. The internal logic operates on the inner types directly, which is fine, but worth noting as a design consideration (see Design section below).\n\n### 2. `handle_create` uses `?` on `validate_order` but `DomainError` must convert to `AppError`\n\nThe line:\n\n```rust\nlet validated = validate_order(draft)?;\n```\n\nThe `?` operator requires `DomainError` to implement `Into<AppError>`. This is not shown in the provided code. If this conversion is not implemented, this will not compile. This is not necessarily a bug if the conversion exists elsewhere, but it is a correctness concern that should be verified.\n\n---\n\n## Moderate Issues\n\n### 3. No `Debug`, `Clone`, ` PartialEq` derives on domain types\n\n`OrderId`, `CustomerId`, `Draft`, `Validated`, `Priced`, and `Order` all lack common derives. At minimum `Debug` is needed for tracing/logging, and `Clone` is commonly needed in async contexts where data may need to be cloned across task boundaries. This will cause friction in practice.\n\n### 4. `OrderId` and `CustomerId` are newtype wrappers with no validation\n\nBoth `OrderId(String)` and `CustomerId(String)` accept any string, including empty strings. The constructor (not shown) should enforce invariants (non-empty, valid format, etc.). If `cmd.customer_id` comes directly from user input without validation, this is a gap.\n\n### 5. `Order` enum does not encode a `Priced` transition\n\nThere is a `Priced` variant but no `price_order` function. This is presumably not yet implemented. The type-state model suggests this is incomplete. No critical issue, but the model is currently half-built.\n\n### 6. Items are `String` without domain meaning\n\n`pub items: smallvec::SmallVec<[String; 4]>` stores item identifiers as bare strings. This should be a proper type like `ItemId` or `OrderLine` with quantity and SKU. Using raw strings loses type safety.\n\n---\n\n## Minor Issues\n\n### 7. `OrderRepo::save` takes `&Order` but may need owned or specific variant\n\nThe trait method `async fn save(&self, order: &Order) -> Result<(), DomainError>` takes a reference to the full `Order` enum. If the repo only needs to persist `Validated` or `Priced` orders, the signature could be tightened to accept the specific variant. As written, the repo must handle all variants internally, which widens the API surface.\n\n### 8. `tracing::instrument` attribute placement\n\n```rust\n#[tracing::instrument(skip(repo), fields(user_id = %cmd.customer_id))]\n```\n\nThe `fields(user_id = %cmd.customer_id)` syntax in the attribute captures the value at the start of the span. If `customer_id` does not implement `Display`, this will fail to compile. Given that `CustomerId` is a newtype around `String`, it likely does not implement `Display` unless explicitly derived. Verify this.\n\n### 9. `smallvec` dependency for a domain model\n\nUsing `smallvec::SmallVec` in the domain types introduces an implementation detail (stack-optimized vector) into the domain layer. This is a performance optimization that leaks into the type signature. If the domain layer is meant to be pure, consider using `Vec` or a custom collection type and applying the optimization at the infrastructure boundary.\n\n---\n\n## Design Suggestions\n\n### 10. Type-state pattern is partially applied\n\nThe `Order` enum wraps `Draft`, `Validated`, and `Priced`, but `validate_order` takes `Draft` directly and returns `Validated` directly, bypassing the `Order` enum. Consider two cleaner approaches:\n\n**Option A: Fully typed transitions**\n\n```rust\nimpl Draft {\n    pub fn validate(self) -> Result<Validated, DomainError> { ... }\n}\n```\n\nThis makes the transition a method on the source type, keeping the state machine self-documenting.\n\n**Option B: Order owns the transitions**\n\n```rust\nimpl Order {\n    pub fn validate(self) -> Result<Order, DomainError> {\n        match self {\n            Order::Draft(d) => Ok(Order::Validated(d.validate()?)),\n            _ => Err(DomainError::InvalidState),\n        }\n    }\n}\n```\n\nThis keeps `Order` as the single entry point but requires runtime matching.\n\nThe current code sits between these two approaches, which can confuse readers about where the state machine logic lives.\n\n### 11. Error type design\n\n`DomainError` and `AppError` are referenced but not defined in the snippet. For an async service, consider:\n\n- `DomainError` should be specific (e.g., `NoItems`, `InvalidCustomerId`, `InvalidState`).\n- `AppError` should wrap `DomainError` and add infrastructure concerns (e.g., `Database`, `Serialization`, `Timeout`).\n- Both should implement `std::error::Error` and have clear `Display` implementations.\n\n### 12. Async trait consideration\n\n`OrderRepo` uses `async fn` in a trait. This requires either the `async fn in trait` feature (stabilized in Rust 1.75) or the `async-trait` crate. If targeting Rust 1.75+, this is fine. If supporting older compilers, this will need `#[async_trait]`. Verify the MSRV.\n\n---\n\n## Summary\n\n| Category | Count |\n|----------|-------|\n| Critical | 2 |\n| Moderate | 4 |\n| Minor | 3 |\n| Design | 3 |\n\nThe core type-state pattern is sound and the code is readable. The main risks are around error conversion correctness (item 2), missing derives that will cause practical friction (item 3), and the domain model being incomplete (items 5, 6). The type-state pattern would benefit from being applied more consistently (item 10).\n"}], "grading": null}], "previous_feedback": {}, "previous_outputs": {"eval-1-spawn-in-domain-with_skill": [{"name": "review.md", "type": "text", "content": "# Async Rust Code Review\n\n**File**: `crates/domain/order_processor.rs`\n**Date**: 2026-04-03\n**Reviewer**: async-rust-reviewer (skill v1.0.0)\n\n---\n\n## VERDICT: REJECTED\n\nThis code fails at Phase 1 (Spawn Discipline) with lethal findings. It would\nalso fail at Phases 2, 3, 4, 5, 6, and 7. The review proceeds through all\nphases because every phase reveals additional violations.\n\n---\n\n## PHASE 1: Spawn Discipline & Runtime Hygiene\n\n### LETHAL-1: tokio::spawn inside domain crate\n\n**Location**: `crates/domain/order_processor.rs`, line 8 (`tokio::spawn(...)`)\n\nThe file path is `crates/domain/order_processor.rs`. Domain crate must have\nzero async dependencies. `tokio::spawn` is a runtime primitive. It does not\nbelong in domain logic -- ever. Spawn is an Action and belongs exclusively in\nthe Actions layer (handlers, infra adapters, main). This violates rule\n`spawn_at_edge_only` (level: fatal).\n\n### LETHAL-2: async fn in domain crate\n\n**Location**: `crates/domain/order_processor.rs`, line 3 (`pub async fn process_orders`)\n\nThe function `process_orders` is declared `async` and lives in `crates/domain/`.\nDomain logic must be pure, synchronous, and testable without a runtime. The\npresence of `async fn` in the domain crate means the domain now depends on an\nasync runtime. This violates rule `no_await_in_calc` (level: fatal) and\n`domain_zero_async_deps` (level: fatal).\n\n### LETHAL-3: CPU-bound work treated as async\n\n**Location**: `crates/domain/order_processor.rs`, lines 10-11\n\n```rust\nlet validated = validate_order(&order)?;\nlet priced = price_order(&validated);\n```\n\n`validate_order` and `price_order` appear to be synchronous domain calculations\n(pure functions with no `.await`). Wrapping them inside `tokio::spawn` and\nforcing them onto async task contexts is an anti-pattern. CPU-bound work must\nuse Rayon or remain synchronous -- not be falsely paralleled via async tasks.\nThis violates rule `sync_over_async` (level: fatal) and\n`workload_routing` (level: error).\n\n### LETHAL-4: Unbounded spawn loop\n\n**Location**: `crates/domain/order_processor.rs`, lines 6-15\n\n```rust\nfor order in orders {\n    let handle = tokio::spawn(async move { ... });\n    handles.push(handle);\n}\n```\n\nThis spawns one task per order with no bound on concurrency. If `orders`\ncontains 100,000 items, 100,000 tasks are spawned simultaneously. This is a\ndenial-of-service vector that will exhaust memory and scheduler resources under\nload. This violates rule `bounded_concurrency` (level: fatal).\n\n---\n\n## PHASE 2: Stream Combinators & Concurrency Primitives\n\n### LETHAL-5: Imperative task bookkeeping with Vec<JoinHandle>\n\n**Location**: `crates/domain/order_processor.rs`, lines 5 and 17-19\n\n```rust\nlet mut handles = Vec::new();\n...\nfor handle in handles {\n    handle.await.map_err(|_| AppError::TaskFailed)??;\n}\n```\n\nManual `Vec<JoinHandle>` collection followed by a loop-join is the textbook\nanti-pattern. The code must use `tokio::task::JoinSet` or\n`futures::stream::FuturesUnordered` or `buffer_unordered(N)` with an explicit\nconcurrency bound. This violates rule `no_imperative_concurrency` (level: error).\n\n### MAJOR-1: No structured concurrency\n\nThe spawned tasks have no lifecycle management. If `process_orders` is\ncancelled (e.g., via `select!` or timeout), the spawned tasks continue running\nindefinitely. `JoinSet` would abort remaining tasks on drop, providing proper\nstructured concurrency. The current code leaks work on cancellation.\n\n---\n\n## PHASE 3: Send + Sync Hygiene & Ownership Design\n\n### LETHAL-6: std::sync::Mutex across .await in spawned tasks\n\n**Location**: `crates/domain/order_processor.rs`, lines 13-14\n\n```rust\nlet mut guard = results_clone.lock().unwrap();\nguard.push(saved);\n```\n\nInside the spawned task, `results_clone.lock().unwrap()` acquires a\n`std::sync::Mutex`. While the `.unwrap()` is not technically across an `.await`\nhere, this pattern is catastrophically fragile: the guard is held while `saved`\n(which may involve complex Clone logic) is pushed. More critically, this same\n`Arc<Mutex<Vec<...>>>` is accessed from the outer function at line 21:\n\n```rust\nlet guard = results.lock().unwrap();\n```\n\nUsing `std::sync::Mutex` in async contexts where the lock guard exists in the\nsame scope as `.await` points (the spawned tasks do contain `.await` at\n`save_to_db`) is a clippy violation (`clippy::await_holding_lock`). This\nviolates rule `arc_over_rc` (level: fatal).\n\n### LETHAL-7: .unwrap() on Mutex lock -- panics kill the runtime\n\n**Location**: `crates/domain/order_processor.rs`, lines 13 and 21\n\n```rust\nlet mut guard = results_clone.lock().unwrap();  // line 13\nlet guard = results.lock().unwrap();             // line 21\n```\n\n`.unwrap()` on a `Mutex::lock()` call will panic if the Mutex is poisoned (i.e.,\na previous holder panicked). In an async context, a panic in a spawned task\npoisons the Mutex, and then every subsequent `.lock().unwrap()` panics as well,\ncausing a cascade failure across the entire runtime. This violates the\nfunctional-rust zero-panic mandate and rule `arc_over_rc`.\n\n### MAJOR-2: Arc<Mutex<Vec<...>>> without priority ladder justification\n\n**Location**: `crates/domain/order_processor.rs`, line 4\n\n```rust\nlet results = Arc::new(Mutex::new(Vec::new()));\n```\n\nThis is the first-resort pattern, not the last. The priority ladder demands:\n\n1. **Ownership transfer** -- each task could return its result, no sharing needed.\n2. **Message passing** -- tasks could send results through an `mpsc` channel.\n3. **FuturesUnordered/buffer_unordered** -- collect results naturally from the stream.\n\nNone of these alternatives were considered. `Arc<Mutex<Vec<...>>>` serializes\naccess and defeats the parallelism the code is trying to achieve. This violates\nrule `avoid_arc_mutex_default` (level: error).\n\n---\n\n## PHASE 4: Cancellation Safety & Pin Awareness\n\n### LETHAL-8: Cancellation-unsafe state mutation\n\n**Location**: `crates/domain/order_processor.rs`, lines 11-13\n\n```rust\nlet saved = save_to_db(&priced).await?;        // .await point\nlet mut guard = results_clone.lock().unwrap(); // state mutation after await\nguard.push(saved);\n```\n\nIf the spawned task's Future is dropped (cancelled) between `save_to_db` and\nthe `push`, the database write has committed but the result is lost from the\nin-memory collection. This creates a state inconsistency: the database has the\norder, but the returned `Vec<ProcessedOrder>` does not contain it. The caller\nhas no way to know which orders were actually persisted.\n\nAdditionally, `save_to_db` itself is a stateful `.await` -- if cancelled during\nthe database write, the operation may be partially committed depending on the\ndatabase driver's transaction semantics. This violates rule\n`cancellation_safe_design` (level: fatal).\n\n---\n\n## PHASE 5: Observability & Error Propagation\n\n### MAJOR-3: No tracing instrumentation\n\n**Location**: `crates/domain/order_processor.rs`, line 3\n\nThe async function `process_orders` has no `#[tracing::instrument]` attribute.\nInside the spawned tasks, there are no span creations, no `tracing::info!`,\n`tracing::debug!`, or `tracing::error!` calls. If any task fails in production,\nthere is zero observability into what happened, which order caused the failure,\nor how long each step took. This violates rule `tracing_instrument` (level: error).\n\n### MAJOR-4: No span propagation into spawned tasks\n\n**Location**: `crates/domain/order_processor.rs`, line 8\n\n`tokio::spawn` is called without `.instrument(tracing::info_span!(...))`. Spawned\ntasks inherit no trace context. In production, you cannot correlate a failed\norder processing task back to the request that triggered it. This violates rule\n`span_propagation_in_spawn` (level: error).\n\n### MAJOR-5: Error context lost in double-? operator\n\n**Location**: `crates/domain/order_processor.rs`, line 18\n\n```rust\nhandle.await.map_err(|_| AppError::TaskFailed)??;\n```\n\nThe `??` is a double-`?` operator. The inner `?` unwraps the task's `Result`\n(if it succeeded with `Ok(Ok(saved))` or `Ok(Err(e))`), and the outer `?`\nhandles the `Result<Result<...>, JoinError>`. But the `map_err(|_| AppError::TaskFailed)`\ndiscards the `JoinError` entirely -- no message, no cause chain, no way to\ndiagnose why the task failed (was it a panic? was it cancelled?). This violates\nrule `async_error_chain` (level: error).\n\n### MAJOR-6: Silently discarding results from spawned tasks\n\n**Location**: `crates/domain/order_processor.rs`, lines 13-14\n\nThe spawned task computes `saved`, pushes it into the shared `results` Vec, and\nthen returns `Ok(saved)` via the JoinHandle. But the outer code at line 18 calls\n`handle.await.map_err(...)??` which evaluates to `Ok(saved)` -- and this value\nis immediately discarded (not bound to a variable). The only result collection\nhappens through the `Arc<Mutex<Vec<...>>>`. The return value from the spawned\ntask is wasted, making the code confusing and the ownership model unclear.\n\n---\n\n## PHASE 6: Hexagonal Architecture Boundaries\n\n### LETHAL-9: Domain crate depends on tokio (implicit)\n\n**Location**: `crates/domain/order_processor.rs`, lines 1 and 8\n\nThe file imports `std::sync::{Arc, Mutex}` and uses `tokio::spawn`. The path\n`crates/domain/order_processor.rs` places this file in the domain crate. Even\nif `tokio` were not explicitly imported (it's referenced via full path\n`tokio::spawn`), the domain crate's `Cargo.toml` would need `tokio` as a\ndependency for this to compile. Domain must have ZERO async dependencies:\nno tokio, no futures, no async-std, no async-trait. This violates rule\n`domain_zero_async_deps` (level: fatal).\n\n### MAJOR-7: save_to_db called from domain\n\n**Location**: `crates/domain/order_processor.rs`, line 11\n\n```rust\nlet saved = save_to_db(&priced).await?;\n```\n\n`save_to_db` is an infrastructure concern (database persistence). Calling it\nfrom domain logic breaks the hexagonal boundary. The domain should not know\nabout databases. Persistence must be delegated to an infrastructure adapter\nvia a trait (port). This violates rule `adapter_owns_async` (level: error).\n\n---\n\n## PHASE 7: Ruthless Async Simplicity\n\n### MAJOR-8: The Async Sniff Test -- this should be sync\n\n**Location**: Entire function, lines 3-23\n\nThe async sniff test: Would a sync version of this code be simpler and correct?\nYes. The entire function could be:\n\n```\nfn process_orders(orders: Vec<Order>) -> Result<Vec<ProcessedOrder>, AppError> {\n    orders.into_iter()\n        .map(|order| {\n            let validated = validate_order(&order)?;\n            let priced = price_order(&validated);\n            Ok(priced)\n        })\n        .collect()\n}\n```\n\nAnd then at the infrastructure/handler layer, the persistence (`save_to_db`)\nwould be done concurrently with proper bounds using `buffer_unordered(N)` or\n`for_each_concurrent(N, ...)`. The async here is unjustified for the domain\nlogic portion. This violates rule `no_unnecessary_async` (level: error).\n\n### MAJOR-9: Function exceeds reasonable .await density\n\n**Location**: `crates/domain/order_processor.rs`\n\nThe function body involves `.await` inside spawned tasks (`save_to_db.await`),\n`.await` on join handles (`handle.await`), and mutex manipulation -- all in a\n19-line function that mixes domain logic, infrastructure calls, concurrency\nmanagement, and error handling. This is a single function doing the work of\nfour separate layers. This violates rule `max_await_points` (level: error).\n\n---\n\n## PHASE-AGNOSTIC: Functional Rust Sync Core Violations\n\nThese are delegated to functional-rust but observed here:\n\n- **MAJOR-10**: `.unwrap()` on `Mutex::lock()` at lines 13 and 21 -- zero-panic\n  mandate violated.\n- **MAJOR-11**: `mut guard` at line 13 -- mutable binding for Mutex guard is\n  necessary for the push, but the entire `Arc<Mutex<Vec>>` pattern could be\n  eliminated if tasks simply returned their results.\n\n---\n\n## EXECUTION EVIDENCE\n\nSince this is hypothetical code (not in a real project on disk), the verification\ngate commands cannot be run against a real codebase. However, the following\ndeterminations are made based on static analysis:\n\n### Layer 1: Async Clippy Lints\n\n```\nPREDICTED: FAIL\n- clippy::await_holding_lock would fire on the Mutex guard in spawned tasks\n- clippy::unused_async would NOT fire (the function does contain .await usage)\n- clippy::large_futures may fire depending on Order/ProcessedOrder size\n```\n\n### Layer 2: Domain Crate Dependencies\n\n```\nPREDICTED: FAIL\nThe file at crates/domain/order_processor.rs uses tokio::spawn, which requires\ntokio in Cargo.toml. The scan would report:\n  \"FAIL: async dependency in domain crate\"\n```\n\n### Layer 3: No .await or spawn in domain source\n\n```\nPREDICTED: FAIL\ngrep -rn \"\\.await\" crates/domain/order_processor.rs -> MATCH at line 11 (.save_to_db) and line 18 (handle.await)\ngrep -rn \"tokio::spawn\" crates/domain/order_processor.rs -> MATCH at line 8\n```\n\n### Layer 4: Functional-rust sync gate\n\n```\nPREDICTED: FAIL\n- .unwrap() used at lines 13, 21 -> clippy::unwrap_used violation\n- mutable guard at line 13 -> mut usage\n```\n\n### Layer 5: Tests\n\n```\nSKIPPED: No test artifacts available for hypothetical code\n```\n\n### Layer 6: Benchmarks\n\n```\nCRITICAL: No benchmarks exist for async hot paths.\nNo cargo bench output available. Performance claims about concurrent order\nprocessing are unverifiable.\n```\n\n### Layer 7: tokio-console\n\n```\nWARN: tokio-console not configured (hypothetical code, no Cargo.toml to check)\n```\n\n---\n\n## FINDINGS SUMMARY\n\n| Severity | Count | IDs |\n|----------|-------|-----|\n| LETHAL   | 9     | LETHAL-1 through LETHAL-9 |\n| MAJOR    | 11    | MAJOR-1 through MAJOR-11 |\n| CRITICAL | 1     | No benchmarks for async hot paths |\n\n---\n\n## MANDATE (Required Changes Before Re-Review)\n\nThe code must be restructured. The following changes are required, in order:\n\n1. **Move order processing to the sync domain layer.** `validate_order` and\n   `price_order` are pure calculations. They must remain synchronous functions\n   in the domain crate with no async dependencies. Return `Result<Vec<ProcessedOrder>, AppError>` via a simple `Iterator::map().collect()` pipeline.\n\n2. **Move persistence to the infrastructure layer.** `save_to_db` is an\n   infrastructure concern. Define a trait (port) in the domain or app crate,\n   implement it in `crates/infra/`. The domain never calls the database directly.\n\n3. **Move concurrency orchestration to the presentation/edge layer.** If\n   concurrent database writes are needed, place the `tokio::spawn` or\n   `buffer_unordered(N)` call in the HTTP handler or a dedicated service in\n   `crates/api/` or `crates/app/`.\n\n4. **Use bounded concurrency.** Replace the unbounded spawn loop with\n   `futures::stream::iter(orders).map(|o| save(o)).buffer_unordered(32)` or\n   `for_each_concurrent(32, ...)` with an explicit concurrency bound.\n\n5. **Replace `Arc<Mutex<Vec<...>>>` with ownership transfer.** Each task returns\n   its `ProcessedOrder`. Collect results via `buffer_unordered` or `JoinSet`\n   which naturally gather results without shared mutable state.\n\n6. **Replace `std::sync::Mutex` with `tokio::sync::Mutex` if locking across\n   `.await` is ever necessary** (it should not be after the above changes).\n\n7. **Eliminate all `.unwrap()` calls.** Use `Result`-propagating lock\n   operations or pattern matching.\n\n8. **Add `#[tracing::instrument]` to the handler function** and propagate\n   spans into any spawned tasks with `.instrument()`.\n\n9. **Preserve error context.** Replace `map_err(|_| AppError::TaskFailed)`\n   with `map_err(|e| AppError::TaskFailed { source: e })` or use `.context()`.\n\n10. **Add criterion benchmarks** for the concurrent order processing pipeline\n    at N=1, N=8, N=64 concurrency levels to verify scaling and establish\n    throughput baselines.\n\n---\n\n*End of review. This code must not ship.*\n"}], "eval-1-spawn-in-domain-without_skill": [{"name": "review.md", "type": "text", "content": "# Async Rust Code Review: `process_orders`\n\n**File**: `crates/domain/order_processor.rs`\n**Date**: 2026-04-03\n**Reviewer**: Baseline (no skill)\n\n---\n\n## Summary\n\nThis function processes a batch of orders by spawning a Tokio task per order, collecting results into a shared `Arc<Mutex<Vec<_>>>`. It contains several correctness bugs and performance anti-patterns.\n\n---\n\n## Issues Found\n\n### CRITICAL: Correctness\n\n#### 1. Silent Data Loss on Panic (`unwrap` on Mutex)\n\n```rust\nlet mut guard = results_clone.lock().unwrap();\n```\n\n`Mutex::lock().unwrap()` will panic if the thread holding the lock panicked (poisoned mutex). Since this code spawns multiple tasks, if any task panics while holding the lock, all subsequent `.lock().unwrap()` calls across all other spawned tasks will also panic, causing cascading failures. In production async Rust, you should either handle `PoisonError` explicitly or use `lock().unwrap_or_else(|e| e.into_inner())` depending on your recovery strategy. Better yet, avoid the shared mutable state entirely (see issue #4).\n\n#### 2. Double Error Handling / Inconsistent Result Collection\n\nThe function collects processed orders into the shared `Vec` **inside** each spawned task, **and** also propagates errors via `handle.await.map_err()??`. This means:\n- If a task succeeds, its result is pushed to the shared vec **and** also returned from `handle.await`.\n- If a task fails, the error is propagated via the `??` double-question-mark, but partial results from successful tasks are already in the shared vec.\n\nThe `Ok(saved)` returned from the task closure is never actually used by the caller -- only the side effect of pushing into the shared vec matters. This is confusing and error-prone. If the intent is to collect all successful results, the `??` on the handle will abort early on the first failure, potentially returning an error even though some results were already collected.\n\n#### 3. `Arc<Mutex<Vec<_>>>` is Unnecessary\n\nEach spawned task pushes a result, then the main function awaits all handles before reading the shared vec. Since all tasks are joined before the final read, you could instead just collect the `JoinHandle` results directly:\n\n```rust\nlet results: Vec<ProcessedOrder> = futures::future::join_all(handles)\n    .await\n    .into_iter()\n    .collect::<Result<Result<Vec<_>, _>, _>>()???;\n```\n\nThe shared mutable state is both a correctness hazard and unnecessary given the control flow.\n\n#### 4. Spawned Tasks May Outlive Critical Resources\n\n`tokio::spawn` creates a `'static` task. The function takes `orders: Vec<Order>` by value, which is fine, but the task closure captures `order` by move. However, if `save_to_db`, `validate_order`, or `price_order` reference any non-`'static` state (e.g., a database connection pool that gets dropped), the spawned tasks could reference freed memory. This depends on the signatures of those functions, but the pattern is worth flagging. Using `tokio::spawn` in domain code is inherently dangerous because domain logic should not be coupled to a specific runtime's task spawning strategy.\n\n### HIGH: Performance\n\n#### 5. Unbounded Task Spawning\n\nOne Tokio task is spawned per order with no concurrency limit. If `orders` contains 100,000 items, 100,000 tasks are spawned simultaneously. This can exhaust memory, saturate the Tokio runtime, and cause excessive context switching. Use `tokio::sync::Semaphore` or `StreamExt::buffer_unordered` to bound concurrency:\n\n```rust\nuse futures::stream::{self, StreamExt};\nlet results: Vec<_> = stream::iter(orders)\n    .map(|order| async { process_single_order(order).await })\n    .buffer_unordered(64) // limit to 64 concurrent tasks\n    .collect()\n    .await;\n```\n\n#### 6. Lock Contention on Mutex\n\nEvery spawned task contends on the same `Mutex` lock. Even though each lock hold is brief (just a `push`), with many concurrent tasks this creates unnecessary contention. `tokio::sync::Mutex` would be even worse here (it's designed for holds across `.await` points, but adds async overhead). The correct solution is to eliminate the shared state entirely and collect results from the `JoinHandle` return values.\n\n#### 7. Sequential Await of Handles\n\n```rust\nfor handle in handles {\n    handle.await.map_err(|_| AppError::TaskFailed)??;\n}\n```\n\nThis awaits handles in insertion order. If task N fails, tasks N+1..M are never awaited, which means:\n- They are **detached** and continue running in the background (since `tokio::spawn` was used).\n- Their results are lost.\n- If they hold resources (DB connections, file handles), those resources leak until the tasks complete.\n\nUse `futures::future::join_all` or `try_join_all` to await all handles concurrently and ensure none are orphaned.\n\n### MEDIUM: Design / Architecture\n\n#### 8. Domain Layer Should Not Spawn Runtime Tasks\n\nThis code lives in `crates/domain/`, which should contain pure business logic. `tokio::spawn` is an infrastructure/runtime concern. Spawning tasks in the domain layer:\n- Couples the domain to Tokio specifically.\n- Makes the function impossible to test without a Tokio runtime.\n- Violates the dependency inversion principle.\n\nThe domain should expose a pure async function that processes a single order, and the orchestration (spawning, concurrency control) should live in `crates/app/` or `crates/infra/`.\n\n#### 9. No Cancellation Safety Consideration\n\nIf the outer function is cancelled (e.g., the caller drops the future), all spawned tasks continue running independently. There is no `CancellationToken` or abort mechanism. This can lead to wasted work or, worse, partial database writes.\n\n#### 10. Mixed Sync and Async Boundaries\n\n```rust\nlet validated = validate_order(&order)?;  // sync\nlet priced = price_order(&validated);      // sync\nlet saved = save_to_db(&priced).await?;    // async\n```\n\nIf `validate_order` or `price_order` are CPU-intensive, they will block the Tokio runtime thread. These should be wrapped in `tokio::task::spawn_blocking` if they do significant work, or the function should document that it expects these to be lightweight.\n\n---\n\n## Severity Summary\n\n| # | Issue | Severity | Category |\n|---|-------|----------|----------|\n| 1 | `unwrap` on Mutex lock (cascading panics) | CRITICAL | Correctness |\n| 2 | Double error handling / inconsistent collection | CRITICAL | Correctness |\n| 3 | `Arc<Mutex<Vec>>` is unnecessary | CRITICAL | Correctness |\n| 4 | `'static` task spawning risk | CRITICAL | Correctness |\n| 5 | Unbounded task spawning | HIGH | Performance |\n| 6 | Lock contention | HIGH | Performance |\n| 7 | Sequential await leaks detached tasks | HIGH | Correctness/Performance |\n| 8 | Domain layer spawns runtime tasks | MEDIUM | Architecture |\n| 9 | No cancellation safety | MEDIUM | Correctness |\n| 10 | Blocking sync work on async runtime | MEDIUM | Performance |\n\n---\n\n## Suggested Rewrite\n\n```rust\n// crates/app/order_service.rs (orchestration in app layer, not domain)\nuse futures::stream::{self, StreamExt};\n\nconst MAX_CONCURRENCY: usize = 64;\n\npub async fn process_orders(\n    orders: Vec<Order>,\n    db: Arc<dyn OrderRepository>, // dependency injection, not static spawn\n) -> Result<Vec<ProcessedOrder>, AppError> {\n    let results: Vec<Result<ProcessedOrder, AppError>> = stream::iter(orders)\n        .map(|order| {\n            let db = Arc::clone(&db);\n            tokio::spawn(async move {\n                let validated = validate_order(&order)?;  // domain pure fn\n                let priced = price_order(&validated);      // domain pure fn\n                let saved = db.save(&priced).await?;       // infra via trait\n                Ok(saved)\n            })\n        })\n        .buffer_unordered(MAX_CONCURRENCY)\n        .collect()\n        .await\n        .into_iter()\n        .map(|join_result| join_result.map_err(|_| AppError::TaskFailed)?)\n        .collect();\n\n    // Partition into successes and failures\n    let (successes, failures): (Vec<_>, Vec<_>) = results\n        .into_iter()\n        .partition(Result::is_ok);\n\n    if !failures.is_empty() {\n        return Err(AppError::PartialFailure {\n            succeeded: successes.into_iter().map(Result::unwrap).collect(),\n            failed_count: failures.len(),\n        });\n    }\n\n    successes.into_iter().map(Result::unwrap).collect()\n}\n```\n\nKey improvements:\n- **No `Arc<Mutex<Vec>>`** -- results are collected from task return values.\n- **Bounded concurrency** via `buffer_unordered`.\n- **Domain stays pure** -- orchestration moved to app layer.\n- **Dependency injection** for the database, not a static `save_to_db` call.\n- **Graceful partial failure** handling instead of silent data loss.\n- **No `unwrap`** on locks or mutexes.\n"}], "eval-2-imperative-stream-loop-with_skill": [{"name": "review.md", "type": "text", "content": "# Async Rust Review: event_processor.rs\n\n**Reviewer**: async-rust-reviewer skill v1.0.0\n**Date**: 2026-04-03\n**File Under Review**: `crates/infra/src/event_processor.rs`\n**Code Submitted**:\n\n```rust\n// crates/infra/src/event_processor.rs\nuse futures::StreamExt;\nuse std::rc::Rc;\n\npub async fn process_event_stream(mut stream: impl Stream<Item = Event> + Unpin) {\n    let context = Rc::new(ProcessingContext::default());\n    let mut results = Vec::new();\n\n    while let Some(event) = stream.next().await {\n        if event.is_relevant() {\n            let enriched = context.enrich(event);\n            let result = process(enriched).await;\n            results.push(result);\n        }\n    }\n\n    Ok(results)\n}\n```\n\n---\n\n## PHASE 1: Spawn Discipline & Runtime Hygiene\n\n**Status**: FAIL\n\n| Check | Result | Severity |\n|-------|--------|----------|\n| Spawn inside domain? | N/A (file is in infra) | -- |\n| Unnecessary async? | The function body contains `.await` points, so async is justified | PASS |\n| CPU-bound work on async runtime? | `context.enrich(event)` and `event.is_relevant()` appear to be sync calls -- acceptable if they are fast (<10-100us). No evidence they are not. | WARN |\n| Missing `Unpin` bound? | `+ Unpin` is present. Acceptable. | PASS |\n| **Return type mismatch** | Function signature declares `-> ` (implicitly `()`) but the body ends with `Ok(results)` which requires a `Result` return type. This code does not compile as written. | COMPILE ERROR |\n\n**Finding 1.1 (COMPILE ERROR)**: The function signature `pub async fn process_event_stream(mut stream: impl Stream<Item = Event> + Unpin)` returns `()` implicitly, but the final expression `Ok(results)` expects a `Result` return type. This is a type error. The signature must be something like `-> Result<Vec<ProcessResult>, Error>` or the `Ok(results)` must be removed.\n\n---\n\n## PHASE 2: Stream Combinators & Concurrency Primitives\n\n**Status**: FAIL -- LETHAL\n\n**Finding 2.1 (LETHAL)**: Imperative stream loop at line 7 (`while let Some(event) = stream.next().await`). This is the textbook anti-pattern explicitly banned by rule `streams_over_loops`. The code processes events sequentially one at a time, completely wasting I/O concurrency. The correct approach is a combinator pipeline using `.filter()`, `.map()`, and `.for_each_concurrent(N)` or `.buffer_unordered(N)`.\n\n**Finding 2.2 (LETHAL)**: No concurrency bound whatsoever. Events are processed one at a time sequentially, but even if concurrency were added, there is no explicit bound (no `buffer_unordered(N)`, no `for_each_concurrent(N)`, no semaphore). Unbounded concurrency is a denial-of-service vector. Every concurrent operation MUST have an explicit bound.\n\n**Correct pattern** (from references/stream-patterns.md):\n\n```rust\npub async fn process_event_stream(stream: impl Stream<Item = Event> + Unpin) -> Result<Vec<ProcessResult>, Error> {\n    let context = Arc::new(ProcessingContext::default());\n\n    stream\n        .filter(|e| future::ready(e.is_relevant()))\n        .map(|e| context.enrich(e))\n        .map(|e| process(e))\n        .buffer_unordered(32)  // bounded concurrency, results in completion order\n        .collect::<Vec<_>>()\n        .await\n        .into_iter()\n        .collect()\n}\n```\n\n---\n\n## PHASE 3: Send + Sync Hygiene & Ownership Design\n\n**Status**: FAIL -- LETHAL\n\n**Finding 3.1 (LETHAL)**: `Rc<ProcessingContext>` on line 5. `Rc<T>` is `!Send`. It is held across `.await` points (line 8: `process(enriched).await`, and line 7: `stream.next().await`). This will fail to compile on a multi-threaded Tokio runtime because the future generated by this async function must be `Send`, but `Rc` inside it makes it `!Send`. Rule `arc_over_rc` is unambiguous: **In async contexts, use `Arc<T>` over `Rc<T>`.**\n\nAdditionally, `context.enrich(event)` borrows from `context` (via a method call on `Rc`), and if `enrich` returns a value that borrows from context, that borrow would persist across the `.await` at line 8 -- another potential `!Send` issue and a potential lifetime violation.\n\n**Finding 3.2 (MAJOR)**: `mut results = Vec::new()` on line 6. Mutable accumulation via push in a loop. In a concurrent context, this pattern breaks down. If the function is ever refactored for concurrency (which it must be per Phase 2), this `mut` accumulation will not work. The combinator pipeline approach via `.collect()` eliminates this entirely.\n\n---\n\n## PHASE 4: Cancellation Safety & Pin Awareness\n\n**Status**: WARN\n\n**Finding 4.1 (MAJOR)**: Cancellation safety concern. If this future is dropped between `context.enrich(event)` (line 8) and `process(enriched).await` completing (line 9), the enriched event has been created but never processed. Whether this matters depends on whether `enrich` has side effects or allocates resources that need cleanup. The pattern of \"mutate/prepare then await\" without a recovery plan is flagged by rule `cancellation_safe_design`.\n\n**Finding 4.2 (MINOR)**: `+ Unpin` bound on the stream is acceptable since the caller is passing a concrete stream. This is fine and not over-pinned.\n\n---\n\n## PHASE 5: Observability & Error Propagation\n\n**Status**: FAIL -- MAJOR\n\n**Finding 5.1 (MAJOR)**: No `#[tracing::instrument]` on this async function. This is an infrastructure-layer async function -- the exact place where instrumentation is mandatory. Rule `tracing_instrument` requires every async function in the shell to have instrumentation or explicit span creation. Bare `.await` without surrounding span loses causal chain across async boundaries.\n\n**Finding 5.2 (MAJOR)**: No error handling on `process(enriched).await` (line 9). The result is blindly pushed into `results`. If `process` can fail (which it almost certainly can -- it is doing I/O), the error is silently discarded. Rule `async_error_chain` demands errors be preserved with context. At minimum, this should be `.map_err()` or use `?` propagation.\n\n**Finding 5.3 (CRITICAL)**: No evidence of `console-subscriber` or `tracing-opentelemetry` configuration. Production services MUST expose tokio-console metrics and OTLP traces.\n\n---\n\n## PHASE 6: Hexagonal Architecture Boundaries\n\n**Status**: PASS (with observations)\n\nThe file is at `crates/infra/src/event_processor.rs` -- infrastructure layer. This is the correct layer for stream processing and async I/O. No domain crate contamination is present in the snippet.\n\n---\n\n## PHASE 7: Ruthless Async Simplicity\n\n**Status**: FAIL\n\n**Finding 7.1 (MAJOR)**: The function processes events sequentially. This is the \"Async Sniff Test\" failure: if you are going to process events one at a time sequentially, why use streams at all? The async here provides no concurrency benefit. Either use combinators for bounded concurrency, or justify why sequential processing is required (ordering guarantees, etc.).\n\n**Finding 7.2 (MINOR)**: The function is short (under 60 lines, under 3 `.await` points), which is acceptable for structural limits.\n\n---\n\n## EXECUTION EVIDENCE\n\nThis is a standalone code snippet provided for review, not part of a runnable crate in the current workspace. The following static analysis was performed:\n\n### Static Grep Scans (simulated against the submitted code)\n\n```\nPattern: \"while let Some(_) = stream.next().await\"\nResult: MATCH at line 7 -- LETHAL: imperative stream loop\n\nPattern: \"Rc<\"\nResult: MATCH at line 5 -- LETHAL: Rc across .await boundary\n\nPattern: \"#[tracing::instrument\"\nResult: NO MATCH -- MAJOR: missing instrumentation\n\nPattern: \"println!\"\nResult: NO MATCH -- clean\n\nPattern: \"let _ =\"\nResult: NO MATCH -- clean (no swallowed JoinError)\n\nPattern: \"buffer_unordered|for_each_concurrent\"\nResult: NO MATCH -- LETHAL: no concurrency bound\n\nPattern: \"mut \"\nResult: MATCH at line 6 (mut results), line 5 implicit -- pattern of mutable accumulation\n```\n\n### Compilation Check\n\nThe code as submitted does NOT compile due to return type mismatch:\n- Signature implies `-> ()` (no return type annotation)\n- Body ends with `Ok(results)` which requires `-> Result<_, _>`\n\n```\nerror[E0308]: mismatched types\n --> crates/infra/src/event_processor.rs:X:Y\n  |\n  | pub async fn process_event_stream(...)  {\n  |                                           - expected `()` because of default return type\n  |     ...\n  |     Ok(results)\n  |     ^^^^^^^^^^ expected `()`, found `Result<_, _>`\n```\n\n### Cargo Clippy Async Lints\n\nCannot execute -- snippet is not part of a compilable crate in this workspace.\nIf it were, the following would be expected to fire:\n- `clippy::await_holding_refcell_ref` -- potentially, if enrich borrows from Rc\n- `clippy::unused_async` -- would NOT fire (function does await)\n- `clippy::large_futures` -- depends on Event/ProcessingContext size\n\n### Benchmark Evidence\n\nNo benchmarks exist for this async hot path. **FLAGGED AS CRITICAL.** Stream processing pipelines MUST have baseline criterion benchmarks at N=1, N=8, N=64 concurrency levels. No numbers = no merge.\n\n---\n\n## VERDICT: REJECTED\n\n## LETHAL FINDINGS (3)\n\n1. **[Phase 2, line 7]** Imperative stream loop `while let Some(event) = stream.next().await`. Streams MUST use combinator pipelines (`.filter()`, `.map()`, `.buffer_unordered(N)`, `.for_each_concurrent(N)`). This pattern processes events sequentially, wasting all I/O concurrency. Rule: `streams_over_loops`.\n\n2. **[Phase 2]** No concurrency bound. Even when refactored to combinators, there is no `buffer_unordered(N)` or `for_each_concurrent(N)`. Unbounded concurrency is a DoS vector. Rule: `bounded_concurrency`.\n\n3. **[Phase 3, line 5]** `Rc<ProcessingContext>` held across `.await` points. `Rc<T>` is `!Send` and will fail to compile on multi-threaded Tokio. MUST be replaced with `Arc<T>`. Rule: `arc_over_rc`.\n\n## MAJOR FINDINGS (4)\n\n1. **[Phase 5]** Missing `#[tracing::instrument]` on async infrastructure function. Rule: `tracing_instrument`.\n\n2. **[Phase 5, line 9]** No error handling on `process(enriched).await` result. Errors are silently collected without inspection. Rule: `async_error_chain`.\n\n3. **[Phase 4]** Cancellation safety: enriched event created but not processed if future dropped at `.await`. No recovery plan. Rule: `cancellation_safe_design`.\n\n4. **[Phase 7]** Sequential processing defeats the purpose of async streams. Either use bounded concurrency via combinators or justify ordering requirements.\n\n## CRITICAL FINDINGS (1)\n\n1. No benchmark evidence for this async hot path. No `cargo bench` output, no throughput baselines, no concurrency scaling numbers. Performance claims without criterion output are worthless. Rule: `benchmarks_or_no_merge`.\n\n## COMPILE ERROR (1)\n\n1. Return type mismatch: function signature has no return type (implies `()`), but body returns `Ok(results)`. Signature must declare `-> Result<Vec<ProcessResult>, SomeError>`.\n\n## MINOR FINDINGS (1)\n\n1. Mutable `Vec::push` accumulation pattern (line 10) -- incompatible with concurrent refactoring.\n\n---\n\n## MANDATE (Required changes before re-review)\n\n1. **Replace `Rc` with `Arc`**: Change `Rc<ProcessingContext>` to `Arc<ProcessingContext>`. This is non-negotiable for multi-threaded async runtimes.\n\n2. **Replace imperative loop with combinator pipeline**: Remove `while let Some(_) = stream.next().await`. Use `stream.filter().map().buffer_unordered(N)` or `.for_each_concurrent(N, ...)` with an explicit concurrency bound (e.g., N=32).\n\n3. **Fix the return type**: Add proper `-> Result<Vec<ProcessResult>, Error>` to the function signature.\n\n4. **Add `#[tracing::instrument]`**: Instrument the async function with `#[tracing::instrument(skip(stream))]`.\n\n5. **Handle errors properly**: Propagate or explicitly handle errors from `process(enriched).await`. Never silently collect results without error inspection.\n\n6. **Add criterion benchmarks**: Create `benches/async_perf.rs` with throughput baselines at N=1, N=8, N=64 concurrency levels for this stream processor.\n\n7. **Verify cancellation safety**: Document what happens if the future is dropped mid-enrichment or mid-processing. Use two-phase commit if side effects are involved.\n"}], "eval-2-imperative-stream-loop-without_skill": [{"name": "review.md", "type": "text", "content": "# Async Stream Processing Code Review\n\n## Code Under Review\n\n```rust\n// crates/infra/src/event_processor.rs\nuse futures::StreamExt;\nuse std::rc::Rc;\n\npub async fn process_event_stream(mut stream: impl Stream<Item = Event> + Unpin) {\n    let context = Rc::new(ProcessingContext::default());\n    let mut results = Vec::new();\n\n    while let Some(event) = stream.next().await {\n        if event.is_relevant() {\n            let enriched = context.enrich(event);\n            let result = process(enriched).await;\n            results.push(result);\n        }\n    }\n\n    Ok(results)\n}\n```\n\n---\n\n## Critical Correctness Issues\n\n### 1. Function signature declares `()` return type but body returns `Ok(results)` (COMPILE ERROR)\n\nThe function signature says `-> impl Future<Output = ()>` (via `async fn ... ()`), but the body contains `Ok(results)`. This will not compile. The return type must be changed to something like `-> Result<Vec<ProcessResult>, Error>` or the `Ok(results)` must be removed.\n\n**Severity:** Compile-time failure.\n\n### 2. `Rc` is not `Send` -- function cannot be used across await points safely\n\n`Rc` is `!Send`. The `process(enriched).await` call is an await point inside an async function. While `Rc` itself does not live across the await here (it is borrowed but not held across the `.await` if `enrich` consumes it), the `Rc<ProcessingContext>` is created once and held for the entire lifetime of the async function. This means the future produced by `process_event_stream` will be `!Send`, which prevents it from being spawned on a multi-threaded runtime (e.g., `tokio::spawn`).\n\nIf this function is ever spawned or used in a context requiring `Send`, it will fail. Use `Arc` instead of `Rc` for async code.\n\n**Severity:** High -- latent bug that surfaces at integration time.\n\n### 3. No error handling on the stream or processing\n\n- The stream type is `Stream<Item = Event>` -- there is no error channel. If the stream can fail, this should be `Stream<Item = Result<Event, E>>` or similar.\n- `process(enriched).await` has no error handling. If `process` can fail, errors are silently discarded.\n- The `Ok(results)` at the end suggests the author intended error handling, but none exists in the body.\n\n**Severity:** High -- silent data loss on errors.\n\n### 4. `results` collection is unbounded\n\nThe `Vec` grows without bound. For a long-running or high-throughput stream, this will consume unbounded memory. There is no batching, no backpressure, and no limit.\n\n**Severity:** High -- OOM risk in production.\n\n---\n\n## Performance Issues\n\n### 5. Sequential processing of all events\n\nEach event is awaited individually inside the loop:\n\n```rust\nlet result = process(enriched).await;\n```\n\nThis means events are processed one at a time. If `process` involves I/O (network, disk), this serializes all latency. Consider using buffered concurrency via `stream.filter_map(...).buffered(N)` or `futures::stream::buffered` to process multiple events concurrently.\n\n### 6. No backpressure signaling\n\nThe loop eagerly consumes from the stream as fast as possible. If the producer is faster than `process`, memory grows unboundedly (via `results`) and there is no mechanism to slow down ingestion.\n\n### 7. Unnecessary allocation via `Rc`\n\n`Rc::new(ProcessingContext::default())` allocates on the heap. If `ProcessingContext` is small and immutable, it could be passed by value or reference without heap allocation. If it needs shared ownership in async context, use `Arc` (see issue #2).\n\n---\n\n## Style / Minor Issues\n\n### 8. Unused import risk\n\n`use std::rc::Rc;` -- if switched to `Arc`, this becomes dead code.\n\n### 9. `mut stream` but only `.next()` is called\n\nThis is fine for `StreamExt::next()`, which requires `&mut self`. Not a bug, but worth noting that the stream is consumed exclusively.\n\n### 10. Missing type annotations / imports\n\n`Event`, `ProcessingContext`, `process`, and `ProcessResult` are all undefined in the snippet. These are presumably defined elsewhere, but the review cannot verify their traits or implementations.\n\n---\n\n## Summary Table\n\n| # | Issue | Severity | Category |\n|---|-------|----------|----------|\n| 1 | Return type mismatch (`()` vs `Ok(results)`) | **Compile Error** | Correctness |\n| 2 | `Rc` makes future `!Send` | **High** | Correctness |\n| 3 | No error handling on stream or process | **High** | Correctness |\n| 4 | Unbounded `results` collection | **High** | Performance / OOM |\n| 5 | Sequential event processing | **Medium** | Performance |\n| 6 | No backpressure | **Medium** | Performance |\n| 7 | Unnecessary `Rc` allocation | **Low** | Performance |\n| 8 | Dead import after fix | **Low** | Style |\n| 9 | Stream mutability pattern | **Info** | Style |\n| 10 | Missing type context | **Info** | Completeness |\n\n---\n\n## Suggested Rewrite Sketch\n\n```rust\nuse futures::StreamExt;\nuse std::sync::Arc;\n\npub async fn process_event_stream(\n    stream: impl Stream<Item = Result<Event, StreamError>> + Unpin,\n    concurrency: usize,\n) -> Result<Vec<ProcessResult>, ProcessingError> {\n    let context = Arc::new(ProcessingContext::default());\n\n    let results: Vec<ProcessResult> = stream\n        .filter_map(|event_result| async move {\n            match event_result {\n                Ok(event) if event.is_relevant() => Some(event),\n                Ok(_) => None,\n                Err(e) => {\n                    tracing::warn!(\"stream error: {e}\");\n                    None\n                }\n            }\n        })\n        .map(|event| {\n            let ctx = context.clone();\n            async move {\n                let enriched = ctx.enrich(event);\n                process(enriched).await\n            }\n        })\n        .buffer_unordered(concurrency)\n        .collect()\n        .await;\n\n    Ok(results)\n}\n```\n\nThis addresses issues #1, #2, #3 (partially), #4 (bounded by concurrency), #5, and #6.\n"}], "eval-3-correct-async-shell-with_skill": [{"name": "review.md", "type": "text", "content": "# Async Rust Review: Order Service\n\n**Reviewed**: 2026-04-03\n**Code**: Inline submission \u2014 domain types, trait port, and HTTP handler\n**Reviewer**: async-rust-reviewer skill v1.0.0\n\n---\n\n## PHASE 1: Spawn Discipline & Runtime Hygiene\n\n**PASS**\n\n- No `tokio::spawn` present anywhere. No spawn in domain, no spawn in handlers. Clean.\n- `validate_order` in `crates/domain/order.rs` is a sync `fn` returning `Result<Validated, DomainError>`. This is correct: domain logic is synchronous, no `.await`, no async.\n- `handle_create` in `crates/api/handlers.rs` is `async fn` with exactly one `.await` point (`repo.save(&Order::Validated(validated)).await?`). The async is justified: it awaits an I/O-bound repository operation.\n- No CPU-bound work misrouted as async. `validate_order` is sync, as it should be (checking `items.is_empty()` and moving data).\n- No unnecessary async. Every `async fn` has at least one `.await`.\n- No blocking operations in async context.\n\n**Spawn Discipline: CLEAN**\n\n---\n\n## PHASE 2: Stream Combinators & Concurrency Primitives\n\n**PASS (no streams present)**\n\n- No stream processing in the submitted code. Nothing to evaluate for combinator discipline.\n- No `join_all`, no unbounded concurrency, no `Vec<JoinHandle>` bookkeeping.\n- No `buffer_unordered` or `for_each_concurrent` needed for this simple handler.\n\n**Concurrency: N/A \u2014 single .await, no concurrent operations**\n\n---\n\n## PHASE 3: Send + Sync Hygiene & Ownership Design\n\n**PASS**\n\n- No `Rc<T>`, `RefCell<T>`, or `std::sync::Mutex` present.\n- No `Arc<Mutex<T>>` present in the submitted code.\n- `handle_create` takes `&dyn OrderRepo` \u2014 a borrowed trait reference, not spawning, so `'static` concerns do not apply.\n- No non-Send state crossing `.await` boundaries.\n- `OrderId(String)` and `CustomerId(String)` are `Send + Sync` (String is Send+Sync, unit-like wrappers inherit it).\n- `smallvec::SmallVec<[String; 4]>` is `Send + Sync`.\n\n**Send+Sync: CLEAN**\n\n---\n\n## PHASE 4: Cancellation Safety & Pin Awareness\n\n**PASS (with minor note)**\n\n- The `handle_create` function has a single `.await` point at `repo.save()`.\n- State before `.await`: `validated` is a fully-constructed, self-consistent value. No partial mutation.\n- If the Future is dropped after `validate_order` succeeds but before `repo.save` completes: the `validated` value is simply lost. No corrupted state. The order was never persisted, so no inconsistency.\n- If the Future is dropped during `repo.save().await`: the save either completed atomically or it did not. The repo is the authority on state. No partial write concern at the application level (though the repo implementation must ensure atomic writes \u2014 that is the adapter's responsibility, not the handler's).\n- No self-referential futures, no `Pin` concerns, no recursive async.\n- No `Box::pin` used, and none needed.\n\n**Cancellation Safety: SAFE** \u2014 single atomic await, sync preparation, state valid at every yield point.\n\n---\n\n## PHASE 5: Observability & Error Propagation\n\n**PASS**\n\n- `handle_create` has `#[tracing::instrument(skip(repo), fields(user_id = %cmd.customer_id))]`. This is correct:\n  - Skips `repo` (not Debug).\n  - Adds structured `user_id` field for trace correlation.\n  - The instrument macro creates a span covering the entire handler execution.\n- No `println!` or `eprintln!` in async code.\n- Error propagation uses `?` operator throughout: `validate_order(draft)?` and `repo.save(...).await?`. The error chain is preserved via the `?` operator \u2014 `DomainError` propagates from domain, `AppError` wraps at the shell boundary.\n- No spawned tasks, so span propagation into spawn is not applicable.\n\n**Minor suggestions (not blocking)**:\n- Consider adding a structured `tracing::info!` or `tracing::debug!` after successful save with `order_id` or `customer_id` for audit trail. Not required, but strengthens observability.\n- The `repo.save()` error is propagated via `?` but not wrapped with `.context()` or `.map_err()` to add handler-level context (e.g., \"failed to persist validated order\"). Consider adding `.map_err(|e| AppError::Persistence(e))?` for richer error chains. The current code relies on the error type itself carrying enough context, which may or may not be sufficient depending on `AppError`'s definition.\n\n**Observability: CLEAN**\n\n---\n\n## PHASE 6: Hexagonal Architecture Boundaries\n\n**PASS (well-structured)**\n\n- **Domain crate** (`crates/domain/order.rs`): Contains structs, enums, and a pure sync function `validate_order`. No async dependencies. No `.await`. No `tokio`. This is textbook correct.\n- **Port trait** (`crates/domain/repo.rs`): `OrderRepo` trait with `async fn save`. The trait is defined in the domain crate (where the domain types live). This is the correct placement \u2014 the domain owns the port contract. The `async fn` in the trait is fine; it does not require the domain crate to depend on any async runtime (native async fn in traits is stable; no `async-trait` crate needed).\n- **Handler** (`crates/api/handlers.rs`): The presentation layer calls sync domain logic (`validate_order`) then awaits the infra adapter (`repo.save`). This matches the canonical pattern from `hexagonal-boundaries.md`:\n  ```\n  handler: async fn create(req: Request) -> Result<Response, AppError> {\n      let cmd = parse(req)?;\n      let order = use_case.execute(cmd)?;    // sync domain\n      repo.save(&order).await?;               // async infra\n      Ok(response)\n  }\n  ```\n- **Dependency direction**: Domain has no external deps. Application depends on domain. Infra depends on domain. Presentation depends on application + infra. Correct.\n\n**Hexagonal Boundaries: CLEAN**\n\n---\n\n## PHASE 7: Ruthless Async Simplicity\n\n**PASS**\n\n- `handle_create` is approximately 4 lines of logic. Well under the 60-line limit.\n- Exactly 1 `.await` point. Well under the 3-await limit.\n- No speculative concurrency. No over-engineered channel topologies.\n- The \"Async Sniff Test\": Would a sync version be simpler? No \u2014 the handler must call an async repository. The async is justified by the I/O-bound persistence operation. The domain logic (`validate_order`) is already sync.\n- No `tokio::spawn` in the handler. Max spawn-per-handler rule is satisfied trivially.\n- The code is boring and obvious. That is a compliment.\n\n**Simplicity: CLEAN**\n\n---\n\n## EXECUTION EVIDENCE\n\nThe submitted code is an inline snippet, not a local crate. The verification gate commands cannot be executed against a project that does not exist on disk. The following notes apply:\n\n| Verification Layer | Status | Notes |\n|---|---|---|\n| Layer 1: Async clippy lints | NOT RUN | No Cargo.toml, no crate to compile |\n| Layer 2: Domain zero async deps | NOT RUN | No `cargo metadata` available |\n| Layer 3: No .await/spawn in domain | MANUAL PASS | Static analysis confirms: `crates/domain/order.rs` has no `.await`, no spawn, no async fn |\n| Layer 4: Functional-rust sync gate | NOT RUN | No crate to compile |\n| Layer 5: Tests | NOT RUN | No test suite provided |\n| Layer 6: Benchmarks | NOT RUN | No benchmarks provided |\n| Layer 7: tokio-console | NOT RUN | No project to inspect |\n\n**Static analysis performed**:\n- Scanned submitted code for `.await`: 1 occurrence in `handle_create` at `repo.save(...).await?`. None in domain.\n- Scanned submitted code for `tokio::spawn`: 0 occurrences.\n- Scanned submitted code for `Rc`, `RefCell`, `std::sync::Mutex`: 0 occurrences.\n- Scanned submitted code for `println`, `eprintln`: 0 occurrences.\n- Verified `#[tracing::instrument(...)]` present on the single async function.\n\n---\n\n### VERDICT: APPROVED\n\n### LETHAL FINDINGS (0)\n\nNone. The code is well-structured and follows all async discipline rules.\n\n### MAJOR FINDINGS (0)\n\nNone. The architecture is clean.\n\n### MINOR FINDINGS (2)\n\n1. **Missing structured log after successful save** (`crates/api/handlers.rs`, `handle_create`): Adding a `tracing::info!(customer_id = %validated.customer_id, \"order validated and persisted\")` after `repo.save()` would strengthen the audit trail. Currently, the span records entry/exit but no intermediate business events.\n\n2. **Error context at the shell boundary** (`crates/api/handlers.rs`, `handle_create`): The `repo.save(...).await?` propagates errors via `?` but does not add handler-level context. Consider `.map_err(|e| AppError::from_persistence(e))?` or similar to preserve the causal chain (\"failed to persist validated order for customer X\"). Whether this is actually needed depends on how `AppError` and `DomainError` are defined, which is not shown.\n\n### CRITICAL FINDINGS (1)\n\n1. **No benchmark evidence for async hot path**: The `handle_create` handler is an async hot path (HTTP endpoint with I/O). No criterion benchmarks were provided. Per the \"benchmarks or no merge\" principle, throughput baselines for this endpoint should be established before production deployment. This is flagged as CRITICAL because the skill mandates benchmark evidence, but the submitted code is a snippet without a project structure, so this is expected in context.\n\n### MANDATE\n\nNone. No changes required. This is a textbook example of the sync-core/async-shell pattern done correctly:\n\n- Domain logic is pure, synchronous, and has zero async dependencies.\n- The port trait (`OrderRepo`) is defined in the domain crate with `async fn` (correct \u2014 the domain owns the contract, not the implementation).\n- The handler is a thin async shell: call sync domain, await infra adapter, return response.\n- `#[tracing::instrument]` is correctly applied with appropriate skips and fields.\n- Cancellation safety is inherent: single atomic `.await` after pure sync preparation.\n- Send+Sync hygiene is clean: no `Rc`, no `RefCell`, no `Mutex` across `.await`.\n\nThis code can serve as a reference implementation for the sync-core/async-shell architecture.\n"}], "eval-3-correct-async-shell-without_skill": [{"name": "review.md", "type": "text", "content": "# Async Rust Service Code Review\n\n## Summary\n\nThis is a well-structured async Rust service that models an order lifecycle using a type-state pattern (`Draft` -> `Validated` -> `Priced`). The overall design shows good intent with domain modeling, tracing, and separation of concerns. However, there are several issues ranging from compile errors to domain modeling concerns and missing robustness.\n\n---\n\n## Issues Found\n\n### 1. Compile Error: Pattern matching on `Order` enum (CRITICAL)\n\nIn `handle_create`, the line:\n\n```rust\nlet draft = Order::Draft { customer_id: cmd.customer_id, items: cmd.items };\n```\n\nwill not compile. `Order` is an enum with tuple variants wrapping the inner structs. The correct syntax is:\n\n```rust\nlet draft = Order::Draft(Draft { customer_id: cmd.customer_id, items: cmd.items });\n```\n\nSimilarly:\n\n```rust\nrepo.save(&Order::Validated(validated)).await?;\n```\n\nis correct because `validated` is already a `Validated` struct, but it depends on the fix above being applied to `draft` first, and `validate_order` takes a `Draft` not an `Order::Draft`.\n\nThe type mismatch is: `Order::Draft` is an `Order`, but `validate_order` expects a `Draft`. The handler needs to either:\n- Construct a bare `Draft` struct and pass it to `validate_order`, then wrap the result in `Order::Validated(...)`.\n- Or restructure the code so `validate_order` accepts `Order::Draft`.\n\n### 2. `Order` enum variants use tuple wrapping but inner structs have identical fields\n\n`Draft` and `Validated` have identical fields (`customer_id` and `items`). This is the classic type-state pattern, which is fine, but the `Priced` variant drops `items` entirely. Once an order is priced, there is no record of what was ordered. This may be intentional but is worth flagging -- downstream reporting or audit trails would lack line-item detail for priced orders.\n\n### 3. No newtype validation on `OrderId` or `CustomerId`\n\n`OrderId(String)` and `CustomerId(String)` are newtypes with no validation. Any string (including empty, unicode garbage, or SQL injection payloads) can construct them. At minimum, consider:\n- Making the inner `String` private (it already is by default with `pub struct`).\n- Providing a fallible constructor: `CustomerId::new(s: String) -> Result<Self, DomainError>`.\n\n### 4. `validate_order` only checks for empty items\n\nThe validation function is named generically but only checks `items.is_empty()`. If this is the extent of validation, consider:\n- Renaming to `ensure_has_items` for clarity.\n- Adding validation for `customer_id` (e.g., non-empty, valid format).\n- Validating individual item strings (non-empty, valid SKU format, etc.).\n\n### 5. `OrderRepo::save` takes `&Order` but the domain logic works with unwrapped states\n\nThe repo trait accepts `&Order` (the enum), but the domain logic operates on the inner structs (`Draft`, `Validated`, `Priced`). This means the repo must pattern-match internally. A more type-safe design would be:\n\n```rust\npub trait OrderRepo {\n    async fn save_validated(&self, order: &Validated) -> Result<(), DomainError>;\n}\n```\n\nThis prevents accidentally saving a `Draft` and makes the interface self-documenting.\n\n### 6. Error handling: `?` operator on `validate_order` will convert `DomainError` but context may be lost\n\nIn `handle_create`:\n\n```rust\nlet validated = validate_order(draft)?;\n```\n\nThis relies on an implicit `From<DomainError> for AppError` conversion. Without seeing those types, this is fine as long as the conversion preserves the domain error details. If `AppError` is a generic catch-all, diagnostic information could be lost. Consider using `.map_err(|e| AppError::Domain(e))?` or ensuring the `From` impl preserves context.\n\n### 7. Missing `impl From<Validated> for OrderResponse`\n\nThe handler calls `OrderResponse::from(validated)`, implying a `From<Validated> for OrderResponse` impl. This is fine if it exists, but worth noting that this conversion logic lives outside the code shown and should be verified to correctly map all `Validated` fields.\n\n### 8. Async concern: `&dyn OrderRepo` in async context\n\nUsing `&dyn OrderRepo` in an async function is valid but can be restrictive. If the `save` method needs to be called across `.await` points or if the trait object needs to be `Send + Sync`, ensure the trait bound is:\n\n```rust\npub trait OrderRepo: Send + Sync {\n    async fn save(&self, order: &Order) -> Result<(), DomainError>;\n}\n```\n\nWithout `Send + Sync`, the handler cannot be used in many async runtimes (tokio, etc.) without additional bounds on the caller.\n\n### 9. `smallvec::SmallVec` usage is good but consider `SmallVec<[ItemId; 4]>`\n\nUsing `SmallVec<[String; 4]>` for items is a reasonable performance choice. However, using `String` for items is the same weakly-typed pattern as `OrderId`/`CustomerId`. Consider introducing an `ItemId` or `Sku` newtype.\n\n### 10. No idempotency or concurrency protection\n\nThe `handle_create` function creates and saves an order without any check for duplicates or concurrency control. If called twice with the same command, it would create two orders. Consider accepting an idempotency key or checking for existing orders.\n\n---\n\n## Positive Observations\n\n- **Type-state pattern**: Using `Draft`, `Validated`, `Priced` to enforce business rules at compile time is excellent.\n- **Tracing integration**: `#[tracing::instrument]` with field extraction shows production-readiness awareness.\n- **`smallvec` usage**: Good performance choice for small collections, avoiding heap allocation for the common case.\n- **Result-based error handling**: No panics, no unwraps, proper `Result` propagation.\n- **Domain separation**: The code separates domain logic (`validate_order`) from infrastructure (`OrderRepo`) and API handlers.\n\n---\n\n## Suggested Fixes (Priority Order)\n\n1. Fix the `Order::Draft { ... }` compile error -- use `Draft { ... }` directly since `validate_order` expects a bare `Draft`.\n2. Add `Send + Sync` bounds to `OrderRepo` trait.\n3. Add constructors with validation for `OrderId` and `CustomerId`.\n4. Consider making `OrderRepo` methods state-specific (e.g., `save_validated`).\n5. Expand `validate_order` or rename it to reflect its actual scope.\n6. Preserve `items` in `Priced` or document why they are intentionally dropped.\n"}]}};
+
+    // ---- State ----
+    let feedbackMap = {};  // run_id -> feedback text
+    let currentIndex = 0;
+    let visitedRuns = new Set();
+
+    // ---- Init ----
+    async function init() {
+      // Load saved feedback from server — but only if this isn't a fresh
+      // iteration (indicated by previous_feedback being present). When
+      // previous feedback exists, the feedback.json on disk is stale from
+      // the prior iteration and should not pre-fill the textareas.
+      const hasPrevious = Object.keys(EMBEDDED_DATA.previous_feedback || {}).length > 0
+        || Object.keys(EMBEDDED_DATA.previous_outputs || {}).length > 0;
+      if (!hasPrevious) {
+        try {
+          const resp = await fetch("/api/feedback");
+          const data = await resp.json();
+          if (data.reviews) {
+            for (const r of data.reviews) feedbackMap[r.run_id] = r.feedback;
+          }
+        } catch { /* first run, no feedback yet */ }
+      }
+
+      document.getElementById("skill-name").textContent = EMBEDDED_DATA.skill_name;
+      showRun(0);
+
+      // Wire up feedback auto-save
+      const textarea = document.getElementById("feedback");
+      let saveTimeout = null;
+      textarea.addEventListener("input", () => {
+        clearTimeout(saveTimeout);
+        document.getElementById("feedback-status").textContent = "";
+        saveTimeout = setTimeout(() => saveCurrentFeedback(), 800);
+      });
+    }
+
+    // ---- Navigation ----
+    function navigate(delta) {
+      const newIndex = currentIndex + delta;
+      if (newIndex >= 0 && newIndex < EMBEDDED_DATA.runs.length) {
+        saveCurrentFeedback();
+        showRun(newIndex);
+      }
+    }
+
+    function updateNavButtons() {
+      document.getElementById("prev-btn").disabled = currentIndex === 0;
+      document.getElementById("next-btn").disabled =
+        currentIndex === EMBEDDED_DATA.runs.length - 1;
+    }
+
+    // ---- Show a run ----
+    function showRun(index) {
+      currentIndex = index;
+      const run = EMBEDDED_DATA.runs[index];
+
+      // Progress
+      document.getElementById("progress").textContent =
+        `${index + 1} of ${EMBEDDED_DATA.runs.length}`;
+
+      // Prompt
+      document.getElementById("prompt-text").textContent = run.prompt;
+
+      // Config badge
+      const badge = document.getElementById("config-badge");
+      const configMatch = run.id.match(/(with_skill|without_skill|new_skill|old_skill)/);
+      if (configMatch) {
+        const config = configMatch[1];
+        const isBaseline = config === "without_skill" || config === "old_skill";
+        badge.textContent = config.replace(/_/g, " ");
+        badge.className = "config-badge " + (isBaseline ? "config-baseline" : "config-primary");
+        badge.style.display = "inline-block";
+      } else {
+        badge.style.display = "none";
+      }
+
+      // Outputs
+      renderOutputs(run);
+
+      // Previous outputs
+      renderPrevOutputs(run);
+
+      // Grades
+      renderGrades(run);
+
+      // Previous feedback
+      const prevFb = (EMBEDDED_DATA.previous_feedback || {})[run.id];
+      const prevEl = document.getElementById("prev-feedback");
+      if (prevFb) {
+        document.getElementById("prev-feedback-text").textContent = prevFb;
+        prevEl.style.display = "block";
+      } else {
+        prevEl.style.display = "none";
+      }
+
+      // Feedback
+      document.getElementById("feedback").value = feedbackMap[run.id] || "";
+      document.getElementById("feedback-status").textContent = "";
+
+      updateNavButtons();
+
+      // Track visited runs and promote done button when all visited
+      visitedRuns.add(index);
+      const doneBtn = document.getElementById("done-btn");
+      if (visitedRuns.size >= EMBEDDED_DATA.runs.length) {
+        doneBtn.classList.add("ready");
+      }
+
+      // Scroll main content to top
+      document.querySelector(".main").scrollTop = 0;
+    }
+
+    // ---- Render outputs ----
+    function renderOutputs(run) {
+      const container = document.getElementById("outputs-body");
+      container.innerHTML = "";
+
+      const outputs = run.outputs || [];
+      if (outputs.length === 0) {
+        container.innerHTML = '<div class="empty-state">No output files</div>';
+        return;
+      }
+
+      for (const file of outputs) {
+        const fileDiv = document.createElement("div");
+        fileDiv.className = "output-file";
+
+        // Always show file header with download link
+        const header = document.createElement("div");
+        header.className = "output-file-header";
+        const nameSpan = document.createElement("span");
+        nameSpan.textContent = file.name;
+        header.appendChild(nameSpan);
+        const dlBtn = document.createElement("a");
+        dlBtn.className = "dl-btn";
+        dlBtn.textContent = "Download";
+        dlBtn.download = file.name;
+        dlBtn.href = getDownloadUri(file);
+        header.appendChild(dlBtn);
+        fileDiv.appendChild(header);
+
+        const content = document.createElement("div");
+        content.className = "output-file-content";
+
+        if (file.type === "text") {
+          const pre = document.createElement("pre");
+          pre.textContent = file.content;
+          content.appendChild(pre);
+        } else if (file.type === "image") {
+          const img = document.createElement("img");
+          img.src = file.data_uri;
+          img.alt = file.name;
+          content.appendChild(img);
+        } else if (file.type === "pdf") {
+          const iframe = document.createElement("iframe");
+          iframe.src = file.data_uri;
+          content.appendChild(iframe);
+        } else if (file.type === "xlsx") {
+          renderXlsx(content, file.data_b64);
+        } else if (file.type === "binary") {
+          const a = document.createElement("a");
+          a.className = "download-link";
+          a.href = file.data_uri;
+          a.download = file.name;
+          a.textContent = "Download " + file.name;
+          content.appendChild(a);
+        } else if (file.type === "error") {
+          const pre = document.createElement("pre");
+          pre.textContent = file.content;
+          pre.style.color = "var(--red)";
+          content.appendChild(pre);
+        }
+
+        fileDiv.appendChild(content);
+        container.appendChild(fileDiv);
+      }
+    }
+
+    // ---- XLSX rendering via SheetJS ----
+    function renderXlsx(container, b64Data) {
+      try {
+        const raw = Uint8Array.from(atob(b64Data), c => c.charCodeAt(0));
+        const wb = XLSX.read(raw, { type: "array" });
+
+        for (let i = 0; i < wb.SheetNames.length; i++) {
+          const sheetName = wb.SheetNames[i];
+          const ws = wb.Sheets[sheetName];
+
+          if (wb.SheetNames.length > 1) {
+            const sheetLabel = document.createElement("div");
+            sheetLabel.style.cssText =
+              "font-weight:600; font-size:0.8rem; color:#b0aea5; margin-top:0.5rem; margin-bottom:0.25rem;";
+            sheetLabel.textContent = "Sheet: " + sheetName;
+            container.appendChild(sheetLabel);
+          }
+
+          const htmlStr = XLSX.utils.sheet_to_html(ws, { editable: false });
+          const wrapper = document.createElement("div");
+          wrapper.innerHTML = htmlStr;
+          container.appendChild(wrapper);
+        }
+      } catch (err) {
+        container.textContent = "Error rendering spreadsheet: " + err.message;
+      }
+    }
+
+    // ---- Grades ----
+    function renderGrades(run) {
+      const section = document.getElementById("grades-section");
+      const content = document.getElementById("grades-content");
+
+      if (!run.grading) {
+        section.style.display = "none";
+        return;
+      }
+
+      const grading = run.grading;
+      section.style.display = "block";
+      // Reset to collapsed
+      content.classList.remove("open");
+      document.getElementById("grades-arrow").classList.remove("open");
+
+      const summary = grading.summary || {};
+      const expectations = grading.expectations || [];
+
+      let html = '<div style="padding: 1rem;">';
+
+      // Summary line
+      const passRate = summary.pass_rate != null
+        ? Math.round(summary.pass_rate * 100) + "%"
+        : "?";
+      const badgeClass = summary.pass_rate >= 0.8 ? "grade-pass" : summary.pass_rate >= 0.5 ? "" : "grade-fail";
+      html += '<div class="grades-summary">';
+      html += '<span class="grade-badge ' + badgeClass + '">' + passRate + '</span>';
+      html += '<span>' + (summary.passed || 0) + ' passed, ' + (summary.failed || 0) + ' failed of ' + (summary.total || 0) + '</span>';
+      html += '</div>';
+
+      // Assertions list
+      html += '<ul class="assertion-list">';
+      for (const exp of expectations) {
+        const statusClass = exp.passed ? "pass" : "fail";
+        const statusIcon = exp.passed ? "\u2713" : "\u2717";
+        html += '<li class="assertion-item">';
+        html += '<span class="assertion-status ' + statusClass + '">' + statusIcon + '</span>';
+        html += '<span>' + escapeHtml(exp.text) + '</span>';
+        if (exp.evidence) {
+          html += '<div class="assertion-evidence">' + escapeHtml(exp.evidence) + '</div>';
+        }
+        html += '</li>';
+      }
+      html += '</ul>';
+
+      html += '</div>';
+      content.innerHTML = html;
+    }
+
+    function toggleGrades() {
+      const content = document.getElementById("grades-content");
+      const arrow = document.getElementById("grades-arrow");
+      content.classList.toggle("open");
+      arrow.classList.toggle("open");
+    }
+
+    // ---- Previous outputs (collapsible) ----
+    function renderPrevOutputs(run) {
+      const section = document.getElementById("prev-outputs-section");
+      const content = document.getElementById("prev-outputs-content");
+      const prevOutputs = (EMBEDDED_DATA.previous_outputs || {})[run.id];
+
+      if (!prevOutputs || prevOutputs.length === 0) {
+        section.style.display = "none";
+        return;
+      }
+
+      section.style.display = "block";
+      // Reset to collapsed
+      content.classList.remove("open");
+      document.getElementById("prev-outputs-arrow").classList.remove("open");
+
+      // Render the files into the content area
+      content.innerHTML = "";
+      const wrapper = document.createElement("div");
+      wrapper.style.padding = "1rem";
+
+      for (const file of prevOutputs) {
+        const fileDiv = document.createElement("div");
+        fileDiv.className = "output-file";
+
+        const header = document.createElement("div");
+        header.className = "output-file-header";
+        const nameSpan = document.createElement("span");
+        nameSpan.textContent = file.name;
+        header.appendChild(nameSpan);
+        const dlBtn = document.createElement("a");
+        dlBtn.className = "dl-btn";
+        dlBtn.textContent = "Download";
+        dlBtn.download = file.name;
+        dlBtn.href = getDownloadUri(file);
+        header.appendChild(dlBtn);
+        fileDiv.appendChild(header);
+
+        const fc = document.createElement("div");
+        fc.className = "output-file-content";
+
+        if (file.type === "text") {
+          const pre = document.createElement("pre");
+          pre.textContent = file.content;
+          fc.appendChild(pre);
+        } else if (file.type === "image") {
+          const img = document.createElement("img");
+          img.src = file.data_uri;
+          img.alt = file.name;
+          fc.appendChild(img);
+        } else if (file.type === "pdf") {
+          const iframe = document.createElement("iframe");
+          iframe.src = file.data_uri;
+          fc.appendChild(iframe);
+        } else if (file.type === "xlsx") {
+          renderXlsx(fc, file.data_b64);
+        } else if (file.type === "binary") {
+          const a = document.createElement("a");
+          a.className = "download-link";
+          a.href = file.data_uri;
+          a.download = file.name;
+          a.textContent = "Download " + file.name;
+          fc.appendChild(a);
+        }
+
+        fileDiv.appendChild(fc);
+        wrapper.appendChild(fileDiv);
+      }
+
+      content.appendChild(wrapper);
+    }
+
+    function togglePrevOutputs() {
+      const content = document.getElementById("prev-outputs-content");
+      const arrow = document.getElementById("prev-outputs-arrow");
+      content.classList.toggle("open");
+      arrow.classList.toggle("open");
+    }
+
+    // ---- Feedback (saved to server -> feedback.json) ----
+    function saveCurrentFeedback() {
+      const run = EMBEDDED_DATA.runs[currentIndex];
+      const text = document.getElementById("feedback").value;
+
+      if (text.trim() === "") {
+        delete feedbackMap[run.id];
+      } else {
+        feedbackMap[run.id] = text;
+      }
+
+      // Build reviews array from map
+      const reviews = [];
+      for (const [run_id, feedback] of Object.entries(feedbackMap)) {
+        if (feedback.trim()) {
+          reviews.push({ run_id, feedback, timestamp: new Date().toISOString() });
+        }
+      }
+
+      fetch("/api/feedback", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ reviews, status: "in_progress" }),
+      }).then(() => {
+        document.getElementById("feedback-status").textContent = "Saved";
+      }).catch(() => {
+        // Static mode or server unavailable — no-op on auto-save,
+        // feedback will be downloaded on final submit
+        document.getElementById("feedback-status").textContent = "Will download on submit";
+      });
+    }
+
+    // ---- Done ----
+    function showDoneDialog() {
+      // Save current textarea to feedbackMap (but don't POST yet)
+      const run = EMBEDDED_DATA.runs[currentIndex];
+      const text = document.getElementById("feedback").value;
+      if (text.trim() === "") {
+        delete feedbackMap[run.id];
+      } else {
+        feedbackMap[run.id] = text;
+      }
+
+      // POST once with status: complete — include ALL runs so the model
+      // can distinguish "no feedback" (looks good) from "not reviewed"
+      const reviews = [];
+      const ts = new Date().toISOString();
+      for (const r of EMBEDDED_DATA.runs) {
+        reviews.push({ run_id: r.id, feedback: feedbackMap[r.id] || "", timestamp: ts });
+      }
+      const payload = JSON.stringify({ reviews, status: "complete" }, null, 2);
+      fetch("/api/feedback", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: payload,
+      }).then(() => {
+        document.getElementById("done-overlay").classList.add("visible");
+      }).catch(() => {
+        // Server not available (static mode) — download as file
+        const blob = new Blob([payload], { type: "application/json" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = "feedback.json";
+        a.click();
+        URL.revokeObjectURL(url);
+        document.getElementById("done-overlay").classList.add("visible");
+      });
+    }
+
+    function closeDoneDialog() {
+      // Reset status back to in_progress
+      saveCurrentFeedback();
+      document.getElementById("done-overlay").classList.remove("visible");
+    }
+
+    // ---- Toast ----
+    function showToast(message) {
+      const toast = document.getElementById("toast");
+      toast.textContent = message;
+      toast.classList.add("visible");
+      setTimeout(() => toast.classList.remove("visible"), 2000);
+    }
+
+    // ---- Keyboard nav ----
+    document.addEventListener("keydown", (e) => {
+      // Don't capture when typing in textarea
+      if (e.target.tagName === "TEXTAREA") return;
+
+      if (e.key === "ArrowLeft" || e.key === "ArrowUp") {
+        e.preventDefault();
+        navigate(-1);
+      } else if (e.key === "ArrowRight" || e.key === "ArrowDown") {
+        e.preventDefault();
+        navigate(1);
+      }
+    });
+
+    // ---- Util ----
+    function getDownloadUri(file) {
+      if (file.data_uri) return file.data_uri;
+      if (file.data_b64) return "data:application/octet-stream;base64," + file.data_b64;
+      if (file.type === "text") return "data:text/plain;charset=utf-8," + encodeURIComponent(file.content);
+      return "#";
+    }
+
+    function escapeHtml(text) {
+      const div = document.createElement("div");
+      div.textContent = text;
+      return div.innerHTML;
+    }
+
+    // ---- View switching ----
+    function switchView(view) {
+      document.querySelectorAll(".view-tab").forEach(t => t.classList.remove("active"));
+      document.querySelectorAll(".view-panel").forEach(p => p.classList.remove("active"));
+      document.querySelector(`[onclick="switchView('${view}')"]`).classList.add("active");
+      document.getElementById("panel-" + view).classList.add("active");
+    }
+
+    // ---- Benchmark rendering ----
+    function renderBenchmark() {
+      const data = EMBEDDED_DATA.benchmark;
+      if (!data) return;
+
+      // Show the tabs
+      document.getElementById("view-tabs").style.display = "flex";
+
+      const container = document.getElementById("benchmark-content");
+      const summary = data.run_summary || {};
+      const metadata = data.metadata || {};
+      const notes = data.notes || [];
+
+      let html = "";
+
+      // Header
+      html += "<h2 style='font-family: Poppins, sans-serif; margin-bottom: 0.5rem;'>Benchmark Results</h2>";
+      html += "<p style='color: var(--text-muted); font-size: 0.875rem; margin-bottom: 1.25rem;'>";
+      if (metadata.skill_name) html += "<strong>" + escapeHtml(metadata.skill_name) + "</strong> &mdash; ";
+      if (metadata.timestamp) html += metadata.timestamp + " &mdash; ";
+      if (metadata.evals_run) html += "Evals: " + metadata.evals_run.join(", ") + " &mdash; ";
+      html += (metadata.runs_per_configuration || "?") + " runs per configuration";
+      html += "</p>";
+
+      // Summary table
+      html += '<table class="benchmark-table">';
+
+      function fmtStat(stat, pct) {
+        if (!stat) return "—";
+        const suffix = pct ? "%" : "";
+        const m = pct ? (stat.mean * 100).toFixed(0) : stat.mean.toFixed(1);
+        const s = pct ? (stat.stddev * 100).toFixed(0) : stat.stddev.toFixed(1);
+        return m + suffix + " ± " + s + suffix;
+      }
+
+      function deltaClass(val) {
+        if (!val) return "";
+        const n = parseFloat(val);
+        if (n > 0) return "benchmark-delta-positive";
+        if (n < 0) return "benchmark-delta-negative";
+        return "";
+      }
+
+      // Discover config names dynamically (everything except "delta")
+      const configs = Object.keys(summary).filter(k => k !== "delta");
+      const configA = configs[0] || "config_a";
+      const configB = configs[1] || "config_b";
+      const labelA = configA.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase());
+      const labelB = configB.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase());
+      const a = summary[configA] || {};
+      const b = summary[configB] || {};
+      const delta = summary.delta || {};
+
+      html += "<thead><tr><th>Metric</th><th>" + escapeHtml(labelA) + "</th><th>" + escapeHtml(labelB) + "</th><th>Delta</th></tr></thead>";
+      html += "<tbody>";
+
+      html += "<tr><td><strong>Pass Rate</strong></td>";
+      html += "<td>" + fmtStat(a.pass_rate, true) + "</td>";
+      html += "<td>" + fmtStat(b.pass_rate, true) + "</td>";
+      html += '<td class="' + deltaClass(delta.pass_rate) + '">' + (delta.pass_rate || "—") + "</td></tr>";
+
+      // Time (only show row if data exists)
+      if (a.time_seconds || b.time_seconds) {
+        html += "<tr><td><strong>Time (s)</strong></td>";
+        html += "<td>" + fmtStat(a.time_seconds, false) + "</td>";
+        html += "<td>" + fmtStat(b.time_seconds, false) + "</td>";
+        html += '<td class="' + deltaClass(delta.time_seconds) + '">' + (delta.time_seconds ? delta.time_seconds + "s" : "—") + "</td></tr>";
+      }
+
+      // Tokens (only show row if data exists)
+      if (a.tokens || b.tokens) {
+        html += "<tr><td><strong>Tokens</strong></td>";
+        html += "<td>" + fmtStat(a.tokens, false) + "</td>";
+        html += "<td>" + fmtStat(b.tokens, false) + "</td>";
+        html += '<td class="' + deltaClass(delta.tokens) + '">' + (delta.tokens || "—") + "</td></tr>";
+      }
+
+      html += "</tbody></table>";
+
+      // Per-eval breakdown (if runs data available)
+      const runs = data.runs || [];
+      if (runs.length > 0) {
+        const evalIds = [...new Set(runs.map(r => r.eval_id))].sort((a, b) => a - b);
+
+        html += "<h3 style='font-family: Poppins, sans-serif; margin-bottom: 0.75rem;'>Per-Eval Breakdown</h3>";
+
+        const hasTime = runs.some(r => r.result && r.result.time_seconds != null);
+        const hasErrors = runs.some(r => r.result && r.result.errors > 0);
+
+        for (const evalId of evalIds) {
+          const evalRuns = runs.filter(r => r.eval_id === evalId);
+          const evalName = evalRuns[0] && evalRuns[0].eval_name ? evalRuns[0].eval_name : "Eval " + evalId;
+
+          html += "<h4 style='font-family: Poppins, sans-serif; margin: 1rem 0 0.5rem; color: var(--text);'>" + escapeHtml(evalName) + "</h4>";
+          html += '<table class="benchmark-table">';
+          html += "<thead><tr><th>Config</th><th>Run</th><th>Pass Rate</th>";
+          if (hasTime) html += "<th>Time (s)</th>";
+          if (hasErrors) html += "<th>Crashes During Execution</th>";
+          html += "</tr></thead>";
+          html += "<tbody>";
+
+          // Group by config and render with average rows
+          const configGroups = [...new Set(evalRuns.map(r => r.configuration))];
+          for (let ci = 0; ci < configGroups.length; ci++) {
+            const config = configGroups[ci];
+            const configRuns = evalRuns.filter(r => r.configuration === config);
+            if (configRuns.length === 0) continue;
+
+            const rowClass = ci === 0 ? "benchmark-row-with" : "benchmark-row-without";
+            const configLabel = config.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase());
+
+            for (const run of configRuns) {
+              const r = run.result || {};
+              const prClass = r.pass_rate >= 0.8 ? "benchmark-delta-positive" : r.pass_rate < 0.5 ? "benchmark-delta-negative" : "";
+              html += '<tr class="' + rowClass + '">';
+              html += "<td>" + configLabel + "</td>";
+              html += "<td>" + run.run_number + "</td>";
+              html += '<td class="' + prClass + '">' + ((r.pass_rate || 0) * 100).toFixed(0) + "% (" + (r.passed || 0) + "/" + (r.total || 0) + ")</td>";
+              if (hasTime) html += "<td>" + (r.time_seconds != null ? r.time_seconds.toFixed(1) : "—") + "</td>";
+              if (hasErrors) html += "<td>" + (r.errors || 0) + "</td>";
+              html += "</tr>";
+            }
+
+            // Average row
+            const rates = configRuns.map(r => (r.result || {}).pass_rate || 0);
+            const avgRate = rates.reduce((a, b) => a + b, 0) / rates.length;
+            const avgPrClass = avgRate >= 0.8 ? "benchmark-delta-positive" : avgRate < 0.5 ? "benchmark-delta-negative" : "";
+            html += '<tr class="benchmark-row-avg ' + rowClass + '">';
+            html += "<td>" + configLabel + "</td>";
+            html += "<td>Avg</td>";
+            html += '<td class="' + avgPrClass + '">' + (avgRate * 100).toFixed(0) + "%</td>";
+            if (hasTime) {
+              const times = configRuns.map(r => (r.result || {}).time_seconds).filter(t => t != null);
+              html += "<td>" + (times.length ? (times.reduce((a, b) => a + b, 0) / times.length).toFixed(1) : "—") + "</td>";
+            }
+            if (hasErrors) html += "<td></td>";
+            html += "</tr>";
+          }
+          html += "</tbody></table>";
+
+          // Per-assertion detail for this eval
+          const runsWithExpectations = {};
+          for (const config of configGroups) {
+            runsWithExpectations[config] = evalRuns.filter(r => r.configuration === config && r.expectations && r.expectations.length > 0);
+          }
+          const hasAnyExpectations = Object.values(runsWithExpectations).some(runs => runs.length > 0);
+          if (hasAnyExpectations) {
+            // Collect all unique assertion texts across all configs
+            const allAssertions = [];
+            const seen = new Set();
+            for (const config of configGroups) {
+              for (const run of runsWithExpectations[config]) {
+                for (const exp of (run.expectations || [])) {
+                  if (!seen.has(exp.text)) {
+                    seen.add(exp.text);
+                    allAssertions.push(exp.text);
+                  }
+                }
+              }
+            }
+
+            html += '<table class="benchmark-table" style="margin-top: 0.5rem;">';
+            html += "<thead><tr><th>Assertion</th>";
+            for (const config of configGroups) {
+              const label = config.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase());
+              html += "<th>" + escapeHtml(label) + "</th>";
+            }
+            html += "</tr></thead><tbody>";
+
+            for (const assertionText of allAssertions) {
+              html += "<tr><td>" + escapeHtml(assertionText) + "</td>";
+
+              for (const config of configGroups) {
+                html += "<td>";
+                for (const run of runsWithExpectations[config]) {
+                  const exp = (run.expectations || []).find(e => e.text === assertionText);
+                  if (exp) {
+                    const cls = exp.passed ? "benchmark-delta-positive" : "benchmark-delta-negative";
+                    const icon = exp.passed ? "\u2713" : "\u2717";
+                    html += '<span class="' + cls + '" title="Run ' + run.run_number + ': ' + escapeHtml(exp.evidence || "") + '">' + icon + "</span> ";
+                  } else {
+                    html += "— ";
+                  }
+                }
+                html += "</td>";
+              }
+              html += "</tr>";
+            }
+            html += "</tbody></table>";
+          }
+        }
+      }
+
+      // Notes
+      if (notes.length > 0) {
+        html += '<div class="benchmark-notes">';
+        html += "<h3>Analysis Notes</h3>";
+        html += "<ul>";
+        for (const note of notes) {
+          html += "<li>" + escapeHtml(note) + "</li>";
+        }
+        html += "</ul></div>";
+      }
+
+      container.innerHTML = html;
+    }
+
+    // ---- Start ----
+    init();
+    renderBenchmark();
+  </script>
+</body>
+</html>

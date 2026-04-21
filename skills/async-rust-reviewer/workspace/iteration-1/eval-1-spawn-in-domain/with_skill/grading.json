@@ -1,0 +1,17 @@
+{
+  "eval_id": 1,
+  "eval_name": "spawn-in-domain",
+  "configuration": "with_skill",
+  "expectations": [
+    {"text": "Identifies tokio::spawn inside domain crate as architecture violation", "passed": true, "evidence": "LETHAL-1: 'tokio::spawn inside domain crate' at line 8. 'Spawn is an Action and belongs exclusively in the Actions layer.'"},
+    {"text": "Identifies async fn in domain crate as violation", "passed": true, "evidence": "LETHAL-2: 'pub async fn process_orders' in domain violates 'no_await_in_calc' and 'domain_zero_async_deps'."},
+    {"text": "Flags Arc<Mutex<Vec>> without priority ladder consideration", "passed": true, "evidence": "MAJOR-2: 'Arc<Mutex<Vec<...>>> without priority ladder justification' -- lists ownership transfer, message passing, buffer_unordered as preferred alternatives."},
+    {"text": "Flags .unwrap() on Mutex lock", "passed": true, "evidence": "LETHAL-7: '.unwrap() on Mutex lock -- panics kill the runtime' at lines 13 and 21."},
+    {"text": "Flags unbounded concurrency / spawn loop", "passed": true, "evidence": "LETHAL-4: 'Unbounded spawn loop' -- 'If orders contains 100,000 items, 100,000 tasks are spawned simultaneously.'"},
+    {"text": "Flags missing tracing/instrumentation", "passed": true, "evidence": "MAJOR-3: 'No tracing instrumentation' -- no #[tracing::instrument] on the async function."},
+    {"text": "Identifies cancellation safety issue", "passed": true, "evidence": "LETHAL-8: 'Cancellation-unsafe state mutation' -- save_to_db commits to DB but cancelled tasks leave results out of returned Vec."},
+    {"text": "Cites specific rule IDs from the skill", "passed": true, "evidence": "Cites: spawn_at_edge_only, no_await_in_calc, sync_over_async, bounded_concurrency, no_imperative_concurrency, arc_over_rc, cancellation_safe_design, tracing_instrument, domain_zero_async_deps, adapter_owns_async, max_await_points."},
+    {"text": "Provides structured 7-phase review", "passed": true, "evidence": "All 7 phases present with clear PASS/FAIL per phase plus a findings summary table."},
+    {"text": "Provides actionable mandate for fixes", "passed": true, "evidence": "10-item ordered mandate with specific refactoring instructions."}
+  ]
+}
