@@ -1,0 +1,101 @@
+# Example Moon task configuration for a Rust verification gauntlet.
+# Place this in a project-level moon.yml or adapt into .moon/tasks/rust.yml.
+
+language: rust
+layer: library
+
+env:
+  CARGO_TERM_COLOR: always
+
+fileGroups:
+  sources:
+    - src/**/*
+    - crates/*/src/**/*
+    - Cargo.toml
+    - Cargo.lock
+    - crates/*/Cargo.toml
+  tests:
+    - tests/**/*
+    - crates/*/tests/**/*
+    - benches/**/*
+    - crates/*/benches/**/*
+  verification:
+    - rust-verification-gauntlet.sh
+    - scripts/**/*
+    - proofs/**/*
+    - tla/**/*
+    - specs/**/*.tla
+    - specs/**/*.cfg
+    - models/**/*.tla
+    - models/**/*.cfg
+    - verus/**/*
+    - proofs/verus/**/*
+    - crates/*/src/**/*_verus.rs
+    - kani/**/*
+    - fuzz/**/*
+    - bolero/**/*
+  bead-artifacts:
+    - .beads/**/baseline-report.md
+    - .beads/**/delivery-scope.jsonl
+    - .beads/**/tla-spec.md
+    - .beads/**/proof-obligations.jsonl
+    - .beads/**/traceability-matrix.jsonl
+    - .beads/**/formal-waivers.jsonl
+    - .beads/**/verification-ledger.jsonl
+    - .beads/**/regression-diff.md
+
+tasks:
+  verify-fast:
+    command: ./rust-verification-gauntlet.sh
+    args:
+      - fast
+    inputs:
+      - '@globs(sources)'
+      - '@globs(tests)'
+      - '@globs(verification)'
+      - '@globs(bead-artifacts)'
+
+  verify-standard:
+    command: ./rust-verification-gauntlet.sh
+    args:
+      - standard
+    inputs:
+      - '@globs(sources)'
+      - '@globs(tests)'
+      - '@globs(verification)'
+      - '@globs(bead-artifacts)'
+
+  verify-deep:
+    command: ./rust-verification-gauntlet.sh
+    args:
+      - deep
+    inputs:
+      - '@globs(sources)'
+      - '@globs(tests)'
+      - '@globs(verification)'
+      - '@globs(bead-artifacts)'
+    options:
+      cache: false
+
+  verify-proof:
+    command: ./rust-verification-gauntlet.sh
+    args:
+      - proof
+    inputs:
+      - '@globs(sources)'
+      - '@globs(verification)'
+      - '@globs(bead-artifacts)'
+    options:
+      cache: false
+
+  verify-all:
+    command: ./rust-verification-gauntlet.sh
+    args:
+      - all
+    inputs:
+      - '@globs(sources)'
+      - '@globs(tests)'
+      - '@globs(verification)'
+      - '@globs(bead-artifacts)'
+    options:
+      cache: false

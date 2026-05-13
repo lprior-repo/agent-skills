@@ -1,0 +1,154 @@
+{
+  "version": "1",
+  "description": "Loom concurrency testing skill evaluation prompts",
+  "prompts": [
+    {
+      "id": "loom_basic_1",
+      "prompt": "Write a Loom test for a simple Arc<AtomicUsize> counter that two threads increment. The test should verify the final count is 2.",
+      "should_trigger": true,
+      "expectations": [
+        "Uses loom::model or loom::model::Builder",
+        "Uses loom::sync::Arc and loom::sync::atomic::{AtomicUsize, Ordering}",
+        "Uses loom::thread for spawning",
+        "Uses cfg(loom) or cfg(not(loom)) pattern",
+        "Test is deterministic"
+      ]
+    },
+    {
+      "id": "loom_memory_ordering_2",
+      "prompt": "I have a publication pattern where thread A writes data then sets a flag with Release ordering, and thread B loads the flag with Acquire ordering then reads the data. How do I test this with Loom to verify the Acquire sees the Release?",
+      "should_trigger": true,
+      "expectations": [
+        "Shows Release/Acquire ordering pair",
+        "Uses loom::model closure",
+        "Demonstrates the happens-before relationship",
+        "Explains why Relaxed would fail"
+      ]
+    },
+    {
+      "id": "loom_setup_3",
+      "prompt": "How do I set up loom in my Rust project? I want to test my sync module but I don't know how to configure the Cargo.toml and sync.rs indirection layer.",
+      "should_trigger": true,
+      "expectations": [
+        "Shows target.'cfg(loom)' dependency configuration",
+        "Shows sync.rs indirection module with #[cfg(loom)] and #[cfg(not(loom))]",
+        "Explains why direct std imports are problematic",
+        "Shows how to run with RUSTFLAGS=\"--cfg loom\""
+      ]
+    },
+    {
+      "id": "loom_debug_4",
+      "prompt": "My Loom test is failing but I don't know which schedule caused it. How do I use checkpointing to isolate and debug the failing permutation?",
+      "should_trigger": true,
+      "expectations": [
+        "Shows LOOM_CHECKPOINT_FILE usage",
+        "Shows LOOM_CHECKPOINT_INTERVAL=1 to isolate failure",
+        "Shows LOOM_LOG=trace for detailed tracing",
+        "Explains LOOM_LOCATION=1 but warns about expense"
+      ]
+    },
+    {
+      "id": "loom_bounds_5",
+      "prompt": "My Loom model has 4 threads and the exhaustive search is taking hours. I want to add bounds for CI. What's the right approach?",
+      "should_trigger": true,
+      "expectations": [
+        "Explains preemption_bound = Some(2) or Some(3) as primary lever",
+        "Mentions LOOM_MAX_PREEMPTIONS environment variable",
+        "Explains bounding priority: shrink model first, then preemption_bound, then hard caps",
+        "Mentions research showing low bounds find most bugs"
+      ]
+    },
+    {
+      "id": "loom_spin_6",
+      "prompt": "Why does my spin loop test hang in Loom but work in production?",
+      "should_trigger": true,
+      "expectations": [
+        "Explains Loom scheduler is NOT fair",
+        "Mentions loom::thread::yield_now() requirement",
+        "Shows proper spin loop pattern with yield",
+        "References 'Spinlocks Considered Harmful'"
+      ]
+    },
+    {
+      "id": "async_rust_7",
+      "prompt": "How do I test my async mutex implementation with Loom?",
+      "should_trigger": true,
+      "expectations": [
+        "Explains Loom's futures feature gate",
+        "Mentions block_on and AtomicWaker only",
+        "Explains async runtimes are too large to model",
+        "Suggests testing the concurrency protocol underneath"
+      ]
+    },
+    {
+      "id": "general_async_8",
+      "prompt": "How do I set up tokio in my Rust project?",
+      "should_trigger": false,
+      "expectations": [
+        "Explains this is not a Loom question",
+        "Directs to tokio documentation or async-rust-reviewer skill"
+      ]
+    },
+    {
+      "id": "loom_unsafecell_9",
+      "prompt": "I have an unsafe concurrent data structure with raw pointers. How do I test it with Loom's UnsafeCell?",
+      "should_trigger": true,
+      "expectations": [
+        "Shows loom::cell::UnsafeCell usage",
+        "Demonstrates with() and with_mut() closure API",
+        "Explains why standard UnsafeCell bypasses Loom tracking"
+      ]
+    },
+    {
+      "id": "loom_comparison_10",
+      "prompt": "Should I use Loom or Shuttle for testing my concurrent code? What's the difference?",
+      "should_trigger": true,
+      "expectations": [
+        "Explains Loom is systematic exhaustive exploration",
+        "Explains Shuttle is randomized with replay",
+        "Explains stress tests are poor coverage",
+        "Gives guidance on when to use which"
+      ]
+    },
+    {
+      "id": "general_concurrency_11",
+      "prompt": "How should I test concurrent Rust code in general? I am not using Loom and just want ordinary unit tests or integration tests.",
+      "should_trigger": false,
+      "expectations": [
+        "Does not route to Loom-specific setup",
+        "Suggests ordinary Rust unit, integration, or stress testing as appropriate",
+        "Mentions Loom only as an optional tool for small synchronization protocols"
+      ]
+    },
+    {
+      "id": "formal_concurrency_12",
+      "prompt": "Use Kani or Verus to prove my lock-free stack cannot violate its safety invariant.",
+      "should_trigger": false,
+      "expectations": [
+        "Routes to formal verification skills instead of Loom",
+        "Explains Loom is not a theorem prover",
+        "Avoids producing Loom-specific Cargo setup"
+      ]
+    },
+    {
+      "id": "tokio_runtime_setup_13",
+      "prompt": "How do I configure Tokio runtime worker threads and enable IO/time drivers?",
+      "should_trigger": false,
+      "expectations": [
+        "Treats this as general async runtime setup",
+        "Does not introduce Loom for general Tokio runtime setup; routes permutation-testing requests separately",
+        "Routes toward async Rust guidance"
+      ]
+    },
+    {
+      "id": "non_rust_concurrency_14",
+      "prompt": "Can you write Java concurrency tests for a synchronized queue?",
+      "should_trigger": false,
+      "expectations": [
+        "Does not trigger the Rust Loom skill",
+        "Acknowledges this is outside Loom's Rust-specific scope",
+        "Avoids Rust-specific loom::model examples"
+      ]
+    }
+  ]
+}
