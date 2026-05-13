@@ -1,148 +1,233 @@
 # agent-skills
 
-Reusable AI agent skills for OpenCode, Claude Code, and compatible toolchains.
+Portable AI-agent skills for OpenCode, Claude Code, and compatible agent runtimes.
 
-This repo mirrors the contents of `~/.agents/skills`.
+This repository is a checked-in snapshot of a local `.agents` workspace. Within this repository, `.agents/skills/` is authoritative over the legacy top-level `skills/` mirror. At runtime, refresh this snapshot from your own `~/.agents/skills/` source of truth.
 
-## Structure
+## What Is In This Repo
 
 ```text
 agent-skills/
+├── .agents/
+│   ├── skill-improvement-plan.md
+│   ├── skills/
+│   │   ├── go-skill/
+│   │   ├── proof-planner/
+│   │   ├── proof-writer/
+│   │   ├── proof-reviewer/
+│   │   ├── evidence-packaging/
+│   │   └── ...
+│   └── tmp/
 ├── skills/
-│   ├── arch-design-qa/
-│   ├── async-rust-reviewer/
-│   ├── gastown/
-│   ├── opencode-scheduler/
-│   ├── truth-serum/
-│   └── ...
 ├── LICENSE
 └── README.md
 ```
 
-## Included Skills
+The top-level `skills/` directory is preserved for compatibility with older layouts. New consumers should prefer `.agents/skills/`.
 
-The repo mirrors your full `~/.agents/skills` collection.
+Local-only search indexes, session telemetry, and other machine-private runtime state are intentionally not included.
 
-### Architecture And Planning
+## Skill Format
 
-| Skill | What it is trying to do |
-| --- | --- |
-| `arch-design-qa` | Acts like a ruthless architectural product owner that pressure-tests domain models, invariants, edge cases, and failure modes before implementation. |
-| `arch-spec-to-beads` | Takes an `architecture-spec.md`, decomposes it, and persists validated beads through the bead pipeline. |
-| `architectural-drift` | Checks for codebase drift, oversized files, and violations of Scott Wlaschin-style DDD structure. |
-| `decomposer` | Shreds architecture specs into smaller, molecular tasks using a BEAM-style supervisor approach. |
-| `plan-shredder` | Stress-tests decomposition plans and attacks weak planning with constraint-driven review. |
-| `planner` | Produces deterministic, atomic bead plans using the enhanced planning template. |
-| `master` | Coordinates sub-agent-driven development by acting as the top-level GoMasterOrchestrator control plane. |
-| `go-skill` | Runs the BEAM-style state machine that moves work from top-priority bead through execution to landing. |
-| `doc-to-beads` | Reads an existing document, derives the architecture/spec, and immediately turns it into persisted beads. |
-| `beads` | Provides execution doctrine and workflow guidance for the `beads` issue tracker. |
+Each skill is a directory containing a `SKILL.md` file and, when needed, supporting reference files.
 
-### Rust And Engineering Discipline
+Most `SKILL.md` files use:
 
-| Skill | What it is trying to do |
-| --- | --- |
-| `functional-rust` | Enforces functional-first Rust with zero-panic discipline, strong layering, and reliability-focused implementation. |
-| `async-rust-reviewer` | Reviews async Rust for spawn discipline, stream usage, cancellation safety, Send/Sync hygiene, and observability. |
-| `rust-contract` | Produces Rust contracts, invariants, and Given/When/Then behavior plans before implementation. |
-| `scott-ddd-refactor` | Refactors code toward Scott Wlaschin-style type-driven design so illegal states become unrepresentable. |
-| `moon-v2` | Guides Moon v2 build setup for Rust, including CI/CD, caching, and lint gate design. |
-| `velocity` | Pushes for fast but disciplined delivery through TDD, functional core practices, and outcome-driven execution. |
+- YAML frontmatter for runtime metadata like `name`, `description`, `allowed-tools`, and invocation controls.
+- JSONL-style operational rules for compact, deterministic agent behavior.
+- A `Mandatory Verification Gate` section for commands or checks the skill must prove before claiming success.
+- An `Anti-Hallucination Shield` section that forbids fake outputs, invented files, and summary-only evidence.
 
-### Testing And QA
+## Install
 
-| Skill | What it is trying to do |
-| --- | --- |
-| `bdd-enforcer` | Ensures implemented behavior is backed by executable Given/When/Then scenarios and fixes gaps when proof is missing. |
-| `hands-on-qa` | Manually tests CLIs, APIs, and interfaces by actually invoking them and reporting only evidence-backed results. |
-| `qa-enforcer` | Performs ruthless execution-first QA like a product owner, deeply validating commands, APIs, and real outputs. |
-| `red-queen` | Evolves tests adversarially through the Digital Red Queen workflow to ratchet regressions and force validation. |
-| `truth-serum` | Audits AI-produced code for hallucinations, weak verification, deleted tests, and missing execution evidence. |
-| `black-hat-reviewer` | Serves as a hardline engineering gatekeeper for contracts, constraints, DDD, and reliability standards. |
-| `test-planner` | Writes exhaustive Rust test plans spanning unit, BDD, property, and mutation testing. |
-| `test-reviewer` | Reviews test plans and suites adversarially, looking for weak assertions, tautologies, and mutation gaps. |
-| `test-writer` | Implements exhaustive Rust tests across unit, integration, proptest, and Kani layers. |
+Install into a global `.agents` runtime:
 
-### Tooling, Platforms, And Ops
+```bash
+mkdir -p ~/.agents
+cp -R .agents/* ~/.agents/
+```
 
-| Skill | What it is trying to do |
-| --- | --- |
-| `opencode` | Acts as the OpenCode CLI expert for sessions, agents, providers, MCP, config, server mode, and GitHub integration. |
-| `opencode-scheduler` | Operates the `opencode-scheduler` plugin for creating, inspecting, updating, running, and troubleshooting recurring jobs. |
-| `rtk` | Installs, verifies, initializes, and diagnoses Rust Token Killer integrations across supported AI tools. |
-| `jj` | Guides Jujutsu workflows including revsets, rebasing, isolation, and GitHub or Gerrit usage. |
-| `landing-skill` | Handles end-of-session quality gates, sync, push, and clean handoff steps. |
-| `dolt` | Troubleshoots and operates Dolt-backed bead data when `bd` commands or remotes go wrong. |
-| `gastown` | Covers Gas Town rig orchestration, convoy workflows, agent runtime configuration, and cross-rig operations. |
-
-### UI, Desktop, And Framework Skills
-
-| Skill | What it is trying to do |
-| --- | --- |
-| `dioxus` | Provides framework guidance for Dioxus 0.7 development, debugging, and browser automation workflows. |
-| `dioxus-qa` | Performs ruthless QA for Dioxus apps through headless browser automation and DOM validation. |
-| `omarchy` | Handles Linux desktop and WM customization for Hyprland, waybar, walker, terminals, themes, and UI configuration. |
-
-### Meta And Authoring Skills
-
-| Skill | What it is trying to do |
-| --- | --- |
-| `skill-writer` | Authors Claude/OpenCode-style skills using contract-first design and progressive disclosure. |
-
-### Support Directories Also Mirrored
-
-Not everything in `skills/` is a directly invocable skill.
-
-| Directory | Purpose |
-| --- | --- |
-| `async-rust-reviewer-workspace/` | Evaluation and workspace artifacts mirrored from `~/.agents/skills` support data. |
-
-### Example: `opencode-scheduler`
-
-### Example: `opencode-scheduler`
-
-Operate the `opencode-scheduler` plugin to:
-- create recurring jobs
-- inspect existing jobs
-- update schedules and runtime settings
-- trigger jobs immediately
-- inspect logs
-- install the built-in `scheduled-job-best-practices` skill
-- troubleshoot backend issues across `launchd`, `systemd`, `cron`, and `schtasks`
-
-## Installation
-
-### Into `.agents`
+Install only the skills into a global `.agents` runtime:
 
 ```bash
 mkdir -p ~/.agents/skills
-cp -R skills/* ~/.agents/skills/
+cp -R .agents/skills/* ~/.agents/skills/
 ```
 
-### Into `.claude`
+Install into Claude Code:
 
 ```bash
 mkdir -p ~/.claude/skills
-cp -R skills/* ~/.claude/skills/
+cp -R .agents/skills/* ~/.claude/skills/
 ```
 
-### Into a project-local `.claude`
+Install into OpenCode:
 
 ```bash
-mkdir -p .claude/skills
-cp -R skills/* .claude/skills/
+mkdir -p ~/.opencode/skill
+cp -R .agents/skills/* ~/.opencode/skill/
 ```
 
-## Notes
+This repository snapshot packages skill definitions. If a runtime skill binds an OpenCode agent name, install the matching agent definition from your local OpenCode runtime config as well.
 
-- `SKILL.md` uses the OpenCode-style YAML + JSONL format.
-- Supporting docs live beside each skill to keep the main skill compact.
-- Some skills include large supporting references and evaluation workspace artifacts because this repo mirrors `~/.agents/skills` as-is.
-- The scheduler skill assumes the `opencode-scheduler` plugin is already installed in `opencode.json`.
+## How To Choose A Skill
 
-## Mirror Guarantee
+Use the skill whose boundary owns the decision.
 
-This repo's `skills/` tree was mirrored recursively from `~/.agents/skills` and verified with a recursive diff to avoid losing nested files or subfolders.
+| Need | Start with |
+| --- | --- |
+| Deliver a bead end to end | `go-skill` |
+| Deliver many beads concurrently | `femdation` |
+| Map a codebase before proof or implementation | `explore` |
+| Turn a document or architecture spec into beads | `doc-to-beads` or `arch-spec-to-beads` |
+| Write requirements, contracts, and proof obligations | `rust-contract` |
+| Plan, write, or review formal proof artifacts | `proof-planner`, `proof-writer`, `proof-reviewer` |
+| Execute proof obligations and verifier lanes | `formal-verifier` |
+| Implement or repair Rust code | `holzman-rust` or `functional-rust` |
+| Write or review tests | `test-planner`, `test-writer`, `test-reviewer` |
+| Audit truth and evidence | `truth-serum` or `evidence-packaging` |
+| Land finished work safely | `landing-skill` |
+| Work on Dioxus or Makepad UI | `dioxus`, `dioxus-qa`, or the `makepad-2.0-*` skills |
+| Customize Linux desktop or Omarchy config | `omarchy` |
+
+## Primary Delivery Pipeline
+
+The high-assurance Rust delivery flow is centered on `go-skill`.
+
+`go-skill` does not write production code itself. It supervises specialists, verifies artifacts on disk, and blocks landing unless raw evidence supports the result.
+
+The current proof-first lifecycle is:
+
+```text
+explore -> contract -> proof plan -> proof write -> proof review -> test plan -> test write -> test review -> implementation -> formal execution -> black-hat review -> truth-serum evidence -> landing
+```
+
+Core principle:
+
+```text
+AI agents do the work. Deterministic tools, adversarial reviewers, raw command evidence, and truth-serum decide whether the work is acceptable.
+```
+
+## Skill Catalog
+
+### Delivery, Beads, And Orchestration
+
+| Skill | What it does | Use it when |
+| --- | --- | --- |
+| `beads` | Defines the autonomous execution doctrine for the `beads` issue tracker. | You need bead lifecycle rules, issue hygiene, or bead-driven execution discipline. |
+| `explore` | Scouts a codebase and writes bead-local scope artifacts without modifying production code. | You need files, APIs, crates, dependencies, risks, or existing verification artifacts mapped before planning. |
+| `go-skill` | Supervises a full bead through isolation, explore, contracts, proof lifecycle, tests, implementation, verification, evidence, landing, and cleanup. | You are starting or resuming real bead delivery. |
+| `femdation` | Dispatches multiple beads concurrently through the current `go-skill` lifecycle while preserving main-thread context. | You need throughput across several independent beads. |
+| `evidence-packaging` | Builds the final assurance bundle and requires active-context Truth Serum before landing. | Formal execution, tests, and black-hat review are done and you need requirement-to-evidence proof. |
+| `landing-skill` | Runs session completion discipline: quality gates, merge/sync/push, bead closure, orphan cleanup, and handoff. | Work is accepted and must reach main/remote without being lost locally. |
+
+### Architecture, Planning, And Domain Modeling
+
+| Skill | What it does | Use it when |
+| --- | --- | --- |
+| `arch-design-qa` | Acts as a ruthless architecture product owner using Double Diamond discovery and Munger-style mental models. | Requirements, domain model, invariants, or failure modes are still fuzzy. |
+| `arch-spec-to-beads` | Takes an existing `architecture-spec.md`, runs decomposition, and persists validated beads. | A written architecture spec needs to become executable work items. |
+| `architectural-drift` | Checks oversized files, cohesion drift, and DDD boundary erosion. | Code shape is decaying or refactoring needs an architectural audit. |
+| `decomposer` | Shreds architecture specs into molecular tasks through the plan-shredder loop. | A large spec must become smaller sequenced work. |
+| `doc-to-beads` | Reads an existing document, derives an architecture spec, and turns it into beads. | You have a design doc, brief, or proposal and want tracked work created from it. |
+| `planner` | Produces deterministic atomic bead plans using the enhanced planning template. | You need clean bead decomposition with acceptance criteria and dependencies. |
+| `plan-shredder` | Attacks task plans for missing constraints, hidden coupling, vague outcomes, and weak decomposition. | You need a plan stress-tested before execution. |
+| `scott-ddd-refactor` | Applies Scott Wlaschin-style type-driven design so illegal states become unrepresentable. | Domain logic relies on primitives, booleans, options, or validation instead of types. |
+
+### Contracts, Proofs, And Formal Verification
+
+| Skill | What it does | Use it when |
+| --- | --- | --- |
+| `rust-contract` | Produces contracts, invariants, traceability, TLA+/Verus-first proof obligations, and BDD plans before implementation. | Behavior must be specified before code or tests are written. |
+| `contract-verification-reviewer` | Independently approves or rejects contract and verification-layer artifacts before tests or implementation. | You need to know whether the contract/proof plan is strong enough to build against. |
+| `proof-planner` | Chooses risk-triggered verifier lanes and writes proof obligation planning artifacts. | You need to decide whether TLA+, Verus, Kani, Flux, Loom, Miri, proptest, fuzz, or CI gates matter. |
+| `proof-writer` | Writes verification artifacts only: TLA+ specs, Verus proofs, Kani harnesses, Flux refinements, Loom models, Miri checks, proptest properties, and fuzz targets. | A reviewed proof plan needs concrete proof/model/harness files. |
+| `proof-reviewer` | Ruthlessly rejects weak, vacuous, unmapped, or under-executed proof artifacts. | Proof artifacts exist and need adversarial review before tests, implementation, or landing. |
+| `formal-verifier` | Executes approved proof-obligation ledgers and records PASS, FAIL_LOCAL, FAIL_REGRESSION, WAIVED, or DEFERRED_GLOBAL evidence. | Proof obligations are approved and need actual verifier execution. |
+| `tla-plus` | Writes, reviews, and repairs TLA+/PlusCal specs, TLC models, invariants, liveness, and counterexample evidence. | The system has temporal behavior, protocols, schedulers, queues, retries, leases, or distributed workflows. |
+| `verus` | Engineers Verus specs and proofs with verifier-in-the-loop evidence and trusted-boundary hygiene. | Rust-local functions, invariants, state transitions, or proof obligations need Verus. |
+| `kani` | Designs and triages Kani bounded model checking harnesses for Rust execution paths. | You need bounded proof of arithmetic, indexing, parser, codec, state-machine, panic, or unsafe precondition behavior. |
+| `flux-rs` | Uses Flux refinement types for Rust invariants, signatures, predicates, and trusted boundary review. | Type-level refinements can make data constraints mechanically checked. |
+| `loom` | Models Rust concurrency interleavings with Loom and related schedule exploration. | Atomics, locks, cancellation, task coordination, or concurrent state machines need deterministic schedule pressure. |
+| `miri` | Runs and interprets Miri for unsafe Rust, provenance, aliasing, invalid values, leaks, and UB diagnostics. | You need UB detection evidence, especially around unsafe-adjacent or platform-sensitive Rust. |
+
+### Rust Engineering, Performance, And Build Discipline
+
+| Skill | What it does | Use it when |
+| --- | --- | --- |
+| `async-rust-reviewer` | Reviews async Rust for spawn discipline, cancellation safety, Send/Sync hygiene, stream usage, region-owned tasks, and observability. | Tokio, futures, streams, spawned tasks, or async API design may be wrong. |
+| `functional-rust` | Generates or repairs Rust with functional-core discipline, zero-panic policy, and NASA/JPL reliability rules. | Rust code needs strict safety, explicit errors, and clean data-calc-action layering. |
+| `holzman-rust` | Implements or optimizes Rust under Power of Ten plus performance, no-panic, bounded-resource, and evidence-first rules. | Production Rust, hot paths, CI repair, or safety-critical implementation needs a specialist. |
+| `moon-v2` | Designs Moon v2 build tasks, CI caching, and Rust quality gates. | You need Moon task layout, CI/CD setup, or cache-aware verification workflows. |
+| `velocity` | Pushes high-throughput delivery while keeping TDD, functional core, CI, and modern engineering discipline intact. | You need faster execution without dropping quality gates. |
+
+### Testing, QA, And Adversarial Review
+
+| Skill | What it does | Use it when |
+| --- | --- | --- |
+| `bdd-enforcer` | Ensures behavior has executable Given/When/Then scenarios and fixes missing scenario coverage. | Implemented behavior lacks end-to-end BDD proof. |
+| `black-hat-reviewer` | Acts as a hardline gatekeeper for contract parity, Farley constraints, Holzman Rust, strict DDD, and simplicity. | You want ruthless review before trusting a design or implementation. |
+| `hands-on-qa` | Manually invokes real CLIs, APIs, or UIs and reports only command-backed evidence. | You need to know whether a workflow actually works for a user. |
+| `qa-enforcer` | Executes ruthless product QA with real commands, APIs, and deep result inspection. | You need behavior validated beyond happy-path tests. |
+| `red-queen` | Evolves tests and code adversarially through deterministic state-machine pressure. | You explicitly want Digital Red Queen-style evolutionary QA. |
+| `test-planner` | Writes exhaustive Rust test plans covering unit, BDD, proptest, mutation, and related layers. | Tests need a strategy before code is written. |
+| `test-writer` | Writes exhaustive Rust tests across unit, integration, proptest, and Kani-oriented coverage. | An approved test plan needs executable tests. |
+| `test-reviewer` | Reviews test plans and suites for contract parity, assertion strength, determinism, and mutation value. | You need to reject weak, tautological, or flaky tests. |
+| `truth-serum` | Audits AI-generated work for hallucinations, missing evidence, deleted tests, weak verification, and runtime panic surface. | You need a zero-trust audit with active command evidence. |
+
+### Agent Tooling, Version Control, And Operations
+
+| Skill | What it does | Use it when |
+| --- | --- | --- |
+| `dolt` | Operates and diagnoses Dolt-backed bead data, remotes, and corruption scenarios. | `bd` or Dolt-backed issue state is failing. |
+| `gastown` | Covers Gas Town rigs, polecats, convoys, runtimes, bead tracking, mail/nudges, formulas, and cross-rig coordination. | You are operating Gas Town or multi-agent work dispatch. |
+| `jj` | Guides Jujutsu workflows, workspaces, rebasing, revsets, and GitHub/Gerrit integration. | Version control work needs `jj` rather than raw git habits. |
+| `omarchy` | Handles end-user Linux desktop and window-manager customization for Hyprland, Waybar, Walker, terminals, themes, screenshots, idle, lock screen, and Omarchy commands. | You are changing desktop config, not developing Omarchy source code. |
+| `opencode` | Explains OpenCode sessions, agents, providers, MCP servers, config, server mode, and GitHub integration. | You are configuring or operating OpenCode. |
+| `opencode-scheduler` | Creates, inspects, updates, runs, troubleshoots, and cleans recurring OpenCode jobs. | You need scheduled agent work or scheduler diagnostics. |
+| `rtk` | Installs, verifies, initializes, and diagnoses Rust Token Killer integrations across supported AI tools. | You need token-rewrite hooks or RTK wiring checked. |
+| `skill-writer` | Designs, hardens, evaluates, and packages portable agent skills with contract-first behavior. | You are creating or refactoring skills. |
+
+### Dioxus UI
+
+| Skill | What it does | Use it when |
+| --- | --- | --- |
+| `dioxus` | Provides Dioxus 0.7 framework guidance for development, CDP debugging, and Playwright E2E testing. | You are building or debugging a Dioxus app. |
+| `dioxus-qa` | Performs evidence-backed QA for Dioxus apps through headless Chrome and DOM validation. | Dioxus routing, UI components, or DOM updates need real browser testing. |
+
+### Makepad 2.0 UI
+
+| Skill | What it does | Use it when |
+| --- | --- | --- |
+| `makepad-2.0-animation` | Covers Makepad 2.0 animation states, timelines, transitions, hover effects, easing, and loops. | You need animation behavior or animator state fixed. |
+| `makepad-2.0-app-structure` | Covers app startup, `app_main!`, event wiring, hot reload, media plugins, audio, wasm, and Cargo setup. | You are creating or restructuring a Makepad app. |
+| `makepad-2.0-design-judgment` | Gives first-pass Makepad architecture and design judgment before loading narrower Makepad skills. | You need the right Makepad approach before implementation. |
+| `makepad-2.0-dsl` | Explains Makepad DSL syntax, `script_mod!`, property syntax, merge operators, and widget registration. | Syntax, live design, or property definitions are wrong. |
+| `makepad-2.0-events` | Covers event/action handling, callbacks, clicks, keyboard/focus events, and `MatchEvent`. | User interaction or callback behavior needs implementation or debugging. |
+| `makepad-2.0-layout` | Covers layout, sizing, flow, padding, margin, alignment, scroll views, `Fill`, and `Fit`. | UI layout, spacing, alignment, or scrolling is broken. |
+| `makepad-2.0-migration` | Guides migration from Makepad 1.x to 2.0 and fixes legacy API usage. | Old Makepad code needs upgrading. |
+| `makepad-2.0-performance` | Covers Makepad performance, profiling, draw batching, memory, GC, and rendering speed. | UI performance or memory behavior needs evidence-backed optimization. |
+| `makepad-2.0-shaders` | Covers shaders, `draw_bg`, `Sdf2d`, GPU drawing, uniforms, instances, and pixel shader behavior. | Custom drawing or shader behavior is needed. |
+| `makepad-2.0-splash` | Covers Splash scripting, hot reload, `script_mod`, runtime scripting, and script integration. | Runtime scripting or hot-reload behavior is involved. |
+| `makepad-2.0-theme` | Covers theming, colors, dark mode, typography, fonts, styles, and design systems. | Visual system, colors, or typography need design-system work. |
+| `makepad-2.0-troubleshooting` | Covers Makepad errors, debugging, widget visibility, broken layouts, and FAQ-style diagnosis. | A Makepad app is not working and needs debugging. |
+| `makepad-2.0-vector` | Covers vector graphics, SVG, gradients, paths, shapes, and tweens. | Vector drawing or animated shapes are needed. |
+| `makepad-2.0-widgets` | Catalogs Makepad widgets like View, Button, Label, TextInput, CheckBox, DropDown, and Slider. | You need the right UI control or component pattern. |
+
+## Maintenance Notes
+
+When refreshing the snapshot from a local machine, use a non-deleting sync from your runtime skill source and keep machine-private runtime state out of the repository:
+
+```bash
+rsync -a ~/.agents/skills/ .agents/skills/
+```
+
+Recommended checks after refresh:
+
+```bash
+git status --short
+git diff --stat
+```
 
 ## License
 
