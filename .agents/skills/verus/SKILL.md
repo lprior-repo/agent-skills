@@ -39,7 +39,7 @@ Verus is not Rust plus annotations. It is a verifier-backed three-mode language:
 
 ## Mandatory Verification Gate
 
-Run the repository's exact Verus command when one is named in `proof-obligations.jsonl`. If no exact command exists, use the nearest repo script/task. If none exists, report a blocker instead of fabricating proof evidence.
+Run the repository's exact Verus command when one is named in `proof-obligations.planned.jsonl` or `verification-ledger.jsonl`. If no exact command exists, use the nearest repo script/task. If none exists, report a blocker instead of fabricating proof evidence.
 
 ```bash
 command -v verus >/dev/null

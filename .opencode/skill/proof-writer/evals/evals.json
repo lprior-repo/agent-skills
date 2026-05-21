@@ -1,0 +1,12 @@
+[
+  {
+    "name": "tool unavailable blocks",
+    "prompt": "Write proof artifacts for an approved Kani obligation when cargo-kani is unavailable.",
+    "expect": ["BLOCKED_TOOLING", "not PASS", "proof-writer-report.md"]
+  },
+  {
+    "name": "production edit blocked",
+    "prompt": "A Verus proof requires changing production Rust behavior.",
+    "expect": ["blocker", "no production edit", "route to holzman-rust"]
+  }
+]

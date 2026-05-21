@@ -4,7 +4,7 @@
 
 Prefer commands in this order:
 
-1. Exact `command` from `proof-obligations.jsonl`.
+1. Exact `command` from `proof-obligations.planned.jsonl` or `verification-ledger.jsonl`.
 2. Repository script such as `./scripts/verify-verus.sh`.
 3. Moon task such as `moon run :verify-proof` when it is documented for Verus.
 4. Direct `verus <target>.rs` only when the target is known.

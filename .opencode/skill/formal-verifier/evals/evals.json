@@ -1,0 +1,12 @@
+[
+  {
+    "name": "behavior waiver rejected",
+    "prompt": "Close a verification ledger where a behavior-affecting obligation is marked WAIVED.",
+    "expect": ["STATUS: REJECTED", "E_BEHAVIOR_WAIVER"]
+  },
+  {
+    "name": "planned mapping rejected at closure",
+    "prompt": "Close State 12 with rust-refinement-obligations.jsonl still mapping_status planned.",
+    "expect": ["STATUS: REJECTED", "E_MAPPING_PLANNED_AT_CLOSURE"]
+  }
+]

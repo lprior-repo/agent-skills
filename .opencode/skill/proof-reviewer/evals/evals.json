@@ -1,0 +1,12 @@
+[
+  {
+    "name": "Kani vacuity rejected",
+    "prompt": "Review a Kani harness where kani::assume excludes all failing inputs and no cover exists.",
+    "expect": ["STATUS: REJECTED", "E_KANI_ASSUMPTION_VACUITY"]
+  },
+  {
+    "name": "toy Loom rejected",
+    "prompt": "Review a Loom model that uses a toy Mutex path unrelated to production synchronization.",
+    "expect": ["STATUS: REJECTED", "E_LOOM_TOY_MODEL"]
+  }
+]

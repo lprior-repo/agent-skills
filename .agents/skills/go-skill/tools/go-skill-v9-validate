@@ -1,0 +1,696 @@
+#!/usr/bin/env python3
+"""Deterministic Go-skill compliance validator.
+
+No agent claims. No network. No mutation. Markdown cannot override findings.
+"""
+
+from __future__ import annotations
+
+import argparse
+from datetime import datetime, timezone
+import hashlib
+import json
+import re
+import sys
+from pathlib import Path
+from typing import Any
+
+
+MIRROR_FILES = [
+    "SKILL.md",
+    "state-machine.md",
+    "artifacts.md",
+    "checklist.md",
+    "proof-test-source.md",
+    "references/proof-schemas.md",
+    "references/proof-pipeline-contract.md",
+    "references/verification-lane-policy.md",
+    "references/trust-marker-scan-patterns.md",
+    "references/evidence-standards.md",
+    "references/review-provenance.md",
+    "references/finding-codes.md",
+    "fixtures/fixture-manifest.json",
+    "tools/go-skill-v9-validate",
+]
+
+STATE_ARTIFACTS: dict[int, list[str]] = {
+    1: ["STATE.md", "runtime-skill-provenance.json", "agent-invocation-ledger.jsonl", "baseline-report.md", "global-readiness-report.md"],
+    2: ["codebase-map.md", "delivery-scope.jsonl"],
+    3: ["domain-model.md", "type-contracts.md", "workflow-model.md", "error-taxonomy.md", "boundary-map.md", "hazard-analysis.md", "contract.md", "proof-seeds.jsonl", "traceability-matrix.jsonl"],
+    4: ["proof-strategy.md", "verifier-lane-matrix.md", "verifier-lane-decisions.jsonl", "verifier-lane-review.jsonl", "proof-coverage-matrix.md", "proof-obligations.planned.jsonl", "trusted-base-plan.md", "waiver-candidates.jsonl", "proof-plan-review.md"],
+    5: ["proof-writer-report.md", "proof-evidence.md", "trusted-base-ledger.jsonl"],
+    6: ["proof-review.md", "proof-findings.jsonl"],
+    7: ["proof-to-rust-map.md", "rust-refinement-obligations.jsonl", "proof-to-rust-review.md"],
+    8: ["test-plan.md"],
+    9: ["test-writer-report.md"],
+    10: ["test-plan-review.md", "test-suite-review.md"],
+    11: ["implementation.md"],
+    12: ["machine-gate-report.md", "regression-diff.md", "formal-verification-report.md", "refinement-verification-report.md", "proof-test-source-alignment.md", "proof-test-source-alignment.jsonl", "verification-ledger.jsonl"],
+    13: ["black-hat-review.md"],
+    14: ["assurance-bundle.md", "truth-serum-report.md", "final-evidence-decision.md"],
+    15: ["landing-report.md"],
+    16: ["cleanup-report.md"],
+}
+
+APPROVAL_FILES = [
+    "proof-plan-review.md",
+    "proof-review.md",
+    "proof-to-rust-review.md",
+    "test-plan-review.md",
+    "test-suite-review.md",
+    "formal-verification-report.md",
+    "refinement-verification-report.md",
+    "black-hat-review.md",
+    "truth-serum-report.md",
+    "final-evidence-decision.md",
+]
+
+INDEPENDENT_REVIEW_FILES = {
+    "proof-plan-review.md": "proof-plan-reviewer",
+    "proof-review.md": "proof-reviewer",
+    "proof-to-rust-review.md": "proof-reviewer",
+    "test-plan-review.md": "test-reviewer",
+    "test-suite-review.md": "test-reviewer",
+    "black-hat-review.md": "black-hat-reviewer",
+    "truth-serum-report.md": "truth-serum",
+    "final-evidence-decision.md": "evidence-packaging",
+}
+
+CORE_VERIFIERS = {"tla-plus", "verus", "kani", "flux-rs", "loom", "miri", "proptest", "cargo-fuzz"}
+DISCOVERY_AGENT_FILES = [
+    "architectural-drift.md",
+    "black-hat-reviewer.md",
+    "contract-verification-reviewer.md",
+    "evidence-packaging.md",
+    "femdation.md",
+    "formal-verifier.md",
+    "go-skill.md",
+    "hands-on-qa.md",
+    "holzman-rust.md",
+    "landing-skill.md",
+    "explore.md",
+    "qa-enforcer.md",
+    "red-queen.md",
+    "proof-planner.md",
+    "proof-plan-reviewer.md",
+    "proof-writer.md",
+    "proof-reviewer.md",
+    "proof-to-implementation.md",
+    "rust-contract.md",
+    "scott-ddd-refactor.md",
+    "test-planner.md",
+    "test-writer.md",
+    "test-reviewer.md",
+    "tla-plus.md",
+    "truth-serum.md",
+    "verus.md",
+]
+LEDGER_RESULTS = {"PASS", "FAIL_LOCAL", "FAIL_REGRESSION", "FAIL_GLOBAL", "WAIVED"}
+SOURCE_REF = re.compile(r"^[A-Za-z0-9_./-]+::[A-Za-z0-9_:.-]+$")
+STATUS = re.compile(r"^\s*(?:#+\s*)?(?:\*\*)?\s*STATUS:\s*(APPROVED|PASS|REJECTED|FAIL|UNVERIFIED)\b", re.M)
+TRUST_RE = re.compile(r"\b(assume|ASSUME|axiom|admit|sorry|trusted|external_body|ignore|stub|disabled_check)\b")
+
+PROOF_SEED_FIELDS = {"schema_version", "id", "requirement_id", "contract_clause", "domain_claim", "risk_tags", "suggested_layers", "behavior_affecting", "model_boundary", "notes"}
+LANE_FIELDS = {"schema_version", "id", "requirement_id", "contract_clause", "proof_seed_id", "verifier", "risk_tags", "applicability", "decision_reason", "required_obligation_ids", "non_applicability_evidence_refs", "limitation_kind", "owner_state", "status"}
+LANE_REVIEW_FIELDS = {"schema_version", "id", "lane_decision_id", "requirement_id", "contract_clause", "proof_seed_id", "verifier", "reviewer_disposition", "finding_refs", "planner_invocation_id", "reviewer_invocation_id", "owner_state", "status"}
+PROOF_FIELDS = {"schema_version", "id", "requirement_id", "contract_clause", "domain_claim", "risk", "risk_tags", "verifier", "artifact", "target", "command", "workdir", "expected_evidence", "assumptions", "model_bounds", "tool_metadata", "trusted_base_refs", "required", "behavior_affecting", "mode", "owner_state", "rerun_from", "status"}
+RRO_FIELDS = {"schema_version", "id", "proof_id", "requirement_id", "contract_clause", "proof_claim_ref", "rust_target", "behavior_affecting", "source_refs", "behavior_test_refs", "refinement_harness_refs", "refinement_claim", "verifier", "evidence_command", "evidence_workdir", "evidence_artifact", "expected_evidence", "mapping_status", "required", "owner_state", "rerun_from", "status"}
+TRUST_FIELDS = {"schema_version", "id", "obligation_id", "artifact", "location", "marker", "trusted_kind", "reason", "scope", "impact", "behavior_affecting", "compensating_evidence", "owner", "expiry", "reviewer_disposition", "status"}
+WAIVER_CANDIDATE_FIELDS = {"schema_version", "id", "requirement_id", "contract_clause", "reason", "behavior_affecting", "boundary_proof", "compensating_evidence", "owner", "expiry", "review_status"}
+FORMAL_WAIVER_FIELDS = {"schema_version", "id", "waiver_candidate_id", "waiver_candidate_hash", "requirement_id", "contract_clause", "behavior_affecting", "approved_candidate_review_invocation_id", "formal_verifier_invocation_id", "owner", "expiry", "boundary_proof", "compensating_evidence", "ledger_result_ref", "status"}
+LEDGER_FIELDS = {"schema_version", "id", "obligation_id", "obligation_kind", "requirement_id", "contract_clause", "behavior_affecting", "verifier", "result", "command", "workdir", "exit_status", "tool_version", "flags", "bounds", "seeds", "raw_log", "evidence_artifact", "formal_waiver_id", "formal_waiver_hash", "formal_verifier_invocation_id", "classification", "rerun_from", "status"}
+INVOCATION_FIELDS = {"schema_version", "ledger_sequence", "previous_entry_hash", "entry_hash", "host_session_id", "invocation_id", "parent_invocation_id", "skill", "state", "workdir", "input_artifacts", "input_artifact_hashes", "output_artifacts", "output_artifact_hashes", "transcript_artifact", "transcript_hash", "reviewed_artifacts_existed_before_start", "started_at", "completed_at", "status"}
+ALIGN_FIELDS = {"requirement_id", "proof_id", "refinement_id", "source_refs", "behavior_test_refs", "refinement_harness_refs", "commands_run", "ledger_result", "status"}
+
+
+class Finding(dict):
+    def __init__(self, code: str, path: str, message: str, line: int | None = None):
+        super().__init__(code=code, severity="BLOCK", path=path, message=message)
+        if line is not None:
+            self["line"] = line
+
+
+def text(path: Path) -> str:
+    return path.read_text(encoding="utf-8", errors="replace")
+
+
+def sha256(path: Path) -> str:
+    h = hashlib.sha256()
+    with path.open("rb") as f:
+        for chunk in iter(lambda: f.read(65536), b""):
+            h.update(chunk)
+    return h.hexdigest()
+
+
+def canonical_row_hash(row: dict[str, Any]) -> str:
+    payload = json.dumps(row, sort_keys=True, separators=(",", ":"), ensure_ascii=True)
+    return hashlib.sha256(payload.encode("utf-8")).hexdigest()
+
+
+def hash_matches(value: Any, expected: str) -> bool:
+    if not isinstance(value, str):
+        return False
+    return value in {expected, f"sha256:{expected}"}
+
+
+def expiry_is_future(value: Any) -> bool:
+    if not isinstance(value, str) or not value.strip():
+        return False
+    raw = value.strip()
+    if raw.lower() in {"none", "never", "permanent"}:
+        return False
+    try:
+        parsed = datetime.fromisoformat(raw.replace("Z", "+00:00"))
+    except ValueError:
+        return False
+    if parsed.tzinfo is None:
+        parsed = parsed.replace(tzinfo=timezone.utc)
+    return parsed > datetime.now(timezone.utc)
+
+
+def jsonl(path: Path, findings: list[Finding]) -> list[dict[str, Any]]:
+    rows: list[dict[str, Any]] = []
+    if not path.exists():
+        return rows
+    for idx, raw in enumerate(text(path).splitlines(), 1):
+        if not raw.strip():
+            continue
+        try:
+            obj = json.loads(raw)
+        except json.JSONDecodeError as exc:
+            findings.append(Finding("E_JSONL_PARSE", str(path), str(exc), idx))
+            continue
+        if not isinstance(obj, dict):
+            findings.append(Finding("E_JSONL_OBJECT", str(path), "row is not a JSON object", idx))
+            continue
+        rows.append(obj)
+    return rows
+
+
+def require_file(root: Path, rel: str, findings: list[Finding]) -> None:
+    p = root / rel
+    if not p.is_file() or p.stat().st_size == 0:
+        findings.append(Finding("E_MISSING_ARTIFACT", rel, "required artifact missing or empty"))
+
+
+def check_fields(rows: list[dict[str, Any]], fields: set[str], version: str | None, path: Path, findings: list[Finding]) -> None:
+    for idx, row in enumerate(rows, 1):
+        missing = sorted(fields - row.keys())
+        if missing:
+            findings.append(Finding("E_SCHEMA_MISSING_FIELD", str(path), f"missing {missing}", idx))
+        if version and row.get("schema_version") != version:
+            findings.append(Finding("E_SCHEMA_VERSION_MISSING", str(path), f"expected schema_version {version}", idx))
+
+
+def check_mirrors(skill_root: Path | None, mirror_root: Path | None, findings: list[Finding]) -> None:
+    if not skill_root or not mirror_root:
+        return
+    for rel in MIRROR_FILES:
+        left, right = skill_root / rel, mirror_root / rel
+        if not left.exists() or not right.exists():
+            findings.append(Finding("E_MIRROR_MISSING", rel, "mirror file missing"))
+            continue
+        if sha256(left) != sha256(right):
+            findings.append(Finding("E_MIRROR_DRIFT", rel, "sha256 differs between mirrors"))
+
+
+def disk_skill_meta(skill_root: Path | None) -> tuple[str | None, str | None]:
+    if not skill_root:
+        return None, None
+    body = text(skill_root / "SKILL.md")
+    version = re.search(r'"version":"([^"]+)"', body)
+    state = re.search(r'"state_sequence".*?"start":1,"end":(\d+)', body)
+    return (version.group(1) if version else None, f"1..{state.group(1)}" if state else None)
+
+
+def check_provenance(root: Path, expected_version: str | None, expected_range: str | None, findings: list[Finding]) -> None:
+    p = root / "runtime-skill-provenance.json"
+    if not p.exists():
+        findings.append(Finding("E_RUNTIME_PROVENANCE_MISSING", str(p), "missing runtime skill provenance"))
+        return
+    try:
+        obj = json.loads(text(p))
+    except json.JSONDecodeError as exc:
+        findings.append(Finding("E_RUNTIME_PROVENANCE_PARSE", str(p), str(exc)))
+        return
+    if obj.get("loaded_skill_name") != "go-skill":
+        findings.append(Finding("E_RUNTIME_PROVENANCE_NAME", str(p), "loaded_skill_name must be go-skill"))
+    if expected_version and obj.get("loaded_skill_version") != expected_version:
+        findings.append(Finding("E_RUNTIME_PROVENANCE_VERSION", str(p), f"loaded {obj.get('loaded_skill_version')} != disk {expected_version}"))
+    if expected_range and obj.get("observed_state_range") != expected_range:
+        findings.append(Finding("E_RUNTIME_PROVENANCE_STATE_RANGE", str(p), f"observed {obj.get('observed_state_range')} != {expected_range}"))
+
+
+def check_status(root: Path, rel: str, findings: list[Finding], allow_pass: bool = False) -> None:
+    p = root / rel
+    if not p.exists():
+        return
+    tokens = STATUS.findall(text(p))
+    if not tokens:
+        findings.append(Finding("E_REVIEW_STATUS_MISSING", rel, "missing explicit STATUS line"))
+        return
+    bad = {"REJECTED", "FAIL", "UNVERIFIED"}.intersection(tokens)
+    good = {"APPROVED"} | ({"PASS"} if allow_pass else set())
+    if bad or not good.intersection(tokens):
+        findings.append(Finding("E_STATUS_NOT_APPROVED", rel, f"status tokens={tokens}"))
+
+
+def invocation_rows(root: Path, findings: list[Finding]) -> list[dict[str, Any]]:
+    rows = jsonl(root / "agent-invocation-ledger.jsonl", findings)
+    check_fields(rows, INVOCATION_FIELDS, "agent-invocation/v1", root / "agent-invocation-ledger.jsonl", findings)
+    check_invocation_integrity(root, rows, findings)
+    return rows
+
+
+def artifact_path(root: Path, value: Any) -> Path | None:
+    if not isinstance(value, str) or not value:
+        return None
+    p = Path(value)
+    if p.is_absolute():
+        return p
+    if value.startswith(".beads/"):
+        return root.parent.parent / p
+    return root / p
+
+
+def expected_hash_for(hashes: Any, rel: Any, index: int) -> Any:
+    if isinstance(hashes, dict):
+        return hashes.get(rel)
+    if isinstance(hashes, list) and index < len(hashes):
+        return hashes[index]
+    return None
+
+
+def check_artifact_hashes(root: Path, row: dict[str, Any], list_field: str, hashes_field: str, row_idx: int, findings: list[Finding]) -> None:
+    artifacts = row.get(list_field)
+    hashes = row.get(hashes_field)
+    if artifacts in (None, ""):
+        artifacts = []
+    if not isinstance(artifacts, list):
+        findings.append(Finding("E_INVOCATION_LEDGER_FORGED", "agent-invocation-ledger.jsonl", f"{list_field} must be a list", row_idx))
+        return
+    if hashes in (None, ""):
+        hashes = []
+    if not isinstance(hashes, (list, dict)):
+        findings.append(Finding("E_INVOCATION_LEDGER_FORGED", "agent-invocation-ledger.jsonl", f"{hashes_field} must be a list or object", row_idx))
+        return
+    for index, rel in enumerate(artifacts):
+        p = artifact_path(root, rel)
+        expected = expected_hash_for(hashes, rel, index)
+        if not p or not p.is_file():
+            findings.append(Finding("E_INVOCATION_LEDGER_FORGED", "agent-invocation-ledger.jsonl", f"artifact missing for {list_field}: {rel}", row_idx))
+            continue
+        if not expected or not hash_matches(expected, sha256(p)):
+            findings.append(Finding("E_INVOCATION_LEDGER_FORGED", "agent-invocation-ledger.jsonl", f"artifact hash mismatch for {rel}", row_idx))
+
+
+def check_invocation_integrity(root: Path, rows: list[dict[str, Any]], findings: list[Finding]) -> None:
+    previous_hash: Any = None
+    review_skills = set(INDEPENDENT_REVIEW_FILES.values()) | {"proof-plan-reviewer"}
+    for idx, row in enumerate(rows, 1):
+        expected_entry_hash = canonical_row_hash({k: v for k, v in row.items() if k != "entry_hash"})
+        if not hash_matches(row.get("entry_hash"), expected_entry_hash):
+            findings.append(Finding("E_INVOCATION_LEDGER_FORGED", "agent-invocation-ledger.jsonl", "entry_hash does not match canonical row hash", idx))
+        if row.get("ledger_sequence") != idx:
+            findings.append(Finding("E_INVOCATION_LEDGER_FORGED", "agent-invocation-ledger.jsonl", "ledger_sequence is not contiguous", idx))
+        if idx == 1:
+            if row.get("previous_entry_hash") not in (None, "", "GENESIS", "0" * 64):
+                findings.append(Finding("E_INVOCATION_LEDGER_FORGED", "agent-invocation-ledger.jsonl", "first previous_entry_hash must be genesis", idx))
+        elif row.get("previous_entry_hash") != previous_hash:
+            findings.append(Finding("E_INVOCATION_LEDGER_FORGED", "agent-invocation-ledger.jsonl", "previous_entry_hash does not match prior entry", idx))
+        previous_hash = row.get("entry_hash")
+
+        transcript = artifact_path(root, row.get("transcript_artifact"))
+        if not transcript or not transcript.is_file():
+            findings.append(Finding("E_INVOCATION_LEDGER_FORGED", "agent-invocation-ledger.jsonl", "transcript artifact missing", idx))
+        elif not hash_matches(row.get("transcript_hash"), sha256(transcript)):
+            findings.append(Finding("E_INVOCATION_LEDGER_FORGED", "agent-invocation-ledger.jsonl", "transcript hash mismatch", idx))
+
+        check_artifact_hashes(root, row, "input_artifacts", "input_artifact_hashes", idx, findings)
+        check_artifact_hashes(root, row, "output_artifacts", "output_artifact_hashes", idx, findings)
+        if row.get("skill") in review_skills and row.get("reviewed_artifacts_existed_before_start") is not True:
+            findings.append(Finding("E_INVOCATION_LEDGER_FORGED", "agent-invocation-ledger.jsonl", "reviewed artifacts did not pre-exist review start", idx))
+
+
+def check_review_provenance(root: Path, invocations: list[dict[str, Any]], findings: list[Finding]) -> None:
+    inv_by_id = {row.get("invocation_id"): row for row in invocations}
+    for rel, expected_skill in INDEPENDENT_REVIEW_FILES.items():
+        p = root / rel
+        if not p.exists():
+            continue
+        body = text(p)
+        skill = re.search(r"^reviewer_skill:\s*(\S+)", body, re.M)
+        inv = re.search(r"^reviewer_invocation_id:\s*(\S+)", body, re.M)
+        writer_inv = re.search(r"^writer_invocation_id:\s*(\S+)", body, re.M)
+        if not skill or not inv:
+            findings.append(Finding("E_REVIEW_PROVENANCE_MISSING", rel, "missing reviewer_skill or reviewer_invocation_id header"))
+            continue
+        if writer_inv and writer_inv.group(1) == inv.group(1):
+            findings.append(Finding("E_REVIEW_SELF_APPROVAL", rel, "writer and reviewer invocation IDs match"))
+        if skill.group(1) != expected_skill:
+            findings.append(Finding("E_REVIEW_PROVENANCE_MISSING", rel, f"expected reviewer_skill {expected_skill}"))
+        row = inv_by_id.get(inv.group(1))
+        if not row:
+            findings.append(Finding("E_INVOCATION_LEDGER_MISSING", rel, f"no invocation ledger row {inv.group(1)}"))
+        elif row.get("skill") != expected_skill or row.get("status") != "completed":
+            findings.append(Finding("E_INVOCATION_LEDGER_FORGED", rel, "invocation row skill/status mismatch"))
+
+
+def check_lane_decisions(root: Path, state: int, invocations: list[dict[str, Any]], findings: list[Finding]) -> None:
+    seeds = jsonl(root / "proof-seeds.jsonl", findings)
+    lanes = jsonl(root / "verifier-lane-decisions.jsonl", findings)
+    reviews = jsonl(root / "verifier-lane-review.jsonl", findings)
+    check_fields(seeds, PROOF_SEED_FIELDS, "proof-seed/v1", root / "proof-seeds.jsonl", findings)
+    check_fields(lanes, LANE_FIELDS, "verifier-lane-decision/v1", root / "verifier-lane-decisions.jsonl", findings)
+    check_fields(reviews, LANE_REVIEW_FIELDS, "verifier-lane-review/v1", root / "verifier-lane-review.jsonl", findings)
+    active: set[tuple[Any, Any, Any, Any]] = set()
+    lane_ids: set[Any] = set()
+    for idx, row in enumerate(lanes, 1):
+        lane_ids.add(row.get("id"))
+        if "reviewer_disposition" in row:
+            findings.append(Finding("E_LANE_SELF_REVIEW", "verifier-lane-decisions.jsonl", "planner-owned lane decision must not contain reviewer_disposition", idx))
+        key = (row.get("requirement_id"), row.get("contract_clause"), row.get("proof_seed_id"), row.get("verifier"))
+        if key in active:
+            findings.append(Finding("E_LANE_DECISION_DUPLICATE", "verifier-lane-decisions.jsonl", f"duplicate active lane {key}", idx))
+        active.add(key)
+        if row.get("applicability") == "required" and not row.get("required_obligation_ids"):
+            findings.append(Finding("E_LANE_DECISION_WEAK", "verifier-lane-decisions.jsonl", "required lane has no obligation IDs", idx))
+        if row.get("applicability") == "not_applicable" and not row.get("non_applicability_evidence_refs"):
+            findings.append(Finding("E_LANE_DECISION_WEAK", "verifier-lane-decisions.jsonl", "not_applicable needs evidence refs", idx))
+        if row.get("applicability") == "blocked_tooling" and state >= 4:
+            findings.append(Finding("E_LANE_BLOCKED_TOOLING", "verifier-lane-decisions.jsonl", "blocked_tooling lane blocks advancement", idx))
+    reviews_by_lane: dict[Any, dict[str, Any]] = {}
+    inv_by_id = {row.get("invocation_id"): row for row in invocations}
+    for idx, row in enumerate(reviews, 1):
+        lane_id = row.get("lane_decision_id")
+        if lane_id in reviews_by_lane:
+            findings.append(Finding("E_LANE_REVIEW_DUPLICATE", "verifier-lane-review.jsonl", f"duplicate lane review {lane_id}", idx))
+        reviews_by_lane[lane_id] = row
+        if lane_id not in lane_ids:
+            findings.append(Finding("E_LANE_REVIEW_ORPHAN", "verifier-lane-review.jsonl", f"review references unknown lane {lane_id}", idx))
+        disposition = row.get("reviewer_disposition")
+        if disposition not in {"accepted", "rejected"}:
+            findings.append(Finding("E_LANE_REVIEW_INVALID", "verifier-lane-review.jsonl", f"invalid reviewer disposition {disposition}", idx))
+        if row.get("planner_invocation_id") == row.get("reviewer_invocation_id"):
+            findings.append(Finding("E_REVIEW_SELF_APPROVAL", "verifier-lane-review.jsonl", "planner and reviewer invocation IDs match", idx))
+        inv = inv_by_id.get(row.get("reviewer_invocation_id"))
+        if not inv or inv.get("skill") != "proof-plan-reviewer" or inv.get("status") != "completed":
+            findings.append(Finding("E_INVOCATION_LEDGER_MISSING", "verifier-lane-review.jsonl", "missing completed proof-plan-reviewer invocation", idx))
+    for seed in seeds:
+        for verifier in CORE_VERIFIERS:
+            key = (seed.get("requirement_id"), seed.get("contract_clause"), seed.get("id"), verifier)
+            if key not in active and state >= 4:
+                findings.append(Finding("E_LANE_DECISION_MISSING", "verifier-lane-decisions.jsonl", f"missing lane decision {key}"))
+    if state >= 4:
+        for lane_id in lane_ids:
+            review = reviews_by_lane.get(lane_id)
+            if not review:
+                findings.append(Finding("E_LANE_REVIEW_MISSING", "verifier-lane-review.jsonl", f"missing review for lane {lane_id}"))
+            elif review.get("reviewer_disposition") != "accepted":
+                findings.append(Finding("E_LANE_REVIEW_REJECTED", "verifier-lane-review.jsonl", f"lane {lane_id} not accepted"))
+
+
+def check_proof_obligations(root: Path, findings: list[Finding]) -> list[dict[str, Any]]:
+    rows = jsonl(root / "proof-obligations.planned.jsonl", findings)
+    check_fields(rows, PROOF_FIELDS, "proof-obligation/v1", root / "proof-obligations.planned.jsonl", findings)
+    for idx, row in enumerate(rows, 1):
+        if any(k in row for k in ("layer", "checker")) or ("claim" in row and "domain_claim" not in row):
+            findings.append(Finding("E_SCHEMA_ALIAS_FIELD", "proof-obligations.planned.jsonl", "legacy proof alias field used", idx))
+        if row.get("required") is not True:
+            findings.append(Finding("E_SCHEMA_MISSING_FIELD", "proof-obligations.planned.jsonl", "required must be true", idx))
+        if row.get("behavior_affecting") is True and row.get("verifier") == "waiver":
+            findings.append(Finding("E_BEHAVIOR_WAIVER", "proof-obligations.planned.jsonl", "behavior-affecting waiver is invalid", idx))
+    return rows
+
+
+def check_trusted_base(root: Path, state: int, findings: list[Finding]) -> None:
+    rows = jsonl(root / "trusted-base-ledger.jsonl", findings)
+    check_fields(rows, TRUST_FIELDS, "trusted-base-ledger/v1", root / "trusted-base-ledger.jsonl", findings)
+    markers = {r.get("marker") for r in rows}
+    for rel in ["proof-evidence.md", "proof-writer-report.md"]:
+        p = root / rel
+        if p.exists():
+            for match in TRUST_RE.finditer(text(p)):
+                if match.group(0) not in markers:
+                    findings.append(Finding("E_TRUST_UNLEDGERED_MARKER", rel, f"trust marker {match.group(0)} lacks ledger row"))
+    for idx, row in enumerate(rows, 1):
+        if state >= 12 and row.get("reviewer_disposition") == "pending":
+            findings.append(Finding("E_TRUST_PENDING_AT_CLOSURE", "trusted-base-ledger.jsonl", "trusted base pending at closure", idx))
+
+
+def check_pending_smoke(root: Path, findings: list[Finding]) -> None:
+    body = ""
+    for rel in ["proof-evidence.md", "proof-writer-report.md", "proof-review.md"]:
+        p = root / rel
+        if p.exists():
+            body += "\n" + text(p)
+    if "PENDING_FORMAL_EXECUTION" in body and not re.search(r"\b(smoke|syntax|typecheck|parser|tiny config)\b", body, re.I):
+        findings.append(Finding("E_PROOF_SMOKE_MISSING", "proof-evidence.md", "pending formal execution lacks cheap smoke/syntax/typecheck evidence"))
+
+
+def check_blocked_tooling(root: Path, state: int, obligations: list[dict[str, Any]], findings: list[Finding]) -> None:
+    if state < 5:
+        return
+    for rel in ["proof-evidence.md", "proof-writer-report.md", "proof-review.md"]:
+        p = root / rel
+        if p.exists() and "BLOCKED_TOOLING" in text(p):
+            findings.append(Finding("E_BLOCKED_TOOLING_ADVANCE", rel, "BLOCKED_TOOLING is a blocker, not State 5 exit evidence"))
+    for row in obligations:
+        refs: list[Any] = []
+        for field in ["artifact", "target"]:
+            value = row.get(field)
+            refs.extend(value if isinstance(value, list) else [value])
+        for rel in refs:
+            p = artifact_path(root, rel)
+            if p and p.is_file() and "BLOCKED_TOOLING" in text(p):
+                findings.append(Finding("E_BLOCKED_TOOLING_ADVANCE", str(rel), "proof artifact contains BLOCKED_TOOLING blocker"))
+
+
+def check_rro(root: Path, state: int, findings: list[Finding]) -> list[dict[str, Any]]:
+    rows = jsonl(root / "rust-refinement-obligations.jsonl", findings)
+    check_fields(rows, RRO_FIELDS, "rust-refinement-obligation/v1", root / "rust-refinement-obligations.jsonl", findings)
+    for idx, row in enumerate(rows, 1):
+        srcs = row.get("source_refs", [])
+        tests = row.get("behavior_test_refs", [])
+        harnesses = row.get("refinement_harness_refs", [])
+        if row.get("behavior_affecting") is True and not tests:
+            findings.append(Finding("E_TLA_NO_RUST_BRIDGE", "rust-refinement-obligations.jsonl", "behavior-affecting row lacks behavior tests", idx))
+        if not isinstance(srcs, list) or not srcs or any(not isinstance(s, str) or not SOURCE_REF.match(s) for s in srcs):
+            findings.append(Finding("E_SOURCE_REF_SHAPE", "rust-refinement-obligations.jsonl", "source_refs must be concrete path::symbol refs", idx))
+        if isinstance(tests, list) and isinstance(harnesses, list) and set(tests).intersection(harnesses):
+            findings.append(Finding("E_BRIDGE_REFS_NOT_DISJOINT", "rust-refinement-obligations.jsonl", "behavior tests overlap verifier harnesses", idx))
+        if state >= 12 and row.get("mapping_status") == "planned":
+            findings.append(Finding("E_MAPPING_PLANNED_AT_CLOSURE", "rust-refinement-obligations.jsonl", "planned bridge row at closure", idx))
+    return rows
+
+
+def check_waivers(root: Path, invocations: list[dict[str, Any]], findings: list[Finding]) -> dict[Any, tuple[dict[str, Any], str]]:
+    candidates = jsonl(root / "waiver-candidates.jsonl", findings)
+    formal = jsonl(root / "formal-waivers.jsonl", findings)
+    check_fields(candidates, WAIVER_CANDIDATE_FIELDS, "waiver-candidate/v1", root / "waiver-candidates.jsonl", findings)
+    check_fields(formal, FORMAL_WAIVER_FIELDS, "formal-waiver/v1", root / "formal-waivers.jsonl", findings)
+    inv_by_id = {row.get("invocation_id"): row for row in invocations}
+    candidates_by_id: dict[Any, tuple[dict[str, Any], str]] = {}
+    for idx, row in enumerate(candidates, 1):
+        candidates_by_id[row.get("id")] = (row, canonical_row_hash(row))
+        if row.get("behavior_affecting") is True:
+            findings.append(Finding("E_BEHAVIOR_WAIVER", "waiver-candidates.jsonl", "behavior waiver candidate is invalid", idx))
+        if row.get("review_status") not in {"pending", "approved", "rejected"}:
+            findings.append(Finding("E_WAIVER_LIFECYCLE_INVALID", "waiver-candidates.jsonl", "invalid candidate review_status", idx))
+        for field in ["reason", "boundary_proof", "compensating_evidence", "owner", "expiry"]:
+            if row.get(field) in (None, "", []):
+                findings.append(Finding("E_WAIVER_LIFECYCLE_INVALID", "waiver-candidates.jsonl", f"candidate missing {field}", idx))
+        if not expiry_is_future(row.get("expiry")):
+            findings.append(Finding("E_WAIVER_LIFECYCLE_INVALID", "waiver-candidates.jsonl", "candidate expiry missing, invalid, or expired", idx))
+    formal_by_id: dict[Any, tuple[dict[str, Any], str]] = {}
+    for idx, row in enumerate(formal, 1):
+        formal_hash = canonical_row_hash(row)
+        formal_by_id[row.get("id")] = (row, formal_hash)
+        candidate, candidate_hash = candidates_by_id.get(row.get("waiver_candidate_id"), ({}, ""))
+        if row.get("behavior_affecting") is True or not row.get("waiver_candidate_id") or not row.get("formal_verifier_invocation_id"):
+            findings.append(Finding("E_WAIVER_LIFECYCLE_INVALID", "formal-waivers.jsonl", "invalid final waiver lifecycle", idx))
+        if not candidate:
+            findings.append(Finding("E_WAIVER_LIFECYCLE_INVALID", "formal-waivers.jsonl", "formal waiver references missing candidate", idx))
+            continue
+        if candidate.get("review_status") != "approved":
+            findings.append(Finding("E_WAIVER_LIFECYCLE_INVALID", "formal-waivers.jsonl", "candidate review_status is not approved", idx))
+        if not hash_matches(row.get("waiver_candidate_hash"), candidate_hash):
+            findings.append(Finding("E_WAIVER_LIFECYCLE_INVALID", "formal-waivers.jsonl", "waiver_candidate_hash does not match candidate row", idx))
+        for field in ["requirement_id", "contract_clause", "behavior_affecting", "owner", "expiry", "boundary_proof", "compensating_evidence"]:
+            if row.get(field) != candidate.get(field):
+                findings.append(Finding("E_WAIVER_LIFECYCLE_INVALID", "formal-waivers.jsonl", f"formal waiver does not match candidate {field}", idx))
+        if row.get("status") != "approved":
+            findings.append(Finding("E_WAIVER_LIFECYCLE_INVALID", "formal-waivers.jsonl", "formal waiver status must be approved", idx))
+        if not expiry_is_future(row.get("expiry")):
+            findings.append(Finding("E_WAIVER_LIFECYCLE_INVALID", "formal-waivers.jsonl", "formal waiver expiry missing, invalid, or expired", idx))
+        review_inv = inv_by_id.get(row.get("approved_candidate_review_invocation_id"))
+        if not review_inv or review_inv.get("skill") != "proof-plan-reviewer" or review_inv.get("status") != "completed":
+            findings.append(Finding("E_INVOCATION_LEDGER_MISSING", "formal-waivers.jsonl", "missing completed candidate review invocation", idx))
+        formal_inv = inv_by_id.get(row.get("formal_verifier_invocation_id"))
+        if not formal_inv or formal_inv.get("skill") != "formal-verifier" or formal_inv.get("status") != "completed":
+            findings.append(Finding("E_INVOCATION_LEDGER_MISSING", "formal-waivers.jsonl", "missing completed formal-verifier invocation", idx))
+    return formal_by_id
+
+
+def check_ledger(root: Path, state: int, formal_waivers: dict[Any, tuple[dict[str, Any], str]], findings: list[Finding]) -> None:
+    rows = jsonl(root / "verification-ledger.jsonl", findings)
+    check_fields(rows, LEDGER_FIELDS, "verification-ledger/v1", root / "verification-ledger.jsonl", findings)
+    seen_waiver_results: set[Any] = set()
+    for idx, row in enumerate(rows, 1):
+        result = row.get("result")
+        if result not in LEDGER_RESULTS:
+            findings.append(Finding("E_LEDGER_RESULT_INVALID", "verification-ledger.jsonl", f"invalid result {result}", idx))
+        if result == "PASS":
+            for field in ["command", "workdir", "exit_status", "tool_version", "raw_log", "evidence_artifact", "formal_verifier_invocation_id"]:
+                if row.get(field) in (None, "", []):
+                    findings.append(Finding("E_COMMAND_EVIDENCE_MISSING", "verification-ledger.jsonl", f"PASS row missing {field}", idx))
+        if result == "WAIVED":
+            if row.get("behavior_affecting") is True:
+                findings.append(Finding("E_BEHAVIOR_WAIVER", "verification-ledger.jsonl", "behavior-affecting ledger waiver", idx))
+            waiver = formal_waivers.get(row.get("formal_waiver_id"))
+            if not waiver:
+                findings.append(Finding("E_WAIVER_LIFECYCLE_INVALID", "verification-ledger.jsonl", "WAIVED row lacks matching formal waiver", idx))
+            else:
+                formal_row, formal_hash = waiver
+                seen_waiver_results.add(formal_row.get("id"))
+                if not hash_matches(row.get("formal_waiver_hash"), formal_hash):
+                    findings.append(Finding("E_WAIVER_LIFECYCLE_INVALID", "verification-ledger.jsonl", "formal_waiver_hash does not match formal waiver row", idx))
+                if formal_row.get("ledger_result_ref") != row.get("id"):
+                    findings.append(Finding("E_WAIVER_LIFECYCLE_INVALID", "verification-ledger.jsonl", "formal waiver ledger_result_ref does not match WAIVED row", idx))
+                if formal_row.get("formal_verifier_invocation_id") != row.get("formal_verifier_invocation_id"):
+                    findings.append(Finding("E_WAIVER_LIFECYCLE_INVALID", "verification-ledger.jsonl", "formal verifier invocation mismatch", idx))
+                for field in ["requirement_id", "contract_clause", "behavior_affecting"]:
+                    if row.get(field) != formal_row.get(field):
+                        findings.append(Finding("E_WAIVER_LIFECYCLE_INVALID", "verification-ledger.jsonl", f"WAIVED row does not match formal waiver {field}", idx))
+        if state >= 12 and row.get("status") != "closed":
+            findings.append(Finding("E_FORMAL_PENDING_AT_CLOSURE", "verification-ledger.jsonl", "ledger row not closed", idx))
+    for waiver_id, (formal_row, _) in formal_waivers.items():
+        if formal_row.get("status") == "approved" and waiver_id not in seen_waiver_results:
+            findings.append(Finding("E_WAIVER_LIFECYCLE_INVALID", "formal-waivers.jsonl", f"approved waiver {waiver_id} lacks WAIVED ledger row"))
+
+
+def check_alignment(root: Path, findings: list[Finding]) -> None:
+    rows = jsonl(root / "proof-test-source-alignment.jsonl", findings)
+    check_fields(rows, ALIGN_FIELDS, None, root / "proof-test-source-alignment.jsonl", findings)
+
+
+def check_matrices(root: Path, findings: list[Finding]) -> None:
+    required = {
+        "proof-to-rust-map.md": "| Proof ID | Claim | Behavior Affecting | Rust Source Refs | Behavior Test Refs | Refinement Harness Refs | Verifier | Evidence Command | Rerun From |",
+        "test-plan.md": "Proof/Refinement Coverage Matrix",
+        "test-writer-report.md": "Proof/Refinement Coverage Matrix",
+        "implementation.md": "Source Coverage Matrix",
+        "proof-test-source-alignment.md": "| Requirement | Proof ID | Refinement ID | Source Refs | Behavior Test Refs | Refinement Harness Refs | Commands Run | Ledger Result | Status |",
+        "black-hat-review.md": "Proof/Test/Source Parity Matrix",
+    }
+    for rel, needle in required.items():
+        p = root / rel
+        if p.exists() and needle not in text(p):
+            findings.append(Finding("E_MATRIX_MISSING", rel, f"missing matrix marker: {needle}"))
+
+
+def check_deferred_global(root: Path, findings: list[Finding]) -> None:
+    if not root.exists():
+        return
+    for p in root.rglob("*"):
+        if p.is_file() and "DEFERRED_GLOBAL" in text(p):
+            findings.append(Finding("E_DEFERRED_GLOBAL_BANNED", str(p.relative_to(root)), "DEFERRED_GLOBAL is not a pass state"))
+
+
+def check_skill_hygiene(skill_root: Path | None, findings: list[Finding]) -> None:
+    if not skill_root:
+        return
+    parent = skill_root.parent
+    for name in ["rust-contract", "proof-planner", "proof-plan-reviewer", "proof-writer", "proof-reviewer", "proof-to-implementation", "formal-verifier", "test-reviewer"]:
+        p = parent / name / "SKILL.md"
+        if not p.exists():
+            findings.append(Finding("E_SKILL_DISCOVERY_MISSING", str(p), "required skill missing"))
+            continue
+        body = text(p)
+        if len(body.splitlines()) > 180 or len(body.encode("utf-8")) > 12 * 1024:
+            findings.append(Finding("E_SKILL_BLOATED", str(p), "SKILL.md exceeds compact budget"))
+        if body.count("```json") > 1 or body.count("Required fields") > 3:
+            findings.append(Finding("E_SCHEMA_REFERENCE_FORK", str(p), "possible inline schema fork; link canonical references instead"))
+
+
+def check_opencode_agent_discovery(mirror_root: Path | None, findings: list[Finding]) -> None:
+    if not mirror_root or ".opencode" not in mirror_root.parts:
+        return
+    agent_dir = mirror_root.parent.parent / "agent"
+    for rel in DISCOVERY_AGENT_FILES:
+        p = agent_dir / rel
+        if not p.exists():
+            findings.append(Finding("E_AGENT_DISCOVERY_MISSING", str(p), "required OpenCode subagent file missing"))
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser(description="Validate Go-skill bead evidence")
+    parser.add_argument("--workspace", required=True)
+    parser.add_argument("--bead", required=True)
+    parser.add_argument("--state", type=int, choices=range(1, 17))
+    parser.add_argument("--landing", action="store_true")
+    parser.add_argument("--source-checkout")
+    parser.add_argument("--skill-root")
+    parser.add_argument("--mirror-root")
+    parser.add_argument("--format", choices=["text", "json"], default="text")
+    args = parser.parse_args()
+
+    workspace = Path(args.workspace).resolve()
+    artifact_root = workspace / ".beads" / args.bead
+    findings: list[Finding] = []
+    state = 16 if args.landing else args.state
+    if state is None:
+        return 2
+
+    if args.source_checkout:
+        source = Path(args.source_checkout).resolve()
+        if workspace == source or source in workspace.parents:
+            findings.append(Finding("E_WORKSPACE_IS_SOURCE", str(workspace), "isolated workspace equals or is nested under source checkout"))
+
+    skill_root = Path(args.skill_root).resolve() if args.skill_root else None
+    mirror_root = Path(args.mirror_root).resolve() if args.mirror_root else None
+    check_mirrors(skill_root, mirror_root, findings)
+    check_skill_hygiene(skill_root, findings)
+    check_opencode_agent_discovery(mirror_root, findings)
+    version, state_range = disk_skill_meta(skill_root)
+
+    for sid in range(1, state + 1):
+        for rel in STATE_ARTIFACTS.get(sid, []):
+            require_file(artifact_root, rel, findings)
+
+    check_provenance(artifact_root, version, state_range, findings)
+    invocations = invocation_rows(artifact_root, findings)
+    check_review_provenance(artifact_root, invocations, findings)
+    check_deferred_global(artifact_root, findings)
+
+    for rel in APPROVAL_FILES:
+        check_status(artifact_root, rel, findings, allow_pass=rel == "machine-gate-report.md")
+
+    check_lane_decisions(artifact_root, state, invocations, findings)
+    proof_obligations = check_proof_obligations(artifact_root, findings)
+    check_trusted_base(artifact_root, state, findings)
+    check_pending_smoke(artifact_root, findings)
+    check_blocked_tooling(artifact_root, state, proof_obligations, findings)
+    check_rro(artifact_root, state, findings)
+    formal_waivers = check_waivers(artifact_root, invocations, findings)
+    check_ledger(artifact_root, state, formal_waivers, findings)
+    check_alignment(artifact_root, findings)
+    check_matrices(artifact_root, findings)
+
+    result = {"bead": args.bead, "state": state, "status": "FAIL" if findings else "PASS", "findings": findings}
+    if args.format == "json":
+        print(json.dumps(result, indent=2, sort_keys=True))
+    else:
+        print(f"STATUS: {result['status']}")
+        for f in findings:
+            loc = f"{f['path']}:{f.get('line')}" if "line" in f else f["path"]
+            print(f"{f['code']} {loc} - {f['message']}")
+    return 1 if findings else 0
+
+
+if __name__ == "__main__":
+    try:
+        raise SystemExit(main())
+    except OSError as exc:
+        print(json.dumps({"status": "ERROR", "error": str(exc)}), file=sys.stderr)
+        raise SystemExit(3)

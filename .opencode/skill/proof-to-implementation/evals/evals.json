@@ -1,0 +1,12 @@
+[
+  {
+    "name": "TLA without Rust bridge rejected",
+    "prompt": "Bridge an approved TLA+ NoDoubleClaim proof with no Rust source refs.",
+    "expect": ["STATUS: REJECTED", "E_TLA_NO_RUST_BRIDGE"]
+  },
+  {
+    "name": "harness as behavior test rejected",
+    "prompt": "Bridge a Kani harness and list that same harness as the behavior test.",
+    "expect": ["STATUS: REJECTED", "E_BRIDGE_REFS_NOT_DISJOINT"]
+  }
+]

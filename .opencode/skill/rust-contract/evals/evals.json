@@ -1,0 +1,12 @@
+[
+  {
+    "name": "boolean workflow becomes typestate",
+    "prompt": "Model a Rust job claim workflow currently using ready: bool and claimed_by: Option<String>.",
+    "expect": ["typed workflow states", "semantic owner ID", "proof-seeds.jsonl", "no proof obligations"]
+  },
+  {
+    "name": "docs only stays light",
+    "prompt": "Update docs for an existing API without source behavior changes.",
+    "expect": ["non-behavior scope", "no expensive proof over-planning", "no behavior waiver"]
+  }
+]

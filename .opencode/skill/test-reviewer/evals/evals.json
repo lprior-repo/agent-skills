@@ -1,0 +1,12 @@
+[
+  {
+    "name": "proof review redirected",
+    "prompt": "Review proof-obligations.planned.jsonl and TLA+ artifacts as test-reviewer.",
+    "expect": ["redirect to proof-plan-reviewer or proof-reviewer", "no proof approval"]
+  },
+  {
+    "name": "weak assertions rejected",
+    "prompt": "Review a test plan where Then clauses only say is_ok and is_err.",
+    "expect": ["STATUS: REJECTED", "concrete assertion findings"]
+  }
+]

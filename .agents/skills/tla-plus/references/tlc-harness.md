@@ -4,7 +4,7 @@
 
 Use commands in this order:
 
-1. Exact command from `.beads/<bead-id>/proof-obligations.jsonl`.
+1. Exact command from `.beads/<bead-id>/proof-obligations.planned.jsonl` or `verification-ledger.jsonl`.
 2. Repo script `./scripts/verify-tla.sh` if it exists and covers the obligation.
 3. Moon task `moon run :verify-proof` or narrower task named by the repo.
 4. Direct TLC command when module/config paths are known.
@@ -136,7 +136,7 @@ State explosion:
 - Reduce constants, add safe symmetry for safety-only checks, add `VIEW`, improve model structure, or split obligations.
 
 Missing tool:
-- Report blocker for required obligation, or `DEFERRED_GLOBAL` only when obligation is non-required and unrelated to current bead scope.
+- Report blocker for required obligation. Non-required unrelated checks may be marked skipped optional evidence, but global-readiness failures are BLOCK_GLOBAL/FAIL_GLOBAL under go-skill.
 
 Broken example/spec claim:
 - If a pedagogical example violates its own invariant, say so. Do not preserve a broken model as authoritative guidance; either mark it as a bug-finding example or repair the invariant/action semantics.

@@ -74,7 +74,7 @@ gate_policy() {
   if optional_cmd cargo-geiger; then
     cargo geiger --all-features
   else
-    printf 'cargo-geiger not installed; optional unless selected by proof-obligations.jsonl\n'
+    printf 'cargo-geiger not installed; optional unless selected by proof-obligations.planned.jsonl\n'
   fi
 }
 
@@ -87,7 +87,7 @@ gate_ub() {
   if optional_cmd cargo-careful; then
     cargo +nightly careful test --workspace --all-targets
   else
-    printf 'cargo-careful not installed; optional unless selected by proof-obligations.jsonl\n'
+    printf 'cargo-careful not installed; optional unless selected by proof-obligations.planned.jsonl\n'
   fi
 }
 
@@ -97,7 +97,7 @@ gate_bolero() {
     cargo bolero test
     cargo bolero test --engine "$BOLERO_ENGINE" --time "$BOLERO_TIME"
   else
-    printf 'cargo-bolero not installed; optional unless selected by proof-obligations.jsonl\n'
+    printf 'cargo-bolero not installed; optional unless selected by proof-obligations.planned.jsonl\n'
   fi
 }
 
@@ -124,11 +124,11 @@ gate_verus() {
   fi
 
   if [[ "${VERUS_REQUIRED:-0}" = "1" ]]; then
-    printf 'Verus is required by proof-obligations.jsonl but no VERUS_CMD or executable ./scripts/verify-verus.sh is configured.\n' >&2
+    printf 'Verus is required by proof-obligations.planned.jsonl but no VERUS_CMD or executable ./scripts/verify-verus.sh is configured.\n' >&2
     exit 1
   fi
 
-  printf 'Verus command not configured; optional unless selected by proof-obligations.jsonl\n'
+  printf 'Verus command not configured; optional unless selected by proof-obligations.planned.jsonl\n'
 }
 
 gate_tla() {
@@ -144,11 +144,11 @@ gate_tla() {
   fi
 
   if [[ "${TLA_REQUIRED:-0}" = "1" ]]; then
-    printf 'TLA+ is required by proof-obligations.jsonl but no TLA_CMD or executable ./scripts/verify-tla.sh is configured.\n' >&2
+    printf 'TLA+ is required by proof-obligations.planned.jsonl but no TLA_CMD or executable ./scripts/verify-tla.sh is configured.\n' >&2
     exit 1
   fi
 
-  printf 'TLA+ command not configured; optional unless selected by proof-obligations.jsonl\n'
+  printf 'TLA+ command not configured; optional unless selected by proof-obligations.planned.jsonl\n'
 }
 
 gate_concurrency() {
@@ -158,7 +158,7 @@ gate_concurrency() {
   if optional_cmd lockbud; then
     lockbud $LOCKBUD_FLAGS
   else
-    printf 'lockbud not installed; optional unless selected by proof-obligations.jsonl\n'
+    printf 'lockbud not installed; optional unless selected by proof-obligations.planned.jsonl\n'
   fi
 }
 

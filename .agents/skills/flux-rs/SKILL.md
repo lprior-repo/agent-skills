@@ -42,7 +42,7 @@ Flux RS is a nightly Rust compiler plugin for refinement types. It is not a reac
 
 ## Mandatory Verification Gate
 
-Run the exact Flux command named in `proof-obligations.jsonl` when present. If no exact command exists, use the nearest repo script/task. If no Flux target exists, report a blocker instead of fabricating evidence.
+Run the exact Flux command named in `proof-obligations.planned.jsonl` or `verification-ledger.jsonl` when present. If no exact command exists, use the nearest repo script/task. If no Flux target exists, report a blocker instead of fabricating evidence.
 
 The commands below are templates only. Replace placeholders with exact project paths, package names, or repo tasks before treating output as evidence.
 

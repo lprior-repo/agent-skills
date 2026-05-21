@@ -39,7 +39,7 @@ Kani proves Rust proof harnesses by bounded symbolic execution over all modeled 
 
 ## Mandatory Verification Gate
 
-Run the exact Kani command named in `proof-obligations.jsonl` when present. If no exact command exists, use the nearest repo script/task. If no Kani target or harness exists for the claim, report a blocker instead of fabricating evidence.
+Run the exact Kani command named in `proof-obligations.planned.jsonl` or `verification-ledger.jsonl` when present. If no exact command exists, use the nearest repo script/task. If no Kani target or harness exists for the claim, report a blocker instead of fabricating evidence.
 
 The commands below are templates only. Replace placeholders with exact project paths, package names, harnesses, feature flags, and evidence paths before treating output as proof evidence.
 

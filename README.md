@@ -2,7 +2,7 @@
 
 Portable AI-agent skills for OpenCode, Claude Code, and compatible agent runtimes.
 
-This repository is a checked-in snapshot of a local `.agents` workspace. Within this repository, `.agents/skills/` is authoritative over the legacy top-level `skills/` mirror. At runtime, refresh this snapshot from your own `~/.agents/skills/` source of truth.
+This repository is a checked-in snapshot of local `.agents` and OpenCode skill/agent runtime files. Within this repository, `.agents/skills/` is authoritative over the legacy top-level `skills/` mirror.
 
 ## What Is In This Repo
 
@@ -18,6 +18,9 @@ agent-skills/
 │   │   ├── evidence-packaging/
 │   │   └── ...
 │   └── tmp/
+├── .opencode/
+│   ├── agent/
+│   └── skill/
 ├── skills/
 ├── LICENSE
 └── README.md
@@ -68,7 +71,13 @@ mkdir -p ~/.opencode/skill
 cp -R .agents/skills/* ~/.opencode/skill/
 ```
 
-This repository snapshot packages skill definitions. If a runtime skill binds an OpenCode agent name, install the matching agent definition from your local OpenCode runtime config as well.
+Install the OpenCode routing snapshot when using Go-skill/femdation subagents:
+
+```bash
+mkdir -p ~/.opencode/agent ~/.opencode/skill
+cp -R .opencode/agent/* ~/.opencode/agent/
+cp -R .opencode/skill/* ~/.opencode/skill/
+```
 
 ## How To Choose A Skill
 

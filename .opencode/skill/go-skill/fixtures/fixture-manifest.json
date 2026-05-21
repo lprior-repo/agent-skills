@@ -1,0 +1,18 @@
+[
+  {"name":"valid-critical-bead","expected":"PASS","codes":[]},
+  {"name":"missing-lane-decision","expected":"FAIL","codes":["E_LANE_DECISION_MISSING"]},
+  {"name":"missing-lane-review","expected":"FAIL","codes":["E_LANE_REVIEW_MISSING"]},
+  {"name":"blocked-tooling-lane","expected":"FAIL","codes":["E_LANE_BLOCKED_TOOLING"]},
+  {"name":"blocked-tooling-proof-writer","expected":"FAIL","codes":["E_BLOCKED_TOOLING_ADVANCE"]},
+  {"name":"old-schema-aliases","expected":"FAIL","codes":["E_SCHEMA_ALIAS_FIELD"]},
+  {"name":"self-approved-proof-plan","expected":"FAIL","codes":["E_REVIEW_SELF_APPROVAL","E_INVOCATION_LEDGER_FORGED"]},
+  {"name":"missing-invocation-ledger","expected":"FAIL","codes":["E_INVOCATION_LEDGER_MISSING"]},
+  {"name":"behavior-waived","expected":"FAIL","codes":["E_BEHAVIOR_WAIVER"]},
+  {"name":"unledgered-trusted-boundary","expected":"FAIL","codes":["E_TRUST_UNLEDGERED_MARKER"]},
+  {"name":"pending-without-smoke","expected":"FAIL","codes":["E_PROOF_SMOKE_MISSING"]},
+  {"name":"tla-without-rust-bridge","expected":"FAIL","codes":["E_TLA_NO_RUST_BRIDGE"]},
+  {"name":"harness-as-behavior-test","expected":"FAIL","codes":["E_BRIDGE_REFS_NOT_DISJOINT"]},
+  {"name":"mapping-planned-at-closure","expected":"FAIL","codes":["E_MAPPING_PLANNED_AT_CLOSURE"]},
+  {"name":"forked-schema-reference","expected":"FAIL","codes":["E_SCHEMA_REFERENCE_FORK"]},
+  {"name":"bloated-skill-inline-schema","expected":"FAIL","codes":["E_SKILL_BLOATED"]}
+]

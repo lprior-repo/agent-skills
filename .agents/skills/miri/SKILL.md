@@ -41,7 +41,7 @@ Miri is Rust's nightly-only MIR interpreter for dynamic Undefined Behavior detec
 
 ## Mandatory Verification Gate
 
-Run the exact Miri command named in `proof-obligations.jsonl`, CI, or the user's request when present. If no exact command exists, use the nearest repo script/task. If Miri is required but nightly, the miri component, source paths, or runnable tests are missing, report `BLOCKER` instead of fabricating evidence.
+Run the exact Miri command named in `proof-obligations.planned.jsonl`, `verification-ledger.jsonl`, CI, or the user's request when present. If no exact command exists, use the nearest repo script/task. If Miri is required but nightly, the miri component, source paths, or runnable tests are missing, report `BLOCKER` instead of fabricating evidence.
 
 The commands below are templates only. Replace placeholders with exact project paths, packages, features, targets, test filters, and evidence paths before treating output as evidence.
 

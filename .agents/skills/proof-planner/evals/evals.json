@@ -1,0 +1,12 @@
+[
+  {
+    "name": "temporal workflow plans TLA plus bridge",
+    "prompt": "Plan proof coverage for a lease/claim workflow with retries and cancellation.",
+    "expect": ["tla-plus required", "verifier-lane-decisions.jsonl", "proof-obligations.planned.jsonl", "proof-to-implementation-input.md"]
+  },
+  {
+    "name": "critical Rust invariant requires Verus",
+    "prompt": "Plan proof coverage for a pure Rust bounded counter invariant.",
+    "expect": ["verus required", "kani or proptest companion", "no behavior waiver"]
+  }
+]

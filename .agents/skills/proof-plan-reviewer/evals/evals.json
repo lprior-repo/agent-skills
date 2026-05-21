@@ -1,0 +1,12 @@
+[
+  {
+    "name": "missing Verus rejected",
+    "prompt": "Review a proof plan for a critical Rust invariant that has no Verus lane.",
+    "expect": ["STATUS: REJECTED", "E_PROOF_PLAN_MISSING_VERUS"]
+  },
+  {
+    "name": "weak non applicability rejected",
+    "prompt": "Review lane decisions that mark Loom not_applicable because 'not needed'.",
+    "expect": ["STATUS: REJECTED", "E_LANE_DECISION_WEAK"]
+  }
+]

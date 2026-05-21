@@ -1,12 +1,6 @@
 ---
 name: femdation
 description: "Aggressive work-conserving multi-bead dispatcher for the proof-first go-skill lifecycle. Keeps every unblocked bead active with direct specialist subagents while preserving gates, artifacts, retries, and landing order."
-argument-hint: "[bead ids, bd query, or fleet goal]"
-disable-model-invocation: true
-allowed-tools:
-  - Bash
-  - Read
-  - Task
 ---
 
 ```jsonl
@@ -18,6 +12,8 @@ allowed-tools:
 {"kind":"rule","id":"direct_children_only","text":"Every child is a direct specialist child for exactly one bead and one state or safe same-state sublane. Child prompts must forbid nested Task/opencode delegation and nested orchestrators."}
 {"kind":"rule","id":"one_mutating_state_per_bead","text":"At most one mutating child may work on a bead at a time. Same-state fanout is allowed only for independent read-only reviews or independent verifier/gate lanes over frozen inputs."}
 {"kind":"rule","id":"aggressive_fill","text":"Launch all currently ready independent dispatches in one batch when the environment supports parallel tool calls. Minimum target occupancy is one active dispatch per unblocked bead, plus safe same-state fanout."}
+{"kind":"rule","id":"occupancy_target","text":"For 10 selected unblocked beads, target 10 active direct specialist children across their current lifecycle states. Anything less requires concrete evidence: blocked gate, serial landing wait, queued dispatch, active verification, resource cap, or terminal done."}
+{"kind":"rule","id":"heterogeneous_wavefront","text":"Beads do not need to be in the same go-skill state. If one bead is in State 4 and another is in State 11, dispatch both ready state workers. Refill across mixed states until every selected bead has landed and completed cleanup."}
 {"kind":"rule","id":"serialize_global_critical_sections","text":"Serialize landing to main/remote, shared global blocker repair, and any operation that mutates shared non-isolated state. Keep other beads moving while one bead waits for a serial section."}
 {"kind":"rule","id":"retry_budget","text":"Inherit go-skill's 7-attempt cap per failed gate or review loop. Retries must route to the nearest invalidated state and record attempt, failure class, repair delta, evidence, and next dispatch."}
 {"kind":"rule","id":"no_gate_weakening","text":"Throughput pressure never justifies weakening proof, test, review, truth-serum, machine, or landing gates. Block the bead and dispatch other ready beads instead."}
@@ -59,12 +55,14 @@ Use a fill-drain-refill loop:
 6. If the gate passes, enqueue the bead's next state immediately; do not wait for a cohort.
 7. If the gate fails, classify it, route repair to the nearest owning state, and keep other beads moving.
 
-Do not walk one bead end-to-end while other unblocked beads wait. The fleet advances as a wavefront: each bead moves as soon as its own gate clears, without waiting for slower beads in earlier states.
+Do not walk one bead end-to-end while other unblocked beads wait. The fleet advances as a heterogeneous wavefront: each bead moves as soon as its own gate clears, without waiting for slower beads in earlier states or faster beads in later states. A State 4 bead and State 11 bead should both have active children when their own inputs and gates make them ready. Continue refill/verify/refill until every selected bead reaches accepted landing evidence and cleanup completion.
 
 ## Parallelism Policy
 
 - Default posture is aggressive: launch all independent ready children the runtime can support.
 - Minimum posture is one active child for every unblocked bead.
+- For 10 selected unblocked beads, keep 10 direct specialist children active unless concrete evidence shows a blocker, serial wait, queued dispatch, active verification, resource cap, or terminal done.
+- Do not require same-phase cohorts; refill workers across whatever `go-skill` state each bead is currently ready to run.
 - Add same-state fanout on top of the minimum when the sublanes consume frozen inputs and write separate artifacts.
 - Do not voluntarily reduce parallelism for readability or comfort. Reduce only for real resource contention, tool locks, rate limits, shared-state mutation, or repeated infrastructure failures.
 - When capacity is constrained, schedule round-robin by bead and prefer the oldest `READY` bead to prevent starvation.
@@ -74,11 +72,12 @@ Safe same-state fanout:
 
 | State | Fanout |
 |---|---|
-| 6 | Run `proof-reviewer` and `contract-verification-reviewer` in parallel after proof artifacts are frozen. |
-| 11 | Run machine-gate capture and `formal-verifier` in parallel when both consume the same frozen implementation/proof/test artifacts. |
-| 12 | Run one `black-hat-reviewer` per bead in parallel across beads. |
-| 13 | Run evidence packaging across beads in parallel; each bead still needs its own active-context truth/evidence approval before landing. |
-| 15 | Cleanup verification may run in parallel after each bead has its own accepted landing evidence. |
+| 4 | Run `proof-planner` then `proof-plan-reviewer` only after planner artifacts are frozen; do not let planner self-approve. |
+| 6 | Run `proof-reviewer` after proof artifacts are frozen; `contract-verification-reviewer` is historical and not a live gate. |
+| 12 | Run machine-gate capture and `formal-verifier` in parallel when both consume the same frozen implementation/proof/test artifacts. |
+| 13 | Run one `black-hat-reviewer` per bead in parallel across beads. |
+| 14 | Run evidence packaging across beads in parallel; each bead still needs its own active-context truth/evidence approval before landing. |
+| 16 | Cleanup verification may run in parallel after each bead has its own accepted landing evidence. |
 
 Unsafe fanout:
 - Do not run implementation, test-writing, proof-writing, or repair children concurrently for the same bead.
@@ -93,19 +92,20 @@ Before dispatch, verify the specialist exists and the dispatch is for exactly on
 |---|---|
 | 2 | `explore` |
 | 3 | `rust-contract`; use `scott-ddd-refactor` only when the state requires domain/type-model repair |
-| 4 | `proof-planner` |
+| 4 | `proof-planner`, then `proof-plan-reviewer` |
 | 5 | `proof-writer` |
-| 6 | `proof-reviewer`, `contract-verification-reviewer` |
-| 7 | `test-planner` |
-| 8 | `test-writer` |
-| 9 | `test-reviewer` |
-| 10 | `holzman-rust` |
-| 11 | `formal-verifier` plus controller machine-gate evidence capture |
-| 12 | `black-hat-reviewer` |
-| 13 | `evidence-packaging`, `truth-serum` |
-| 14 | `landing-skill` |
+| 6 | `proof-reviewer` |
+| 7 | `proof-to-implementation`, then `proof-reviewer` for bridge review |
+| 8 | `test-planner` |
+| 9 | `test-writer` |
+| 10 | `test-reviewer` |
+| 11 | `holzman-rust` |
+| 12 | `formal-verifier` plus controller machine-gate evidence capture |
+| 13 | `black-hat-reviewer` |
+| 14 | `evidence-packaging`, `truth-serum` |
+| 15 | `landing-skill` |
 
-States 1 and 15 are controller verification states. Keep them small, evidence-backed, and batched across beads where safe.
+States 1 and 16 are controller verification states. Keep them small, evidence-backed, and batched across beads where safe.
 
 ## Dispatch Manifest
 
@@ -136,12 +136,26 @@ Run the relevant checks before claiming the fleet is healthy or a bead advanced:
 test -s /home/lewis/.agents/skills/go-skill/state-machine.md
 test -s /home/lewis/.agents/skills/go-skill/checklist.md
 test -s /home/lewis/.agents/skills/go-skill/artifacts.md
+test -s /home/lewis/.opencode/agent/explore.md
+test -s /home/lewis/.opencode/agent/proof-plan-reviewer.md
+test -s /home/lewis/.opencode/agent/proof-to-implementation.md
+test -s /home/lewis/.opencode/agent/evidence-packaging.md
+test -s /home/lewis/.opencode/agent/landing-skill.md
 
 # Current proof-first delegates exist
 test -s /home/lewis/.agents/skills/explore/SKILL.md
+test -s /home/lewis/.agents/skills/rust-contract/SKILL.md
 test -s /home/lewis/.agents/skills/proof-planner/SKILL.md
+test -s /home/lewis/.agents/skills/proof-plan-reviewer/SKILL.md
 test -s /home/lewis/.agents/skills/proof-writer/SKILL.md
 test -s /home/lewis/.agents/skills/proof-reviewer/SKILL.md
+test -s /home/lewis/.agents/skills/proof-to-implementation/SKILL.md
+test -s /home/lewis/.agents/skills/test-planner/SKILL.md
+test -s /home/lewis/.agents/skills/test-writer/SKILL.md
+test -s /home/lewis/.agents/skills/test-reviewer/SKILL.md
+test -s /home/lewis/.agents/skills/holzman-rust/SKILL.md
+test -s /home/lewis/.agents/skills/formal-verifier/SKILL.md
+test -s /home/lewis/.agents/skills/black-hat-reviewer/SKILL.md
 test -s /home/lewis/.agents/skills/evidence-packaging/SKILL.md
 test -s /home/lewis/.agents/skills/truth-serum/SKILL.md
 test -s /home/lewis/.agents/skills/landing-skill/SKILL.md
@@ -156,21 +170,8 @@ test -s .beads/<bead-id>/STATE.md
 test -s .beads/<bead-id>/baseline-report.md
 jq -c . .beads/<bead-id>/delivery-scope.jsonl >/dev/null
 
-# Current-state gates: run every matching row from go-skill state-machine.md, checklist.md, and artifacts.md.
-# Paired approvals are all mandatory; one approved file never substitutes for another.
-test -s .beads/<bead-id>/proof-review.md && test -s .beads/<bead-id>/contract-verification-review.md
-rg -n '^STATUS: APPROVED$' .beads/<bead-id>/proof-review.md
-rg -n '^STATUS: APPROVED$' .beads/<bead-id>/contract-verification-review.md
-test -s .beads/<bead-id>/test-plan-review.md && test -s .beads/<bead-id>/test-suite-review.md
-rg -n '^STATUS: APPROVED$' .beads/<bead-id>/test-plan-review.md
-rg -n '^STATUS: APPROVED$' .beads/<bead-id>/test-suite-review.md
-test -s .beads/<bead-id>/machine-gate-report.md && test -s .beads/<bead-id>/formal-verification-report.md && test -s .beads/<bead-id>/verification-ledger.jsonl
-rg -n '^STATUS: PASS$|^STATUS: APPROVED$' .beads/<bead-id>/machine-gate-report.md
-rg -n '^STATUS: PASS$|^STATUS: APPROVED$' .beads/<bead-id>/formal-verification-report.md
-jq -c . .beads/<bead-id>/verification-ledger.jsonl >/dev/null
-test -s .beads/<bead-id>/assurance-bundle.md && test -s .beads/<bead-id>/truth-serum-report.md && test -s .beads/<bead-id>/final-evidence-decision.md
-rg -n '^STATUS: PASS$|^STATUS: APPROVED$' .beads/<bead-id>/truth-serum-report.md
-rg -n '^STATUS: APPROVED$' .beads/<bead-id>/final-evidence-decision.md
+# Current-state gate: validate only the bead's current state/transition.
+"/home/lewis/.agents/skills/go-skill/tools/go-skill-v9-validate" --workspace "$(pwd -P)" --bead "<bead-id>" --state "<current-state>" --source-checkout "<source-checkout-path-from-STATE>" --skill-root /home/lewis/.agents/skills/go-skill --mirror-root /home/lewis/.opencode/skill/go-skill
 ```
 
 For scheduler health, every active bead must have exactly one of: active child PID/session/task ID, queued dispatch manifest, verifier/artifact check in progress, serial landing wait, blocker with evidence, or terminal done status.
