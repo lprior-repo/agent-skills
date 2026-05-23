@@ -36,6 +36,27 @@ Proof plans, proof obligations, TLA+, Verus, Kani, Flux, Loom, Miri, and proof e
 4. No ignored tests, sleeps, broad mocks of domain queries, hidden shared mutable state, or silent error suppression.
 5. Mutation thought experiment: deleting branch/error/value logic must be caught by a named test.
 6. Snapshot tests must be checked and intentional.
+7. Resource-heavy commands are bounded: broad Kani/CBMC, mutation, fuzz, coverage, sanitizer, or full-workspace suites must use scoped targets, timeouts, and memory caps. Unbounded verifier commands such as `cargo kani -j 4` are infrastructure-risk findings, not acceptable test evidence.
+
+## Resource Governance
+
+When a test plan or suite asks the agent to execute expensive verification-adjacent commands, review the command shape before approving or running it.
+
+- Behavior tests should not depend on broad proof lanes; verifier harnesses still do not count as behavior tests.
+- Prefer exact package, test, harness, or file scopes over full-workspace sweeps.
+- Require timeouts for long-running lanes.
+- Require cgroup/container memory caps for broad or unknown Kani/CBMC runs. Safe local default:
+
+```bash
+systemd-run --user --scope --collect \
+  -p WorkingDirectory=<workspace> \
+  -p MemoryHigh=20G \
+  -p MemoryMax=24G \
+  -p MemorySwapMax=0 \
+  cargo kani -j 1 --output-format=regular <exact-package-or-harness-args>
+```
+
+- Flag any unbounded `cargo kani`, `cargo kani -j 4`, full mutation sweep, or fuzz run without a time and memory budget as a review finding.
 
 ## References
 
@@ -45,4 +66,4 @@ Proof plans, proof obligations, TLA+, Verus, Kani, Flux, Loom, Miri, and proof e
 
 ## Output Rules
 
-Findings first, ordered by severity. Include file/line when reviewing code. `STATUS: APPROVED` only when no lethal behavior-test gaps remain.
+Findings first, ordered by severity. Include file/line when reviewing code. Include resource-risk findings for unbounded expensive test commands. `STATUS: APPROVED` only when no lethal behavior-test gaps remain.
