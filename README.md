@@ -179,6 +179,7 @@ AI agents do the work. Deterministic tools, adversarial reviewers, raw command e
 | `hands-on-qa` | Manually invokes real CLIs, APIs, or UIs and reports only command-backed evidence. | You need to know whether a workflow actually works for a user. |
 | `qa-enforcer` | Executes ruthless product QA with real commands, APIs, and deep result inspection. | You need behavior validated beyond happy-path tests. |
 | `red-queen` | Evolves tests and code adversarially through deterministic state-machine pressure. | You explicitly want Digital Red Queen-style evolutionary QA. |
+| `rust-fuzzer` | Designs, reviews, runs, and triages safe Rust fuzz campaigns with cargo-fuzz, AFL++, honggfuzz, LibAFL, fuzzcheck, sanitizers, and language-tooling oracles. | Rust parsers, compilers, interpreters, VMs, bytecode, JITs, or structured inputs need coverage-guided fuzzing without writing unsafe code. |
 | `test-planner` | Writes exhaustive Rust test plans covering unit, BDD, proptest, mutation, and related layers. | Tests need a strategy before code is written. |
 | `test-writer` | Writes exhaustive Rust tests across unit, integration, proptest, and Kani-oriented coverage. | An approved test plan needs executable tests. |
 | `test-reviewer` | Reviews test plans and suites for contract parity, assertion strength, determinism, and mutation value. | You need to reject weak, tautological, or flaky tests. |
