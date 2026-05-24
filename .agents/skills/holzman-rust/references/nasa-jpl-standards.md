@@ -147,7 +147,7 @@ cargo hack check --workspace --feature-powerset
 cargo mutants
 ```
 
-`cargo check --workspace --all-targets --all-features` compiles tests/examples/benches and is allowed. Strict source lint never includes test targets as an implementation style gate. In bead workflows, classify failures against `delivery-scope.jsonl` and `baseline-report.md`: local, regression, required obligation, and release-critical global failures block; pre-existing unrelated repo debt is `DEFERRED_GLOBAL` follow-up evidence.
+`cargo check --workspace --all-targets --all-features` compiles tests/examples/benches and is allowed. Strict source lint never includes test targets as an implementation style gate. In bead workflows, classify failures against `delivery-scope.jsonl`, `baseline-report.md`, and `global-readiness-report.md`: local, regression, required-obligation, and global-readiness failures block until repaired.
 
 ## Bounded Resource Standard
 

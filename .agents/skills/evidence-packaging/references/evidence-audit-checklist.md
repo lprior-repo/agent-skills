@@ -4,7 +4,7 @@ Approve only if:
 - Every required artifact exists and is non-empty.
 - JSONL artifacts parse one object per line.
 - Each requirement maps to at least one proof or test evidence row.
-- Every proof obligation has PASS, WAIVED, or non-blocking DEFERRED_GLOBAL with reason.
+- Every proof obligation has PASS or WAIVED, with no unresolved FAIL_GLOBAL/BLOCK_GLOBAL evidence.
 - Every waiver has owner, reason, expiry/follow-up, and compensating evidence.
 - Black-hat review is approved or all defects have repair evidence.
 - Truth-serum ran in the active context or the bundle is marked UNVERIFIED.
