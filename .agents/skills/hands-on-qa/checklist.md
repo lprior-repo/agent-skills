@@ -83,11 +83,11 @@ Before delivering the report, verify every item:
 - [ ] **Target section**: Binary/API path, version, how it was built/found
 - [ ] **Interface Surface**: Every flag, subcommand, endpoint, HTTP method listed
 - [ ] **Test Matrix**: An entry for every test executed with expected vs actual
-- [ ] **Findings**: Each has severity, category, description, reproduction steps, evidence
+- [ ] **Findings**: Each has severity, category, description, reproduction steps or rationale, evidence, and disposition
 - [ ] **Developer Toolbox**: Tool suggestions and commands for developer follow-up
 - [ ] **Summary**: Total tests, PASS/FAIL counts, severity breakdown
 - [ ] No test result based on assumption or code reading alone
-- [ ] Every CRITICAL and MAJOR finding has a reproduction command the developer can re-run
+- [ ] Every CRITICAL, MAJOR, MINOR, and OBSERVATION finding has evidence plus a disposition
 - [ ] Recommended next steps are actionable (specific, not vague)
 
 ---
@@ -100,3 +100,4 @@ Must all pass before report is delivered:
 - [ ] **Evidence Backed**: Every PASS and FAIL has verbatim command output
 - [ ] **No Assumptions**: No results from code reading alone
 - [ ] **Fail Fast**: CRITICAL happy path failures reported immediately, not buried at end
+- [ ] **All Findings Addressed**: Every finding uses canonical disposition `fixed_with_evidence`, `owner_approved_debt`, `owner_approved_no_action`, or `blocker`; `blocker` prevents sign-off

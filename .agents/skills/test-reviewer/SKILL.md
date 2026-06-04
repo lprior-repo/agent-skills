@@ -68,4 +68,4 @@ systemd-run --user --scope --collect \
 
 ## Output Rules
 
-Findings first, ordered by severity. Include file/line when reviewing code. Include resource-risk findings for unbounded expensive test commands. `STATUS: APPROVED` only when no lethal behavior-test gaps remain.
+Findings first, ordered by severity. Include file/line when reviewing code. Include resource-risk findings for unbounded expensive test commands. `STATUS: APPROVED` only when every finding at every severity uses canonical disposition `fixed_with_evidence`, `owner_approved_debt`, or `owner_approved_no_action`. If any finding is `blocker`, write `STATUS: REJECTED` and prevent advancement. Do not approve with open LOW/MINOR/OBSERVATION/INFORMATIONAL findings.

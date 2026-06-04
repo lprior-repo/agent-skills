@@ -56,8 +56,9 @@ Process one branch at a time. Do NOT merge until ALL gates pass for that branch.
 ```bash
 BRANCH=<branch-name>
 git checkout main
-git diff main...origin/$BRANCH --stat
-git diff main...origin/$BRANCH
+BASE=$(git merge-base main "origin/$BRANCH")
+git diff "$BASE" "origin/$BRANCH" --stat
+git diff "$BASE" "origin/$BRANCH"
 ```
 
 Understand what changed. Note files, modules, and scope of change.
@@ -85,14 +86,15 @@ Invoke the `architectural-drift` skill on the diff. Check:
 
 1. **File length** — any file now over 300 lines?
    ```bash
-   git diff --name-only main...HEAD | while read f; do
+   BASE=$(git merge-base main HEAD)
+   git diff --name-only "$BASE" HEAD | while read f; do
      [ -f "$f" ] && wc -l "$f"
    done
    ```
 2. **DDD violations** — can illegal states be represented? Are domain boundaries crossed?
 3. **V2 spec compliance** — FD3/FD4 for IPC, group commits via DbWriterActor, no external DBs, no Wasm execution in engine
 
-Record findings. Create P1 beads for each violation.
+Record every finding. Create beads for each violation, including low/minor follow-ups. Any branch-review finding without canonical disposition `fixed_with_evidence`, `owner_approved_debt`, or `owner_approved_no_action` fails the review; `blocker` rejects the branch.
 
 #### Step E: Black Hat Review
 
@@ -104,7 +106,7 @@ Invoke the `black-hat-reviewer` skill on the diff. Check:
 4. Security — OWASP top 10, injection, `unsafe` usage, credential leaks
 5. Error handling — no unwraps in production paths, proper error propagation
 
-Record findings. P0 for security issues, P1 for quality defects.
+Record every finding. P0 for security issues, P1-P3 for quality, Holzman, DDD, UX, docs, style, and follow-up defects. Any branch-review finding without canonical disposition `fixed_with_evidence`, `owner_approved_debt`, or `owner_approved_no_action` fails the review; `blocker` rejects the branch.
 
 #### Step F: Red Queen — Test Design / Assertion Strength
 
@@ -115,7 +117,7 @@ Invoke the `red-queen` skill on the diff. Check:
 3. Property-based test coverage — are there proptest/invariants for complex logic?
 4. Edge cases — boundary values, empty inputs, concurrent access
 
-Record findings. P1 for missing coverage, P2 for weak test effectiveness or assertion gaps.
+Record every finding. P1 for missing coverage, P2 for weak test effectiveness or assertion gaps, P3 for lower-severity test hygiene observations. Any branch-review finding without canonical disposition `fixed_with_evidence`, `owner_approved_debt`, or `owner_approved_no_action` fails the review; `blocker` rejects the branch.
 
 #### Step G: Manual QA
 
@@ -132,7 +134,7 @@ cargo run -p vo-cli -- history --json 2>&1
 cd crates/vo-frontend && dx build 2>&1
 ```
 
-Record findings. P0 for broken builds, P1 for broken CLI/API.
+Record every finding. P0 for broken builds, P1 for broken CLI/API, P2-P3 for UX, docs, output formatting, and observation findings. Any branch-review finding without canonical disposition `fixed_with_evidence`, `owner_approved_debt`, or `owner_approved_no_action` fails the review; `blocker` rejects the branch.
 
 #### Step H: Architecture QA
 
@@ -143,11 +145,13 @@ Invoke the `arch-design-qa` skill on the diff. Check:
 3. AI-native — do CLI interfaces output strict JSON? Are schemas well-defined?
 4. Type-driven design — are illegal states unrepresentable?
 
-Record findings. P1 for spec violations, P2 for boundary leaks.
+Record every finding. P1 for spec violations, P2 for boundary leaks, P3 for lower-severity design observations. Any branch-review finding without canonical disposition `fixed_with_evidence`, `owner_approved_debt`, or `owner_approved_no_action` fails the review; `blocker` rejects the branch.
 
 ## Phase 3: Gate Decision
 
 ### Branch PASSED all reviews:
+
+This state means zero open reviewer findings, or every finding at every severity has canonical disposition `fixed_with_evidence`, `owner_approved_debt`, or `owner_approved_no_action`. A newly created bead is not sufficient by itself.
 
 ```bash
 git checkout main
@@ -180,7 +184,7 @@ Do NOT merge. Before creating beads, check for duplicates:
 bd search "$BRANCH <finding-keyword>" 2>&1
 ```
 
-If no existing bead matches, create:
+For every finding, if no existing bead matches, create. Newly created beads mean the branch remains rejected until disposition changes to `fixed_with_evidence`, `owner_approved_debt`, or `owner_approved_no_action`:
 
 ```bash
 bd create \
@@ -190,9 +194,9 @@ Reviewer: <which gate failed>
 File: <file:line>
 Issue: <what's wrong>
 Fix: <what the polecat needs to do>
-Severity: <P0/P1>" \
+Severity: <P0/P1/P2/P3>" \
   --type=bug \
-  -p <0-1> \
+  -p <0-3> \
   --deps discovered-from:<branch-bead-if-exists> \
   --json
 ```
@@ -215,7 +219,7 @@ Invoke `architectural-drift` skill on the full codebase:
 ```bash
 find crates -name "*.rs" -exec wc -l {} \; | sort -rn | head -20
 ```
-Any file over 300 lines gets a P2 bead. DDD or V2 violations get P2-P3 beads.
+Any file over 300 lines gets a P2 bead. DDD, V2, low/minor, and observation findings get P2-P3 beads.
 
 ### 4.2 Architecture QA Scan
 
@@ -245,7 +249,7 @@ Invoke `hands-on-qa` skill. Smoke test:
 - API health endpoint (if running)
 - Frontend build
 
-P2 beads for failures.
+P2-P3 beads for every failure or lower-severity finding.
 
 ### 4.5 Black Hat Scan
 
@@ -255,7 +259,7 @@ git log --oneline -20
 ```
 Scan for security patterns, unsafe code, credential leaks.
 
-P2 beads for findings.
+P2-P3 beads for every finding.
 
 ## Phase 5: Sync Beads to Fleet
 

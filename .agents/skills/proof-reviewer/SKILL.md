@@ -31,7 +31,7 @@ Assume the proof writer was lazy and tried to pass toy artifacts. Find the lie.
 7. Reject implementation claims proved only against copied harness models, hardcoded graph builders, comments, `cover!`, or `assert(true)`.
 8. When reviewing bridge mapping, reject missing source refs, missing independent behavior tests, or harness/test overlap.
 9. Reject `PENDING_FORMAL_EXECUTION` without cheap smoke/typecheck evidence.
-10. Approve only when every required obligation has non-vacuous artifact evidence or an explicit blocker that prevents advancement.
+10. Approve only when every required obligation has non-vacuous artifact evidence and every finding at every severity uses canonical `finding/v1.disposition`: `fixed_with_evidence`, `owner_approved_debt`, or `owner_approved_no_action`. If any finding is `blocker`, write `STATUS: REJECTED` and prevent advancement. Formal waivers may be evidence refs but are not disposition values.
 
 ## Lethal Findings
 
@@ -55,4 +55,4 @@ Assume the proof writer was lazy and tried to pass toy artifacts. Find the lie.
 
 ## Output Rules
 
-`proof-review.md` and `proof-to-rust-review.md` must include provenance headers and `STATUS: APPROVED` or `STATUS: REJECTED`. Findings use `finding/v1` with exact artifact, obligation, severity, and required fix.
+`proof-review.md` and `proof-to-rust-review.md` must include provenance headers and `STATUS: APPROVED` or `STATUS: REJECTED`. Findings use `finding/v1` with exact artifact, obligation, severity, required fix, and disposition. Do not approve with unresolved low/minor/observation/informational findings.

@@ -28,9 +28,9 @@ Stop bad proof plans before proof-writer wastes time. Assume the planner skipped
 4. Check required lanes against the shared verification-lane policy.
 5. Check every planned obligation has schema version, exact command, workdir, bounds, assumptions, expected evidence, and no legacy alias fields.
 6. Reject behavior-affecting waivers and waivers that exist because proof is hard.
-8. Check non-vacuity and trusted-base planning.
-9. Write one `verifier-lane-review/v1` row for every planner lane decision, with independent planner/reviewer invocation IDs and `reviewer_disposition: accepted` only for valid lanes.
-10. Approve only when the plan is precise enough for proof-writer and proof-to-implementation.
+7. Check non-vacuity and trusted-base planning.
+8. Write one `verifier-lane-review/v1` row for every planner lane decision, with independent planner/reviewer invocation IDs and `reviewer_disposition: accepted` only for valid lanes.
+9. Approve only when the plan is precise enough for proof-writer and proof-to-implementation, and every finding at every severity uses canonical `finding/v1.disposition`: `fixed_with_evidence`, `owner_approved_debt`, or `owner_approved_no_action`. If any finding is `blocker`, write `STATUS: REJECTED` and prevent advancement. Formal waivers may be evidence refs but are not disposition values.
 
 ## References
 
@@ -45,4 +45,4 @@ Stop bad proof plans before proof-writer wastes time. Assume the planner skipped
 
 `proof-plan-review.md` must include `reviewer_skill`, `reviewer_invocation_id`, `review_state`, reviewed artifacts/hashes, and `STATUS: APPROVED` or `STATUS: REJECTED`. `verifier-lane-review.jsonl` uses `verifier-lane-review/v1`.
 
-Findings use `finding/v1`. If rejected, write exact repair instructions and the smallest state to rerun.
+Findings use `finding/v1` with severity, required fix, and disposition. If rejected, write exact repair instructions and the smallest state to rerun. Do not approve with unresolved low/minor/observation/informational findings.

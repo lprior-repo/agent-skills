@@ -52,6 +52,8 @@ Required fields: `schema_version`, `id`, `lane_decision_id`, `requirement_id`, `
 
 Purpose: independent `proof-plan-reviewer` disposition for each planner-owned lane decision. Planner artifacts must not self-stamp reviewer disposition. Downstream proof writing requires `reviewer_disposition: accepted` for every lane row.
 
+`reviewer_disposition` is lane-review status, not `finding/v1.disposition`. Findings must use only the canonical `finding/v1.disposition` values below.
+
 ## `proof-obligation/v1`
 
 Required fields: `schema_version`, `id`, `requirement_id`, `contract_clause`, `domain_claim`, `risk`, `risk_tags`, `verifier`, `artifact`, `target`, `command`, `workdir`, `expected_evidence`, `assumptions`, `model_bounds`, `tool_metadata`, `trusted_base_refs`, `required`, `behavior_affecting`, `mode`, `owner_state`, `rerun_from`, `status`.
@@ -98,4 +100,10 @@ Independent review requires control-plane or otherwise non-writer-controlled inv
 
 ## `finding/v1`
 
-Required fields: `schema_version`, `reviewer_skill`, `review_state`, `finding_code`, `severity`, `artifact`, `owner_state`, `message`, `required_fix`.
+Required fields: `schema_version`, `reviewer_skill`, `review_state`, `finding_code`, `severity`, `artifact`, `owner_state`, `message`, `required_fix`, `disposition`.
+
+Allowed `disposition` values:
+- `fixed_with_evidence`: requires `evidence_refs` pointing to repair evidence or reviewed artifact rows.
+- `owner_approved_debt`: requires `owner`, `approval_ref`, `rationale`, and `debt_ref`; only valid for non-behavior-affecting findings.
+- `owner_approved_no_action`: requires `owner`, `approval_ref`, and `rationale`; only valid when the reviewer confirms the finding is non-blocking.
+- `blocker`: requires `blocker_reason`; the owning review status must be `STATUS: REJECTED` or `STATUS: UNVERIFIED`.

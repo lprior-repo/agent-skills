@@ -392,7 +392,7 @@ grep -r "console-subscriber" Cargo.toml crates/*/Cargo.toml && \
 
 ## Review Output Format
 
-Start every review with the verdict. Structure findings by phase. Cite rule IDs.
+Start every review with the verdict. Structure findings by phase. Cite rule IDs. Approval requires every finding at every severity to use canonical disposition `fixed_with_evidence`, `owner_approved_debt`, or `owner_approved_no_action`. Any `blocker` finding forces `REJECTED`; do not leave minor findings as non-blocking ambiguity.
 
 ```markdown
 # Async Rust Review: [filename or description]
@@ -415,13 +415,14 @@ Start every review with the verdict. Structure findings by phase. Cite rule IDs.
 ## CRITICAL FINDINGS (N)
 [Usually benchmark gaps or missing verification evidence.]
 
+## MINOR / OBSERVATION FINDINGS (N)
+[Every lower-severity issue still needs canonical disposition: `fixed_with_evidence`, `owner_approved_debt`, `owner_approved_no_action`, or `blocker` that forces `REJECTED`.]
+
 ## EXECUTION EVIDENCE / STATIC ANALYSIS
 [In project mode: actual command output. In snippet mode: static scan results.]
 
 ## MANDATE
-[If REJECTED: ordered list of required changes. Each item references the relevant
-reference file for the correct pattern (e.g., "See references/stream-patterns.md
-for the buffer_unordered example").]
+[If REJECTED: ordered list of required changes for all unresolved findings, not only lethal/high/medium items. Each item references the relevant reference file for the correct pattern (e.g., "See references/stream-patterns.md for the buffer_unordered example").]
 ```
 
 ## Reference Files

@@ -71,7 +71,7 @@ For EACH branch, run these 5 reviewers as **blocking gates** (see `references/re
 | All reviews PASS | ANY review FAILS |
 |------------------|------------------|
 | Merge to main | Do NOT merge |
-| `moon run :ci` (final gate) | Create P0/P1 beads with: |
+| `moon run :ci` (final gate) | Create or link one bead for every finding, P0-P3: |
 | `git push origin main` | - Branch name |
 | | - File:line of issue |
 | | - What's wrong |
@@ -79,7 +79,7 @@ For EACH branch, run these 5 reviewers as **blocking gates** (see `references/re
 
 ### Phase 4: Active Scanning (always runs)
 Even with no branches to review, all 5 reviewers scan the codebase.
-Findings become P2/P3 improvement beads.
+Findings become P2/P3 improvement beads. Active-scan beads are fleet feed; branch-review beads are not merge permission unless they use canonical disposition `owner_approved_debt` or `owner_approved_no_action`.
 
 ### Phase 5: Sync Beads
 ```bash
@@ -101,8 +101,7 @@ Main: <sha> (clean/dirty)
 
 ## Bead Creation Rules
 
-Every finding gets a bead. The bead must contain enough context for a polecat to fix it
-without needing to re-run the review.
+Every finding gets a bead or an explicit duplicate link to an existing open bead. The bead must contain enough context for a polecat to fix it without needing to re-run the review. Low, minor, observation, and nice-to-have findings still need canonical disposition; do not drop them because they are not P0/P1. Creating or linking a bead is not automatically a passing disposition for branch review. A branch may merge only when every finding is `fixed_with_evidence`, `owner_approved_debt`, or `owner_approved_no_action`; `blocker` findings reject the branch.
 
 **ONE BEAD = ONE FILE = ONE FIX.** Never create aggregate beads. A polecat should be
 able to complete a bead in a single session without touching 10 other files.
@@ -137,6 +136,7 @@ Context: <any surrounding context needed>" \
 | Red queen | Weak test effectiveness or assertion gaps | P2 |
 | Arch design QA | Spec non-compliance | P1 |
 | Arch design QA | Domain boundary leak | P2 |
+| Any reviewer | Minor, low, observation, UX, docs, style, or follow-up finding | P3 unless reviewer marks higher |
 | Active scan | Any finding | P2-P3 |
 
 ## Cron Setup

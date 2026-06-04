@@ -185,7 +185,7 @@ nu $Ltask-add drq-session --spec_ref README.md
 nu $Ltask-add-check drq-session "factory help" --expect_exit=0
 nu $Ltask-add-check drq-session "factory version" --expect_exit=0
 nu $Ltask-add-check drq-session "factory new -s test-slug 2>/dev/null; echo \$?" --expect_exit=0
-# ... one per promise
+# Repeat `task-add-check` for each discovered promise; every check must be explicit.
 
 # Claim
 nu $Lclaim drq-session red-queen
@@ -553,9 +553,9 @@ RED QUEEN (Orchestrator)
 | **CRITICAL** | Core workflow command returns wrong exit code (0 on error, non-0 on success) | dimension.fitness = 1.0 (maximum pressure) |
 | **MAJOR** | Documented command fails or produces wrong output (verified by grep/diff, not AI) | dimension.fitness += 0.3 |
 | **MINOR** | Output doesn't match documented format (verified by pattern match, not AI) | dimension.fitness += 0.1 |
-| **OBSERVATION** | AI-only judgment (no deterministic check possible) | Not added to done_when |
+| **OBSERVATION** | AI-only judgment (no deterministic check possible) | Must be dispositioned with canonical `fixed_with_evidence`, `owner_approved_debt`, `owner_approved_no_action`, or `blocker` |
 
-Note: OBSERVATION is the only severity that relies on AI judgment. CRITICAL/MAJOR/MINOR all have deterministic verification commands in done_when.
+Note: OBSERVATION is the only severity that relies on AI judgment, so it is not automatically added to done_when. It still must be addressed before closure; unresolved observations are not acceptable silent debt. CRITICAL/MAJOR/MINOR all have deterministic verification commands in done_when.
 
 ## Anti-Patterns
 
@@ -578,6 +578,7 @@ Note: OBSERVATION is the only severity that relies on AI judgment. CRITICAL/MAJO
 - [ ] Landscape scores computed (survivors / tests_run for each dimension)
 - [ ] Equilibrium checked (0-survivor generations counted)
 - [ ] Crown status derived from validate result + survivor severities
+- [ ] Every observation has canonical disposition `fixed_with_evidence`, `owner_approved_debt`, `owner_approved_no_action`, or `blocker`
 
 ## Session Completion
 

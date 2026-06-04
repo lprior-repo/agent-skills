@@ -65,19 +65,26 @@ def validate_skill(path: str | Path) -> list[str]:
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("skill_path", help="Path to a skill directory or SKILL.md")
+    parser.add_argument(
+        "skill_paths",
+        nargs="+",
+        help="Path(s) to skill directories or SKILL.md files",
+    )
     parser.add_argument("--quiet", action="store_true", help="Only print failures")
     args = parser.parse_args()
 
-    errors = validate_skill(args.skill_path)
-    if errors:
-        for error in errors:
-            print(f"ERROR: {error}", file=sys.stderr)
-        return 1
-    if not args.quiet:
-        parsed = parse_skill_md(args.skill_path)
-        print(f"OK: {parsed['name']} validated")
-    return 0
+    failed = False
+    for skill_path in args.skill_paths:
+        errors = validate_skill(skill_path)
+        if errors:
+            failed = True
+            for error in errors:
+                print(f"ERROR {skill_path}: {error}", file=sys.stderr)
+            continue
+        if not args.quiet:
+            parsed = parse_skill_md(skill_md_path(skill_path))
+            print(f"OK: {parsed['name']} validated")
+    return 1 if failed else 0
 
 
 if __name__ == "__main__":

@@ -4,6 +4,7 @@ description: "Build a truth-serum-audited assurance bundle for bead delivery. Us
 allowed-tools:
   - Bash
   - Read
+  - Glob
   - Grep
   - Write
 ---
@@ -15,10 +16,11 @@ allowed-tools:
 {"kind":"rule","id":"traceability_kernel","text":"Every user requirement must map to contract clause, proof obligation or test, execution evidence, review status, and final disposition."}
 {"kind":"rule","id":"truth_serum_required","text":"Run truth-serum in the active execution context before approval. Delegated truth-serum output is review input only and cannot approve the bundle."}
 {"kind":"rule","id":"no_new_claims","text":"Do not create new correctness claims during packaging. Package only already-produced artifacts and mark gaps as blockers."}
-{"kind":"workflow","id":"evidence_packaging","steps":["Read delivery-scope.jsonl, contract.md, traceability-matrix.jsonl, proof-review.md, test-plan-review.md, formal-verification-report.md, verification-ledger.jsonl, black-hat-review.md, and gate reports.","Check every required artifact exists and is non-empty.","Build assurance-bundle.md with requirement-to-evidence mapping and unresolved waiver/debt table.","Run truth-serum audit in the active execution context against the bundle and raw artifacts.","Write truth-serum-report.md and final-evidence-decision.md with STATUS: APPROVED or STATUS: REJECTED."]}
+{"kind":"workflow","id":"evidence_packaging","steps":["Read delivery-scope.jsonl, contract.md, traceability-matrix.jsonl, proof-review.md, test-plan-review.md, formal-verification-report.md, verification-ledger.jsonl, black-hat-review.md, and gate reports.","Check every required artifact exists and is non-empty.","Build assurance-bundle.md with requirement-to-evidence mapping and unresolved waiver/debt table.","Run truth-serum audit in the active execution context against the bundle and raw artifacts.","Write truth-serum-report.md and final-evidence-decision.md with STATUS: APPROVED, STATUS: REJECTED, or STATUS: UNVERIFIED."]}
 {"kind":"artifact","id":"outputs","items":[".beads/<bead-id>/assurance-bundle.md",".beads/<bead-id>/truth-serum-report.md",".beads/<bead-id>/final-evidence-decision.md"]}
 {"kind":"gate","id":"mandatory_verification_gate","text":"Verify required artifacts, JSONL validity, status lines, and raw evidence pointers. Missing or invalid evidence blocks landing."}
 {"kind":"gate","id":"no_conflicted_or_stale_evidence","text":"Reject merge-conflicted artifacts, stale STATUS: REJECTED reviews, missing raw logs, nonexistent paths, behavior waivers, and proof claims without source/test/harness alignment."}
+{"kind":"gate","id":"all_review_findings_dispositioned","text":"Reject or mark UNVERIFIED bundles with any reviewer finding at any severity that lacks a canonical finding/v1.disposition: fixed_with_evidence, owner_approved_debt, owner_approved_no_action, or blocker. Blocker prevents advancement. Formal waivers may be evidence refs but are not disposition values. Low, minor, observation, and informational findings cannot be silently deferred."}
 {"kind":"gate","id":"anti_hallucination","text":"Never invent command output, test counts, verifier status, reviewer approval, commit IDs, paths, or waiver decisions. Mark absent proof as MISSING_EVIDENCE."}
 ```
 
@@ -64,10 +66,13 @@ Forbidden:
 - Omitting failed gates from the bundle.
 - Reporting missing tools as passed.
 - Claiming a requirement is covered without a traceability row.
+- Treating design-model evidence as Rust implementation evidence without bridge/source/test/harness rows.
 - Treating Kani `cover!`, copied models, commented-out tests, ignored tests not run, or missing raw logs as proof.
+- Omitting low, minor, observation, or informational reviewer findings from the unresolved debt table.
 - Allowing landing before truth-serum evidence audit passes.
 
 Required:
 - `assurance-bundle.md` must name every requirement and its evidence.
+- `assurance-bundle.md` must include every reviewer finding and its disposition.
 - `truth-serum-report.md` must include command evidence or explicit blockers.
 - `final-evidence-decision.md` must include `STATUS: APPROVED`, `STATUS: REJECTED`, or `STATUS: UNVERIFIED`.

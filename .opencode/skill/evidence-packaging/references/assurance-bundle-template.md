@@ -28,7 +28,14 @@ commit_or_change: <id>
 | Review | Artifact | Status | Findings |
 |---|---|---|---|
 
+## Findings Disposition
+
+| Finding | Severity | Source Review | Disposition | Evidence Or Owner Approval |
+|---|---|---|---|---|
+
 ## Waivers And Deferred Work
+
+Waivers and deferred work are not finding dispositions. Findings must use only canonical `finding/v1.disposition` values: `fixed_with_evidence`, `owner_approved_debt`, `owner_approved_no_action`, or `blocker`.
 
 | Item | Reason | Owner | Expiry/Follow-up | Compensating Evidence |
 |---|---|---|---|---|
