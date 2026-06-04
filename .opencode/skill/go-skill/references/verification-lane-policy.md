@@ -1,16 +1,21 @@
 # Verification Lane Policy
 
-The proof planner must classify every proof seed across the core verifier set. No silent omissions.
+The proof planner must classify every proof seed through an implementation-bound lane profile. No silent omissions.
 
-## Required Defaults
+## Default Rust-Implementation Profile
 
-- Temporal workflow, protocol, queue, retry, claim, lease, lifecycle, distributed state: TLA+ required.
-- Rust-local pure/core invariant, arithmetic, indexing, typestate transition: Verus required.
-- Natural bounded state or panic/overflow/index risk: Kani required unless lane decision proves non-applicability.
-- Illegal state representable as refinement type: Flux required when practical evidence exists; otherwise explain with lane decision.
-- Implementation concurrency, cancellation, shutdown, interleaving risk: Loom required.
-- Unsafe, FFI, layout, aliasing, provenance: Miri required.
-- Parser, codec, hostile input: proptest and cargo-fuzz required unless non-applicable by source evidence.
+For Rust behavior, the default required lanes are:
+
+- Verus for Rust-local pure/core invariants, arithmetic, indexing, typestate transitions, and deeper functional proof obligations.
+- Kani for bounded state, panic/overflow/index risk, error/rejection claims, and executable implementation checks.
+- Flux for illegal states expressible as refinements, length/index relationships, ownership-aware post-states, and API preconditions when practical.
+- proptest for behavior/property pressure through executable Rust APIs.
+
+## Conditional Lanes
+
+- Loom is required for implementation concurrency, cancellation, shutdown, task ownership, channel/queue, atomics, locks, or interleaving risk.
+- Unsafe, FFI, layout, aliasing, raw-pointer, provenance, invalid-value, or UB-sensitive claims require explicit specialist scoping before they become proof obligations.
+- cargo-fuzz is required for parsers, codecs, hostile input, persisted bytes, IPC/storage decoding, and fuzzable canonicalization boundaries.
 
 ## Waivers
 
@@ -19,3 +24,9 @@ Waivers are only for non-behavior obligations. Behavior-affecting rows must be p
 ## Non-Applicability
 
 `not_applicable` requires concrete evidence references. "Not needed", "too hard", and "not practical" are invalid without a lane-decision row and reviewer acceptance.
+
+## Proof-Theater Rejections
+
+- Kani `cover!` can show reachability only; it cannot satisfy a property obligation without assertions or verifier-enforced postconditions.
+- Verus proofs over standalone model types do not bind to Rust behavior unless the bridge names production source refs and executable evidence.
+- Harnesses that copy production logic, hardcode the graph under test, or assert `true` are model/smoke artifacts only.

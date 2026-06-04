@@ -1,12 +1,9 @@
 # Proof Artifact Boundaries
 
 Allowed edits:
-- `specs/**/*.tla`
-- `specs/**/*.cfg`
 - `proofs/**/*.rs`
 - `harnesses/kani/**/*.rs`
 - `models/loom/**/*.rs`
-- `tests/miri/**/*.rs`
 - `tests/proptest/**/*.rs`
 - `fuzz/fuzz_targets/**/*.rs`
 - proof evidence files under `.beads/<bead-id>/`

@@ -31,7 +31,7 @@ See doc/adr/0002-layer-boundaries.md for rationale.
 
 - Build: `cargo build --workspace`
 - Test: `cargo nextest run`
-- Lint: `cargo clippy --all-targets -- -D warnings`
+- Lint: `cargo clippy --all-features -- -D warnings`
 - Full verify: `./scripts/verify.sh`
 
 ## Conventions
@@ -44,7 +44,7 @@ See doc/adr/0002-layer-boundaries.md for rationale.
 
 ## Gotchas
 
-- NEVER use `.unwrap()` in domain code. Use `?` or `.map_err()`.
+- NEVER use runtime panic surfaces in production code: `.unwrap()`, `.expect()`, `panic!`, `todo!`, `unimplemented!`, `unreachable!`, production `assert!` macros, unchecked indexing/slicing, or unsafe code. Use typed errors and checked access.
 - NEVER modify test files to make tests pass. Fix the code instead.
 - NEVER run `cargo insta accept` without reviewing diffs.
 - Domain crate must have zero I/O dependencies.
@@ -127,30 +127,37 @@ set -euo pipefail
 echo "=== Step 1/9: Format check ==="
 cargo fmt --check
 
-echo "=== Step 2/9: Clippy ==="
-cargo clippy --all-targets -- -D warnings
+echo "=== Step 2/10: Source clippy + test compile + zero runtime panic surface ==="
+cargo clippy --all-features -- -D warnings -D unsafe_code -D clippy::unwrap_used -D clippy::expect_used -D clippy::panic -D clippy::panic_in_result_fn -D clippy::todo -D clippy::unimplemented -D clippy::dbg_macro -D clippy::indexing_slicing -D clippy::string_slice -D clippy::get_unwrap -D clippy::arithmetic_side_effects -D clippy::as_conversions -D clippy::let_underscore_must_use
+cargo test --all-features --no-run
 
-echo "=== Step 3/9: Custom lints (dylint) ==="
+echo "=== Step 3/10: Production panic macro scan ==="
+if rg -n '(^|[^A-Za-z0-9_])(assert!|assert_eq!|assert_ne!|unreachable!)' --glob '*.rs' --glob '!**/tests/**' --glob '!**/benches/**' --glob '!**/examples/**' --glob '!build.rs'; then
+  echo "FAIL: production panic macro found. Return typed errors or prove the match is non-production."
+  exit 1
+fi
+
+echo "=== Step 4/10: Custom lints (dylint) ==="
 cargo dylint --all --workspace
 
-echo "=== Step 4/9: Dependency bans (cargo-deny) ==="
+echo "=== Step 5/10: Dependency bans (cargo-deny) ==="
 cargo deny check bans
 
-echo "=== Step 5/9: Crate boundary check ==="
+echo "=== Step 6/10: Crate boundary check ==="
 ./scripts/check-boundaries.sh
 
-echo "=== Step 6/9: Tests (nextest + PropTest + insta snapshots) ==="
+echo "=== Step 7/10: Tests (nextest + PropTest + insta snapshots) ==="
 INSTA_UPDATE=no cargo nextest run
 
-echo "=== Step 7/9: Semver check ==="
+echo "=== Step 8/10: Semver check ==="
 cargo semver-checks --package domain --baseline-rev origin/main
 
-echo "=== Step 8/9: Coverage ==="
+echo "=== Step 9/10: Coverage ==="
 cargo llvm-cov --package domain --fail-under-lines 90
 cargo llvm-cov --package application --fail-under-lines 80
 cargo llvm-cov --package infra --fail-under-lines 60
 
-echo "=== Step 9/9: Mutation testing (changed files only) ==="
+echo "=== Step 10/10: Mutation testing (changed files only) ==="
 if [ -f pr.diff ]; then
   cargo mutants --in-diff pr.diff -vV --in-place
 else

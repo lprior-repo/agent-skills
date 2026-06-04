@@ -4,12 +4,17 @@ A comprehensive checklist for auditing AI-generated code for laziness,
 hallucinations, and broken contracts. This is the "Truth Serum" that
 forces honest self-reflection.
 
-## The 8 Deadly AI Sins
+## The 9 Deadly AI Sins
 
 ### 1. Fake Execution (CRITICAL)
 **Finding**: Claiming to run tests but generating hallucinated outputs instead of using the `bash` tool.
 **Evidence**: No `bash` tool call in the response history for the tests being claimed.
 **Action**: FLAG AS HALLUCINATED EXECUTION. Demand actual tool usage.
+
+### 1b. Delegated Proof Laundering (CRITICAL)
+**Finding**: A subagent, reviewer, or external summary is treated as Truth Serum execution evidence.
+**Evidence**: Final report cites a subagent result without a matching command run in the active execution context, observed stdout/stderr, and exit status.
+**Action**: FLAG AS UNVERIFIED DELEGATED PROOF. Rerun the command directly or mark the result `UNVERIFIED` with a blocker.
 
 ### 2. Ellipsis Laziness (CRITICAL)
 **Finding**: Code contains `...`, `// TODO`, `// rest of code here`, or incomplete implementations.
@@ -36,10 +41,10 @@ forces honest self-reflection.
 **Evidence**: `git status` showing unexpected file changes.
 **Action**: FLAG AS COLLATERAL DAMAGE. Demand focused, minimal changes.
 
-### 6. Lazy Error Handling (MAJOR)
-**Finding**: Domain code uses `unwrap()`, `expect()`, `panic!()` instead of proper `Result<T, E>`.
-**Evidence**: Grep for `\.(unwrap|expect)\(` in domain crate.
-**Action**: FLAG AS UNSAFE PATTERN. Demand proper error propagation.
+### 6. Runtime Panic Surface (CRITICAL)
+**Finding**: Production Rust contains `unwrap`, `expect`, `panic!`, `todo!`, `unimplemented!`, `unreachable!`, production `assert!` macros, unchecked indexing/slicing, unsafe code, ignored fallible results, or arithmetic side-effect surprises.
+**Evidence**: Strict clippy denials plus static scan for production panic macros.
+**Action**: FLAG AS RUNTIME PANIC SURFACE. Demand typed errors, checked access, explicit bounds, or proof the match is non-production.
 
 ### 7. No Validation (MAJOR)
 **Finding**: Claimed "it works" without running any tests or commands.
@@ -71,14 +76,14 @@ git diff --stat | grep -E "deletion"
 ```
 **Goal**: Ensure no tests were silently removed.
 
-### Step 3: Lazy Code Scan
+### Step 3: Runtime Panic Surface Scan
 ```bash
-# Find unsafe patterns
-grep -rn "\.unwrap()" --include="*.rs" src/domain/
-grep -rn "todo!" --include="*.rs" src/
-grep -rn "panic!" --include="*.rs" src/
+# Find production panic and unsafe surfaces
+cargo clippy --all-features -- -D warnings -D unsafe_code -D clippy::unwrap_used -D clippy::expect_used -D clippy::panic -D clippy::panic_in_result_fn -D clippy::todo -D clippy::unimplemented -D clippy::dbg_macro -D clippy::indexing_slicing -D clippy::string_slice -D clippy::get_unwrap -D clippy::arithmetic_side_effects -D clippy::as_conversions -D clippy::let_underscore_must_use
+cargo test --all-features --no-run
+rg -n '(^|[^A-Za-z0-9_])(assert!|assert_eq!|assert_ne!|unreachable!)' --glob '*.rs' --glob '!**/tests/**' --glob '!**/benches/**' --glob '!**/examples/**' --glob '!build.rs'
 ```
-**Goal**: Find shortcut patterns that bypass proper error handling.
+**Goal**: Find every shortcut that can panic or bypass typed error handling in production.
 
 ### Step 4: Contract Parity
 ```bash
@@ -97,6 +102,16 @@ cargo clippy 2>&1
 ```
 **Goal**: Prove it actually works. No "should" or "probably".
 
+### Step 6: Evidence Ownership Check
+```text
+For every claimed PASS, verify:
+- command was run in the active execution context
+- stdout/stderr were observed directly
+- exit status is known or the blocker is explicit
+- subagent-only findings are labeled UNVERIFIED
+```
+**Goal**: Prevent delegated review from being laundered into proof.
+
 ## The Truth Report Template
 
 After auditing, output this exact format:
@@ -109,8 +124,9 @@ After auditing, output this exact format:
 | Test Preservation | ❌ FAIL / ✅ PASS | No tests deleted |
 | Contract Parity | ❌ FAIL / ✅ PASS | All `Must` requirements met |
 | Scope Integrity | ❌ FAIL / ✅ PASS | Only intended files changed |
-| Error Handling | ❌ FAIL / ✅ PASS | No unwrap/panic in domain |
+| Runtime Panic Surface | ❌ FAIL / ✅ PASS | No production unwrap/expect/panic/assert/unreachable/unchecked indexing/unsafe |
 | Execution Proof | ❌ FAIL / ✅ PASS | Tests pass with exit 0 |
+| Delegated Proof | ❌ FAIL / ✅ PASS | Subagent claims rerun directly or labeled UNVERIFIED |
 
 ## Automated Self-Audit Trigger
 
@@ -119,9 +135,10 @@ After any large code change (>50 lines), automatically run:
 ```bash
 # Self-audit script
 echo "=== Self-Audit: Truth Serum ==="
-echo "Checking for lazy patterns..."
-grep -rn "\.unwrap()" --include="*.rs" src/ || echo "No unwrap found"
-grep -rn "todo!" --include="*.rs" src/ || echo "No todo found"
+echo "Checking for runtime panic surface..."
+cargo clippy --all-features -- -D warnings -D unsafe_code -D clippy::unwrap_used -D clippy::expect_used -D clippy::panic -D clippy::panic_in_result_fn -D clippy::todo -D clippy::unimplemented -D clippy::dbg_macro -D clippy::indexing_slicing -D clippy::string_slice -D clippy::get_unwrap -D clippy::arithmetic_side_effects -D clippy::as_conversions -D clippy::let_underscore_must_use
+cargo test --all-features --no-run
+if rg -n '(^|[^A-Za-z0-9_])(assert!|assert_eq!|assert_ne!|unreachable!)' --glob '*.rs' --glob '!**/tests/**' --glob '!**/benches/**' --glob '!**/examples/**' --glob '!build.rs'; then exit 1; else true; fi
 echo "Checking test integrity..."
 git diff --name-only | grep test || echo "No test changes"
 echo "Verifying scope..."
@@ -143,8 +160,14 @@ echo "=== Audit Complete ==="
 ### Lie: "This is idiomatic Rust"
 **Truth**: Uses `unwrap()` in domain code, ignores error handling conventions.
 
+### Lie: "There are no panics"
+**Truth**: Clippy only checked `panic!`; production `assert!`, `unreachable!`, indexing, and `.expect()` were never scanned.
+
 ### Lie: "The tests pass"
 **Truth**: Never ran tests. Assumes they pass based on code review.
+
+### Lie: "The reviewer subagent verified this"
+**Truth**: A subagent finding is review input, not execution proof. Rerun the command directly or mark it UNVERIFIED.
 
 ### Lie: "I added comprehensive error handling"
 **Truth**: Added `unwrap()` everywhere instead of proper `Result` types.

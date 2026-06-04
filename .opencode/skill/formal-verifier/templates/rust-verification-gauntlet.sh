@@ -24,7 +24,6 @@ SOURCE_CLIPPY_FLAGS="${SOURCE_CLIPPY_FLAGS:---workspace --lib --bins --examples 
 TEST_FLAGS="${TEST_FLAGS:---workspace --all-features --locked}"
 MIRI_FLAGS="${MIRI_FLAGS:---workspace --all-targets}"
 VERUS_CMD="${VERUS_CMD:-}"
-TLA_CMD="${TLA_CMD:-}"
 KANI_FLAGS="${KANI_FLAGS:---workspace}"
 BOLERO_ENGINE="${BOLERO_ENGINE:-libfuzzer}"
 BOLERO_TIME="${BOLERO_TIME:-60s}"
@@ -131,26 +130,6 @@ gate_verus() {
   printf 'Verus command not configured; optional unless selected by proof-obligations.planned.jsonl\n'
 }
 
-gate_tla() {
-  section "TLA+ temporal model checking"
-  if [[ -n "$TLA_CMD" ]]; then
-    bash -lc "$TLA_CMD"
-    return
-  fi
-
-  if [[ -x ./scripts/verify-tla.sh ]]; then
-    ./scripts/verify-tla.sh
-    return
-  fi
-
-  if [[ "${TLA_REQUIRED:-0}" = "1" ]]; then
-    printf 'TLA+ is required by proof-obligations.planned.jsonl but no TLA_CMD or executable ./scripts/verify-tla.sh is configured.\n' >&2
-    exit 1
-  fi
-
-  printf 'TLA+ command not configured; optional unless selected by proof-obligations.planned.jsonl\n'
-}
-
 gate_concurrency() {
   section "concurrency schedule and deadlock checks"
   RUSTFLAGS="--cfg loom" cargo test --workspace loom
@@ -200,7 +179,6 @@ case "$MODE" in
     gate_mutation
     ;;
   proof)
-    gate_tla
     gate_verus
     gate_kani
     gate_lean
@@ -210,7 +188,6 @@ case "$MODE" in
     gate_policy
     gate_ub
     gate_bolero
-    gate_tla
     gate_verus
     gate_kani
     gate_concurrency

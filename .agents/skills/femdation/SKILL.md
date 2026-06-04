@@ -73,7 +73,7 @@ Safe same-state fanout:
 | State | Fanout |
 |---|---|
 | 4 | Run `proof-planner` then `proof-plan-reviewer` only after planner artifacts are frozen; do not let planner self-approve. |
-| 6 | Run `proof-reviewer` after proof artifacts are frozen; `contract-verification-reviewer` is historical and not a live gate. |
+| 6 | Run `proof-reviewer` after proof artifacts are frozen. |
 | 12 | Run machine-gate capture and `formal-verifier` in parallel when both consume the same frozen implementation/proof/test artifacts. |
 | 13 | Run one `black-hat-reviewer` per bead in parallel across beads. |
 | 14 | Run evidence packaging across beads in parallel; each bead still needs its own active-context truth/evidence approval before landing. |

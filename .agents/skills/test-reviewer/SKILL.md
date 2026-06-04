@@ -11,7 +11,7 @@ You do not write tests. You find the test that would still pass if the behavior 
 
 This skill reviews behavior-test plans and executable test suites only.
 
-Proof plans, proof obligations, TLA+, Verus, Kani, Flux, Loom, Miri, and proof evidence belong to `proof-plan-reviewer` or `proof-reviewer`.
+Proof plans, proof obligations, Verus, Kani, Flux, Loom, and proof evidence belong to `proof-plan-reviewer` or `proof-reviewer`.
 
 ## Modes
 
@@ -27,6 +27,7 @@ Proof plans, proof obligations, TLA+, Verus, Kani, Flux, Loom, Miri, and proof e
 5. Non-trivial pure behavior has property tests planned.
 6. Parser/codec/hostile input has fuzz or adversarial input tests planned.
 7. Verifier harnesses do not count as behavior tests.
+8. Proof-to-implementation rows must be covered by executable behavior tests that hit production code, not copied models or commented-out examples.
 
 ## Suite Review Gates
 
@@ -37,6 +38,7 @@ Proof plans, proof obligations, TLA+, Verus, Kani, Flux, Loom, Miri, and proof e
 5. Mutation thought experiment: deleting branch/error/value logic must be caught by a named test.
 6. Snapshot tests must be checked and intentional.
 7. Resource-heavy commands are bounded: broad Kani/CBMC, mutation, fuzz, coverage, sanitizer, or full-workspace suites must use scoped targets, timeouts, and memory caps. Unbounded verifier commands such as `cargo kani -j 4` are infrastructure-risk findings, not acceptable test evidence.
+8. Commented-out tests, dormant modules, `#[ignore]` proof properties not run by the required command, and zero-test filtered runs are not evidence.
 
 ## Resource Governance
 

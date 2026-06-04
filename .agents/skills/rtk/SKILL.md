@@ -5,8 +5,6 @@ description: >
   for OpenCode, Claude Code, Codex, Cursor, and other supported agents. Use
   when the user wants RTK installed, wired into an AI tool, or checked for the
   correct package and working rewrite hooks.
-disable-model-invocation: true
-argument-hint: '[install|verify|init|diagnose] [--opencode|--claude|--codex|--agent <name>]'
 allowed-tools:
   - Bash
   - Read

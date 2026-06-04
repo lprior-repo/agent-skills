@@ -63,7 +63,7 @@ counter.fetch_add(1, Ordering::Relaxed);
 let current = counter.load(Ordering::Relaxed);
 ```
 
-**arc-swap** (from functional-rust Core 10) for lock-free reads of larger values:
+**arc-swap** (from holzman-rust Core 10) for lock-free reads of larger values:
 
 ```rust
 use arc_swap::ArcSwap;

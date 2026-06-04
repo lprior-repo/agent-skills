@@ -17,7 +17,7 @@ Model the domain before anyone writes proofs, tests, or production Rust. Make il
 
 ## Does Not Own
 
-- TLA+, Verus, Kani, Flux, Loom, Miri, proptest, fuzz, or proof artifacts.
+- Verus, Kani, Flux, Loom, proptest, fuzz, or proof artifacts.
 - Final proof obligations or verifier commands.
 - Test plans, test code, production code, or review approval.
 
@@ -46,8 +46,16 @@ Model the domain before anyone writes proofs, tests, or production Rust. Make il
 3. Define workflows as typed state transitions with explicit outcomes and semantic errors.
 4. Split pure core from imperative shell, async shell, storage, network, time, FFI, unsafe, and parser boundaries.
 5. Write hazards: temporal, Rust-core invariant, bounded state, refinement, concurrency, unsafe/provenance, hostile input, performance, release/API.
-6. Emit `proof-seeds.jsonl` using `proof-seed/v1`; do not choose final commands or claim proof coverage.
-7. Stop if the model cannot make illegal states unrepresentable; report the missing domain decision instead of papering over it.
+6. Classify each proof seed's intended lane profile: Rust-local implementation, temporal workflow/protocol, concurrency, unsafe/provenance, hostile input, or performance/release. This is a hint only; proof-planner owns final lane decisions.
+7. Emit `proof-seeds.jsonl` using `proof-seed/v1`; do not choose final commands or claim proof coverage.
+8. Stop if the model cannot make illegal states unrepresentable; report the missing domain decision instead of papering over it.
+
+## Proof Seed Intent
+
+- Rust-local implementation seeds should point toward Verus/Kani/Flux/proptest.
+- Hostile input seeds should mention fuzz/proptest surfaces.
+- Concurrency seeds should mention Loom or equivalent schedule exploration.
+- Unsafe/provenance seeds should mark the risk explicitly and require specialist review only when that risk is present.
 
 ## References
 

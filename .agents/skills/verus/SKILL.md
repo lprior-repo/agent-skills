@@ -18,7 +18,7 @@ Verus is not Rust plus annotations. It is a verifier-backed three-mode language:
 {"kind":"meta","skill":"verus","version":"1.0.0","format":"markdown-with-embedded-jsonl"}
 {"kind":"mission","goal":"Write, review, and repair Verus code so it verifies without hidden trust expansion, brittle solver context, or hallucinated evidence."}
 {"kind":"scope","owns":["Verus specs","proof functions","exec contracts","loop invariants","quantifier triggers","ghost/exec separation","trusted-boundary audits","verifier diagnostics repair","Verus proof-obligation execution evidence"]}
-{"kind":"scope","does_not_own":["TLA+ temporal models","production Rust implementation unrelated to proof repair","test helper/loop/table-style judgments","inventing external proofs or tool output"]}
+{"kind":"scope","does_not_own":["temporal models","production Rust implementation unrelated to proof repair","test helper/loop/table-style judgments","inventing external proofs or tool output"]}
 {"kind":"rule","id":"mode_first","text":"Choose `spec`, `proof`, or `exec` first. Spec defines mathematics; proof establishes facts; exec runs. Do not mix ghost-only values into executable expressions."}
 {"kind":"rule","id":"contract_shape","text":"Use `requires`/`ensures` on exec and proof functions. Do not put `requires`/`ensures` on `spec fn`; use `recommends` or redesign."}
 {"kind":"rule","id":"math_layer","text":"State specs over `int`/`nat` by default. Keep executable locals and returns in compilable Rust integer types and prove conversions/bounds explicitly."}
@@ -31,7 +31,7 @@ Verus is not Rust plus annotations. It is a verifier-backed three-mode language:
 {"kind":"rule","id":"type_invariants","text":"Type invariants are not magically in proof context. Invoke `use_type_invariant` or the project-approved invariant lemma at the point of use."}
 {"kind":"rule","id":"trust_boundary_is_evidence","text":"`assume`, `#[verifier::external_body]`, `#[verifier::external]`, and axiomatic specs are trusted-base expansion. Report them separately from fully proved verification."}
 {"kind":"rule","id":"no_hallucinated_evidence","text":"Never invent verifier output, proof names, command success, warning status, file paths, or tool availability."}
-{"kind":"rule","id":"pipeline_boundary","text":"In the broader Rust proof stack, Verus is default for Rust-local pure/core logic. TLA+ owns temporal workflow/protocol behavior; Lean/Aeneas/Hax own tiny theorem kernels beyond Verus; Kani/Miri/fuzz/Loom/etc. are risk-selected companions."}
+{"kind":"rule","id":"pipeline_boundary","text":"In the broader Rust proof stack, Verus is default for Rust-local pure/core logic. Lean/Aeneas/Hax own tiny theorem kernels beyond Verus; Kani/fuzz/Loom/etc. are risk-selected companions."}
 {"kind":"ref","file":"references/verus-patterns.md","use":"Mode rules, proof idioms, anti-patterns, and failure signatures."}
 {"kind":"ref","file":"references/verus-harness.md","use":"Verifier-in-the-loop commands, diagnostics, trust audit, and acceptance gates."}
 {"kind":"ref","file":"references/verus-curriculum.md","use":"Training/evaluation curriculum and source priority map."}

@@ -327,8 +327,8 @@ cargo llvm-cov --html --output-dir coverage/  # HTML report
 cargo llvm-cov --lcov --output-path lcov.info  # for CI
 ```
 
-Note: High coverage ≠ good tests. 70% with quality assertions > 100% with `is_ok()`.
-The mutation kill rate is a better proxy for test quality than line coverage.
+Note: High coverage ≠ effective tests. 70% with exact assertions > 100% with `is_ok()`.
+The mutation kill rate is a better proxy for assertion strength than line coverage.
 
 ## mockall — Mocking (Use Sparingly)
 
@@ -409,8 +409,9 @@ fn document_rejects_empty_title() {
 ## Running the Full Test Stack
 
 ```bash
-# 1. Compile checks
-cargo clippy --all-targets --all-features -- -D warnings
+# 1. Source lint + test compile
+cargo clippy --workspace --all-features -- -D warnings
+cargo test --all-features --no-run
 
 # 2. Unit + integration tests
 cargo nextest run 2>&1 | tdd-guard-rust --project-root . --passthrough

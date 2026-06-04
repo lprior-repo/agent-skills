@@ -59,11 +59,13 @@ Before writing a single test:
    existing `tests/` directory, any `#[cfg(test)]` modules.
 
 4. Identify the test layers needed:
-   - Calc layer pure functions → inline `#[cfg(test)]` unit tests
-   - Component boundary behaviors → `/tests/` integration tests
-   - Parsers/deserializers → fuzz targets
-   - Critical invariants → Kani harnesses
-   - Pure functions with multiple inputs → proptest
+    - Calc layer pure functions → inline `#[cfg(test)]` unit tests
+    - Component boundary behaviors → `/tests/` integration tests
+    - Parsers/deserializers → fuzz targets
+    - Critical invariants → Kani harnesses
+    - Pure functions with multiple inputs → proptest
+
+   Kani/proof harnesses do not replace behavior tests. When a proof-to-implementation map exists, write executable tests against production APIs that would fail if the production behavior were deleted or the proof harness were disconnected.
 
 ---
 

@@ -5,7 +5,7 @@ Use one JSON object per line.
 Required fields:
 
 ```json
-{"id":"PO-001","requirement_id":"REQ-001","contract_clause":"C-001","risk":"temporal_retry","verifier":"tla-plus","artifact":"specs/retry_model.tla","command":"java -jar tla2tools.jar specs/retry_model.tla -config specs/retry_model.cfg","expected_evidence":"TLC reports invariant and deadlock checks pass","assumptions":["bounded retries <= 3"],"required":true,"mode":"verify-proof","owner_state":6,"rerun_from":6,"status":"planned","waiver":null}
+{"id":"PO-001","requirement_id":"REQ-001","contract_clause":"C-001","risk":"bounded_transition","verifier":"kani","artifact":"harnesses/kani/transition.rs","command":"cargo kani --harness transition_obligation --output-format=regular","expected_evidence":"Kani reports successful verification for the named harness","assumptions":["input length <= 8"],"required":true,"mode":"verify-proof","owner_state":6,"rerun_from":6,"status":"planned","waiver":null}
 ```
 
 Status values:

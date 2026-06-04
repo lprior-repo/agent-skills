@@ -1,7 +1,7 @@
 [
   {
     "name": "proof review redirected",
-    "prompt": "Review proof-obligations.planned.jsonl and TLA+ artifacts as test-reviewer.",
+    "prompt": "Review proof-obligations-planned.jsonl as test-reviewer.",
     "expect": ["redirect to proof-plan-reviewer or proof-reviewer", "no proof approval"]
   },
   {

@@ -254,7 +254,7 @@ Stateful oracles:
 | TSan | Parser/interpreter/compiler races | Synchronization must be visible; atomics/fences can limit signal |
 | Clang UBSan | Embedded C/C++ runtimes and native helpers | Treat as mixed-language adjunct, not Rust-native coverage by default |
 | Rust source coverage | Harness blind spots and corpus quality | Coverage alone does not prove semantic depth |
-| Miri repro lane | Minimized failures involving pre-existing unsafe code | Slow, not coverage-guided, and not a replacement for fuzzing; do not add unsafe for Miri |
+| UB repro lane | Minimized failures involving pre-existing unsafe code | Slow, not coverage-guided, and not a replacement for fuzzing; do not add unsafe to reach it |
 
 Record sanitizer name, sanitizer flag or default, sanitizer initialization/report evidence when visible, toolchain, target triple, Cargo features, `RUSTFLAGS`/`RUSTDOCFLAGS`/engine env vars, corpus path, artifact path, time budget, exact command, and exit status for every evidence claim.
 

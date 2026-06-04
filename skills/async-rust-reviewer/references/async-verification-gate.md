@@ -50,7 +50,7 @@ grep -rn "println!\|eprintln!" --include="*.rs" crates/api/ crates/infra/ && \
 
 ## Layer 4: Functional-Rust Sync Gate (Seconds)
 
-Inherited from functional-rust — must also pass:
+Inherited from holzman-rust — must also pass:
 
 ```bash
 cargo fmt --check

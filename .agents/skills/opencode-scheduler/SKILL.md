@@ -1,8 +1,6 @@
 ---
 name: opencode-scheduler
 description: "Operate the opencode-scheduler plugin to create, inspect, update, run, troubleshoot, and clean up recurring OpenCode jobs. Use when scheduling recurring agent work, checking job state or logs, installing the scheduler best-practices skill, or debugging scheduler backend issues."
-argument-hint: "[schedule request, job name, or scheduler operation]"
-disable-model-invocation: true
 ---
 
 ```jsonl

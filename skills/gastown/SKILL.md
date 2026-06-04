@@ -1,7 +1,6 @@
 ---
 name: gastown
 description: "Gas Town multi-agent orchestration expert for workspace setup, rig management, agent runtime configuration (claude, opencode, codex, cursor, amp, gemini, copilot, auggie, pi, omp), bead/issue tracking with bd, convoy work tracking, polecat lifecycle, witness/refinery/deacon monitoring, formula workflows, molecules, mail/nudge communication, scheduling, escalation, dashboard/feed monitoring, and cross-rig coordination. Use this skill whenever the user mentions Gas Town, gt commands, rigs, polecats, convoys, beads issues, slinging work, multi-agent coordination, agent orchestration, or any gt CLI operation — even if they don't explicitly say 'Gas Town'."
-argument-hint: "[command or topic] — e.g. 'setup new rig', 'sling work to opencode', 'configure Seshat rig', 'convoy create', 'troubleshoot stuck agent'"
 allowed-tools:
   - Read
   - Bash

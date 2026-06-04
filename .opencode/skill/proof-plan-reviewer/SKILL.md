@@ -1,6 +1,6 @@
 ---
 name: proof-plan-reviewer
-description: "Brutal pre-proof reviewer for defense-in-depth proof plans. Use after proof-planner and before proof-writer. Rejects missing Verus/TLA+/Kani/Flux/Loom/Miri coverage, weak lane decisions, vague commands, shallow bounds, missing non-vacuity, invalid waivers, absent bridge planning, and self-approved plan artifacts. Writes review artifacts only."
+description: "Brutal pre-proof reviewer for implementation-bound proof plans. Use after proof-planner and before proof-writer. Rejects missing Verus/Kani/Flux/proptest default Rust lanes, unjustified Loom/fuzz decisions, weak commands, shallow bounds, invalid waivers, absent bridge planning, and self-approved artifacts. Writes review artifacts only."
 ---
 
 # Proof Plan Reviewer
@@ -23,14 +23,14 @@ Stop bad proof plans before proof-writer wastes time. Assume the planner skipped
 ## Workflow
 
 1. Verify review provenance: reviewer invocation must differ from planner invocation.
-2. Validate every proof seed has lane decisions for the full core verifier set.
+2. Validate every proof seed has lane decisions for the required lane profile from `verification-lane-policy.md`; Rust-local behavior defaults to Verus, Kani, Flux, and proptest.
 3. Reject weak `not_applicable` decisions, missing evidence refs, self-stamped reviewer fields, or any planner-owned lane that cannot receive an accepted review row.
 4. Check required lanes against the shared verification-lane policy.
 5. Check every planned obligation has schema version, exact command, workdir, bounds, assumptions, expected evidence, and no legacy alias fields.
 6. Reject behavior-affecting waivers and waivers that exist because proof is hard.
-7. Check non-vacuity and trusted-base planning.
-8. Write one `verifier-lane-review/v1` row for every planner lane decision, with independent planner/reviewer invocation IDs and `reviewer_disposition: accepted` only for valid lanes.
-9. Approve only when the plan is precise enough for proof-writer and proof-to-implementation.
+8. Check non-vacuity and trusted-base planning.
+9. Write one `verifier-lane-review/v1` row for every planner lane decision, with independent planner/reviewer invocation IDs and `reviewer_disposition: accepted` only for valid lanes.
+10. Approve only when the plan is precise enough for proof-writer and proof-to-implementation.
 
 ## References
 

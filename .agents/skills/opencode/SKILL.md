@@ -192,6 +192,541 @@ Requires `OPENCODE_SERVER_PASSWORD` for basic auth.
 | `--print-logs` | Print logs to stderr |
 | `--log-level DEBUG` | Set log level (DEBUG/INFO/WARN/ERROR) |
 
+## Deep CLI Execution Model
+
+OpenCode is best understood as a server-backed coding agent with several frontends:
+
+- `opencode` launches the TUI frontend.
+- `opencode run` sends one prompt non-interactively.
+- `opencode serve` exposes the same engine over HTTP.
+- `opencode attach` connects a UI/CLI client to an existing server.
+- Sessions are the durable unit of work: messages, tool calls, diffs, permissions, and metadata hang off a session.
+
+### Core Flow
+
+OpenCode's normal execution path is roughly:
+
+1. Resolve config from global, project, and environment sources.
+2. Resolve working directory and project root.
+3. Load agents, skills, tools, plugins, MCP servers, provider credentials, model defaults, and permissions.
+4. Create or resume a session.
+5. Send a user message into that session.
+6. The selected agent calls tools, asks for permissions/questions if needed, and streams events.
+7. Session data, messages, parts, and diffs are persisted.
+8. The client exits, stays interactive, or keeps serving depending on the subcommand.
+
+For bead/go-skill automation, `opencode run` is the main entry point:
+
+```bash
+opencode run --agent build --title "go-skill VB-123" \
+  "Use the go-skill skill. Run the full lifecycle for bead VB-123."
+```
+
+To feed follow-up commands into the same session:
+
+```bash
+opencode run -c "Continue from the current go-skill state."
+```
+
+Or target a known session:
+
+```bash
+opencode run -s <session-id> "Repair the State 6 proof-reviewer blocker."
+```
+
+### `opencode` -- TUI Frontend
+
+Default command. Starts the terminal UI.
+
+```bash
+opencode
+opencode /some/project
+opencode -m provider/model
+opencode --agent build
+opencode -c
+opencode -s <session-id>
+```
+
+What it does:
+
+- Starts an interactive client in the terminal.
+- Creates or resumes a session.
+- Lets you type prompts, approve tools, answer questions, inspect diffs, and continue work.
+- Uses the same backend/session machinery as `run` and `serve`.
+
+Use the TUI when active human supervision is wanted. It is not required for headless bead execution.
+
+### `opencode run [message..]` -- Headless Prompt Execution
+
+Single-shot, non-TUI execution.
+
+```bash
+opencode run "fix the parser bug"
+opencode run --format json "summarize this repo"
+opencode run -c "continue"
+opencode run -s <session-id> "next step"
+opencode run --agent build "do the work"
+opencode run --command my-command "arg text"
+```
+
+Important flags:
+
+- `--agent <name>` selects the primary/custom agent.
+- `--model provider/model` overrides model.
+- `--format json` emits raw JSON events, best for logs and automation.
+- `-c`, `--continue` resumes the latest session.
+- `-s`, `--session` resumes a specific session.
+- `--fork` copies a prior session before continuing.
+- `--title` names the session.
+- `-f`, `--file` attaches files.
+- `--attach <url>` sends the run to an existing server.
+- `--dir` sets the project directory, especially useful with `--attach`.
+- `--dangerously-skip-permissions` auto-approves permissions not explicitly denied.
+
+For feeding commands, this is the key pattern:
+
+```bash
+opencode run --title "go-skill bead-123" \
+  "Use go-skill. Start bead bead-123."
+
+opencode run -c \
+  "Proceed to the next state after validating the current gate."
+
+opencode run -c \
+  "The verifier failed. Repair according to go-skill routing and rerun the gate."
+```
+
+Each `run` invocation is just another message into a session unless it starts fresh. Feeding OpenCode commands headlessly means appending messages to the same persisted session with `-c` or `-s <session-id>`.
+
+### `opencode serve` -- Headless HTTP Server
+
+Starts a headless HTTP server.
+
+```bash
+OPENCODE_SERVER_PASSWORD=secret opencode serve --port 4096
+```
+
+What it does:
+
+- Runs OpenCode's backend without opening a TUI.
+- Exposes sessions, messages, events, permissions, questions, config, files, PTY, and other APIs.
+- Enables remote clients, automation, browser UI, or `opencode run --attach`.
+
+Use this for a long-lived agent service:
+
+```bash
+OPENCODE_SERVER_PASSWORD=secret opencode serve --port 4096
+
+opencode run --attach http://localhost:4096 \
+  "Use go-skill. Run bead VB-123."
+```
+
+### `opencode attach <url>` -- Attach To Existing Server
+
+Attaches a local client to an existing server.
+
+```bash
+opencode attach http://localhost:4096
+opencode attach http://localhost:4096 -c
+opencode attach http://localhost:4096 -s <session-id>
+```
+
+What it does:
+
+- Connects to a running `opencode serve`.
+- Lets you interact with sessions hosted by that server.
+- Supports auth via `--username`, `--password`, or environment variables.
+
+Use this when the server is already running somewhere else.
+
+### `opencode web` -- Browser Frontend
+
+Starts the server and opens the web interface.
+
+```bash
+opencode web --port 4096
+```
+
+What it does:
+
+- Combines `serve` plus browser UI.
+- Uses the same backend with a browser frontend instead of a terminal frontend.
+- Helps with visual session management, but is not needed for headless automation.
+
+### `opencode acp` -- Agent Client Protocol
+
+Starts an Agent Client Protocol server.
+
+```bash
+opencode acp --port 3001
+```
+
+What it does:
+
+- Exposes OpenCode through ACP.
+- Targets editor/agent-client integrations.
+- Provides a protocol-specific agent backend surface similar in purpose to server mode.
+
+Use this when another tool wants to drive OpenCode as an agent backend.
+
+### `opencode mcp` -- Model Context Protocol Servers
+
+Manages MCP servers.
+
+```bash
+opencode mcp list
+opencode mcp add
+opencode mcp auth <name>
+opencode mcp logout <name>
+opencode mcp debug <name>
+```
+
+What it does:
+
+- MCP servers add external tools and capabilities.
+- Local MCP servers usually run as subprocesses.
+- Remote MCP servers connect over network transports.
+- OAuth-capable MCPs need `mcp auth`.
+
+MCP tools become callable by agents, subject to OpenCode permissions and configuration. For go-skill work, MCP is only relevant if the lifecycle depends on external systems exposed through MCP.
+
+### `opencode providers` / `opencode auth` -- Provider Credentials
+
+Manages AI provider credentials.
+
+```bash
+opencode providers list
+opencode providers login
+opencode providers logout
+
+opencode auth list
+opencode auth login
+opencode auth logout
+```
+
+What it does:
+
+- Configures credentials for Anthropic, OpenAI, Google, and other providers.
+- Provider credentials feed model availability.
+- Config can also use environment references such as `{env:ANTHROPIC_API_KEY}`.
+
+Model names use `provider/model`:
+
+```bash
+opencode run -m openai/gpt-5.5 "..."
+```
+
+### `opencode models [provider]` -- Model Catalog
+
+Lists available models.
+
+```bash
+opencode models
+opencode models openai
+opencode models --verbose
+opencode models --refresh
+```
+
+What it does:
+
+- Shows models OpenCode knows how to route to.
+- `--verbose` includes metadata like pricing and capabilities.
+- `--refresh` updates the model cache.
+
+Use this when a run fails with model lookup or provider issues.
+
+### `opencode agent` -- Agent Profiles
+
+Manages agents.
+
+```bash
+opencode agent list
+opencode agent create
+```
+
+What agents are:
+
+- An agent is a named behavior profile.
+- It defines prompt/persona, model, mode, tool permissions, and step limits.
+- Built-ins include `build`, `plan`, `general`, and `explore`.
+- Custom agents live in config or `.opencode/agent/*.md`.
+
+For go-skill:
+
+```bash
+opencode run --agent build \
+  "Use the go-skill skill. Run bead VB-123."
+```
+
+If a dedicated go-skill agent exists:
+
+```bash
+opencode run --agent go-skill \
+  "Run bead VB-123 through the full lifecycle."
+```
+
+Skills and agents are different concepts:
+
+- Skill: domain instructions loaded into context.
+- Agent: execution profile that determines behavior, permissions, model, and mode.
+
+### `opencode debug` -- Diagnostics
+
+Diagnostic commands.
+
+```bash
+opencode debug config
+opencode debug paths
+opencode debug skill
+opencode debug agent <name>
+opencode debug lsp
+opencode debug rg
+opencode debug file
+opencode debug startup
+opencode debug info
+```
+
+What it does:
+
+- Shows resolved config.
+- Shows loaded skills and agents.
+- Helps debug file search, LSP, ripgrep, project detection, and startup.
+- Proves OpenCode sees the right skill, agent, and config before automation.
+
+For go-skill readiness:
+
+```bash
+opencode debug skill
+opencode debug agent build
+opencode debug config
+```
+
+### `opencode session` -- Session Inventory
+
+Manages sessions.
+
+```bash
+opencode session list
+opencode session delete <session-id>
+```
+
+What sessions are:
+
+- Durable conversations with state.
+- They include messages, tool calls, file diffs, and metadata.
+- `run -c` resumes the latest session.
+- `run -s <id>` resumes an exact session.
+
+For feeding commands:
+
+```bash
+opencode session list
+opencode run -s <id> "Continue go-skill State 8."
+```
+
+### `opencode export [sessionID]` -- Export Sessions
+
+Exports session data.
+
+```bash
+opencode export <session-id> > session.json
+opencode export <session-id> --sanitize > session-redacted.json
+```
+
+What it does:
+
+- Serializes a session for backup, sharing, review, or migration.
+- `--sanitize` redacts sensitive transcript and file data.
+
+Use this when an audit trail of a go-skill run is needed.
+
+### `opencode import <file>` -- Import Sessions
+
+Imports a session.
+
+```bash
+opencode import session.json
+opencode import https://share-url
+```
+
+What it does:
+
+- Restores an exported/shared session into local OpenCode storage.
+- Helps reproduce or continue someone else's run.
+
+### `opencode stats` -- Usage And Cost
+
+Shows token, cost, and tool usage.
+
+```bash
+opencode stats
+opencode stats --days 7
+opencode stats --models
+opencode stats --tools 20
+opencode stats --project ""
+```
+
+What it does:
+
+- Summarizes usage across projects and sessions.
+- Helps identify costly models, long runs, and heavy tool usage.
+
+For go-skill, this matters because full lifecycle runs can be expensive.
+
+### `opencode github` -- GitHub Agent
+
+Manages the GitHub agent integration.
+
+```bash
+opencode github install
+opencode github run
+```
+
+What it does:
+
+- Installs/runs OpenCode's GitHub automation.
+- Targets issue and PR event handling.
+- Stays separate from local bead/go-skill work unless beads are wired to GitHub workflows.
+
+### `opencode pr <number>` -- PR Checkout Workflow
+
+Fetches and checks out a GitHub PR, then starts OpenCode.
+
+```bash
+opencode pr 123
+```
+
+What it does:
+
+- Uses GitHub repository context.
+- Checks out the PR branch.
+- Starts OpenCode for review or changes.
+
+This is interactive-oriented and is not the main path for bead automation.
+
+### `opencode plugin <module>` -- Plugin Installer
+
+Installs a plugin and updates config.
+
+```bash
+opencode plugin some-npm-plugin
+opencode plugin some-npm-plugin --global
+opencode plugin some-npm-plugin --force
+```
+
+What plugins do:
+
+- Extend OpenCode with hooks, tools, providers, and config behavior.
+- Can intercept events, tool execution, chat params, permissions, and more.
+- Are installed from npm modules or local project plugin config.
+
+Plugin installation changes config, so treat it as setup, not routine bead execution.
+
+### `opencode db` -- Local Database Tooling
+
+Database tooling.
+
+```bash
+opencode db path
+opencode db "select * from session limit 5" --format json
+opencode db migrate
+```
+
+What it does:
+
+- Opens or queries OpenCode's SQLite database.
+- Prints the DB path.
+- Migrates older JSON data into SQLite.
+
+Use this for low-level debugging, not normal operation.
+
+### `opencode completion` -- Shell Completion
+
+Generates shell completions.
+
+```bash
+opencode completion
+```
+
+What it does:
+
+- Emits shell completion script.
+- Supports shell integration setup.
+- Does not participate in agent execution.
+
+### `opencode upgrade [target]` -- Upgrade CLI
+
+Upgrades OpenCode.
+
+```bash
+opencode upgrade
+opencode upgrade 1.2.0
+opencode upgrade -m npm
+```
+
+What it does:
+
+- Updates the installed CLI.
+- Supports methods like `curl`, `npm`, `pnpm`, `bun`, `brew`, `choco`, and `scoop`.
+
+This changes the installed tool, so only use it intentionally.
+
+### `opencode uninstall` -- Remove CLI
+
+Removes OpenCode.
+
+```bash
+opencode uninstall --dry-run
+opencode uninstall --keep-config
+opencode uninstall --keep-data
+opencode uninstall --force
+```
+
+What it does:
+
+- Removes installed OpenCode files.
+- Can preserve config or session data.
+- `--dry-run` previews removal.
+
+### Deep Go-Skill Headless Pattern
+
+For a full go-skill run on a bead without opening the TUI, use:
+
+```bash
+opencode run --format json \
+  --title "go-skill VB-123" \
+  "Use the go-skill skill. Run the full go-skill lifecycle for bead VB-123. Follow all state gates, use the isolated workspace, record evidence, and do not skip verifier/reviewer gates." \
+  > go-skill-VB-123.jsonl
+```
+
+Then feed it more commands in the same session:
+
+```bash
+opencode run -c --format json \
+  "Continue from the current go-skill state. If blocked, route repair according to the go-skill state machine." \
+  >> go-skill-VB-123.jsonl
+```
+
+For a long-lived server-backed run:
+
+```bash
+OPENCODE_SERVER_PASSWORD=secret opencode serve --port 4096
+
+opencode run --attach http://localhost:4096 \
+  --password secret \
+  --format json \
+  --title "go-skill VB-123" \
+  "Use the go-skill skill. Run the full lifecycle for bead VB-123."
+```
+
+Core distinction:
+
+- `run`: best for scripted, one-shot, CI-style prompting.
+- `run -c` / `run -s`: best for feeding more commands to the same work.
+- `serve`: best for a persistent backend.
+- `attach`: best for controlling an already-running backend.
+- TUI/web: best for human supervision.
+
 ## Configuration System
 
 ### Config File Hierarchy (Low to High Precedence)

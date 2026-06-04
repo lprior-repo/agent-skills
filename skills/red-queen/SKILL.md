@@ -344,11 +344,11 @@ nu $L quality-gate drq-session /path/to/project
 
 **DRY Check (Rust):** `cargo clippy -- -D clippy::redundant_clone -D clippy::manual_map -D clippy::unnecessary_wraps` → dimension `quality-dry`
 
-**Test Quality:** tokei JSON → test-to-code ratio < 0.5 → survivor (dimension: `quality-test-coverage`)
+**Test Design / Assertion Strength:** tokei JSON → test-to-code ratio < 0.5 → survivor (dimension: `quality-test-coverage`). This judges evidence volume and assertions, not test implementation style.
 
-### `fowler-review` — Martin Fowler Code + Test Quality Review
+### `fowler-review` — Martin Fowler Source Quality + Test Effectiveness Review
 
-Tool-based (not grep heuristic) review of source code AND tests. Each violation → gen-survivor.
+Tool-based (not grep heuristic) review of source code structure and test effectiveness. Test loops, helpers, and local mutability are not violations unless they hide assertions or create nondeterminism. Each violation → gen-survivor.
 
 ```bash
 nu $L fowler-review drq-session /path/to/project --complexity-threshold 15 --fn-length-threshold 50 --file-length-threshold 250 --nesting-threshold 4 --coverage-threshold 80.0
@@ -380,7 +380,7 @@ nu $L fowler-review drq-session /path/to/project --complexity-threshold 15 --fn-
 | Error handling (unwrap/expect) | `fowler-error-handling` |
 | Wildcard enum matches | `fowler-exhaustive` |
 
-**4d. Test Code Review:**
+**4d. Test Design / Assertion Review:**
 
 | Smell | Method | Dimension |
 |-------|--------|-----------|
@@ -389,7 +389,7 @@ nu $L fowler-review drq-session /path/to/project --complexity-threshold 15 --fn-
 | Coverage | `cargo llvm-cov --fail-under-lines $threshold` | `fowler-test-coverage` |
 | Happy path only | < 30% of tests cover error paths | `fowler-test-happy-only` |
 | Flaky indicators | sleep calls in tests | `fowler-test-flaky` |
-| Test isolation | static mut / lazy_static / Mutex in tests | `fowler-test-isolation` |
+| Test isolation | shared static mut / lazy_static / global Mutex state in tests | `fowler-test-isolation` |
 
 **4e. Security & Supply Chain:**
 

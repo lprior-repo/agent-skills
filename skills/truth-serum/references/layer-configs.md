@@ -263,7 +263,7 @@ impl<'tcx> LateLintPass<'tcx> for NoUnwrapInDomain {
                     *span,
                     "`.unwrap()` not allowed in domain code",
                     None,
-                    "use `?`, `.map_err()`, or `.expect()` with context instead",
+                    "use `?`, `.map_err()`, or return a typed error instead",
                 );
             }
         }
@@ -288,9 +288,18 @@ libraries = [
 # Cargo.toml (workspace root)
 [workspace.lints.clippy]
 unwrap_used = "deny"
+expect_used = "deny"
 panic = "deny"
+panic_in_result_fn = "deny"
 todo = "deny"
+unimplemented = "deny"
 dbg_macro = "deny"
+indexing_slicing = "deny"
+string_slice = "deny"
+get_unwrap = "deny"
+arithmetic_side_effects = "deny"
+as_conversions = "deny"
+let_underscore_must_use = "deny"
 wildcard_imports = "deny"
 
 [workspace.lints.rust]
@@ -385,10 +394,10 @@ fn verify_money_add_preserves_invariant() {
     let b: i64 = kani::any();
     kani::assume(a >= 0 && a < 1_000_000);
     kani::assume(b >= 0 && b < 1_000_000);
-    let m1 = Money::new(a, Currency::USD).unwrap();
-    let m2 = Money::new(b, Currency::USD).unwrap();
-    if let Ok(result) = m1.add(&m2) {
-        assert!(result.amount() >= 0);
+    if let (Ok(m1), Ok(m2)) = (Money::new(a, Currency::USD), Money::new(b, Currency::USD)) {
+        if let Ok(result) = m1.add(&m2) {
+            kani::assert(result.amount() >= 0, "money amount remains non-negative");
+        }
     }
 }
 ```
@@ -401,7 +410,7 @@ fn verify_money_add_preserves_invariant() {
 fn verify_negative_money_rejected() {
     let x: i64 = kani::any();
     kani::assume(x < 0);
-    assert!(Money::new(x, Currency::USD).is_err());
+    kani::assert(Money::new(x, Currency::USD).is_err(), "negative money is rejected");
 }
 ```
 

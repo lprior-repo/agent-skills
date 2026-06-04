@@ -135,7 +135,6 @@ cargo +nightly -Zallow-features=portable_simd,try_blocks clippy \
 
 cargo +nightly nextest run --workspace --all-features
 cargo +nightly doc --workspace --all-features --no-deps
-cargo +nightly miri test --workspace --all-features
 if rg -n '(^|[^A-Za-z0-9_])(assert!|assert_eq!|assert_ne!|unreachable!)' --glob '*.rs' --glob '!**/tests/**' --glob '!**/benches/**' --glob '!**/examples/**' --glob '!build.rs'; then exit 1; else true; fi
 
 cargo audit
@@ -178,7 +177,7 @@ Unsafe code must state:
 - Aliasing and lifetime assumptions.
 - Alignment and initialization assumptions.
 - Panic behavior and drop safety.
-- Test evidence: unit, property, fuzz, Miri, or sanitizer where applicable.
+- Test evidence: unit, property, fuzz, sanitizer, or dedicated UB tooling where applicable.
 
 ## Verification Commands
 
@@ -203,7 +202,6 @@ Fallback preserves the same lint/tool intent as the nightly gate. If a lint, too
 Add these when the touched code justifies them and tools are available. These are templates only; do not report them as run until concrete repo target names are substituted:
 
 ```bash
-cargo miri test
 cargo fuzz run actual_fuzz_target
 cargo bench
 cargo bloat --release --crates

@@ -152,4 +152,4 @@ Reject a Kani plan or report if it:
 - Omits `#[kani::solver(...)]`, `--solver`, `--cbmc-args`, or `-Z mem-predicates` when those surfaces are present.
 - Claims unbounded correctness from bounded inputs.
 - Claims full unsafe-code soundness.
-- Treats `cargo test`, clippy, Miri, Verus, Flux, or TLA+ output as a substitute for required Kani evidence.
+- Treats `cargo test`, clippy, Verus, Flux, UB-tooling, or design-model output as a substitute for required Kani evidence.

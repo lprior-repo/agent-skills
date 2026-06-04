@@ -25,20 +25,10 @@ Use this reference for proof review, formal verification, and validator scans. A
 - `#[trusted]`, `#[ignore]`, opaque specs used to hide invalid states
 - refinements that repeat the constructor precondition without rejecting invalid cases
 
-## TLA+
-
-- state constraints, symmetry sets, small constants, hidden fairness decisions
-- missing `TypeOK`, missing deadlock stance, weak invariants that do not mention the risky state
-
 ## Loom
 
 - toy models that do not use production synchronization indirection
 - missing cancellation, drop, timeout, and shutdown paths
-
-## Miri
-
-- skipped unsafe paths, cfg gates that exclude the dangerous code, unsupported operations hidden by `cfg(miri)`
-- single-seed runs where seed variation matters
 
 ## Validator Rule
 

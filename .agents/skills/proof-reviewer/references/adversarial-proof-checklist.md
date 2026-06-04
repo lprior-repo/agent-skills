@@ -6,12 +6,6 @@ General:
 - Every assumption is named and justified.
 - No proof depends on deleted tests, fake paths, or unrun commands.
 
-TLA+:
-- Constants are constrained.
-- Invariants are meaningful and not restatements of initialization.
-- Deadlock checking is present; if irrelevant, the review records the reason and affected obligations.
-- Liveness/fairness exists for temporal progress claims.
-
 Verus:
 - Trusted boundaries are minimal and listed.
 - Specs connect to executable functions.
@@ -33,7 +27,7 @@ Loom:
 - Cancellation/drop/error paths are modeled.
 - Assertions check the contract, not just no panic.
 
-Miri/proptest/fuzz:
+proptest/fuzz:
 - Exercised paths match the risk.
 - Generators/corpus cover boundary classes.
 - Oracles assert contract behavior.

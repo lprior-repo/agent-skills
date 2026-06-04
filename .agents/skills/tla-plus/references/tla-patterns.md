@@ -97,7 +97,7 @@ Every TLA+ model must say how it maps to implementation:
 - Persistent state corresponding to each variable.
 - Inputs/environment modeled as nondeterministic actions.
 - Failures modeled explicitly: timeout, crash, cancellation, duplicate message, retry exhaustion.
-- Shell behavior excluded from the model and covered by tests, QA, Loom, Stateright, Kani, Miri, or fuzzing.
+- Shell behavior excluded from the model and covered by tests, QA, Loom, Stateright, Kani, fuzzing, or dedicated UB tooling.
 
 ## PlusCal Guidance
 

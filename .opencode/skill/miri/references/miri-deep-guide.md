@@ -145,12 +145,11 @@ Valgrind Memcheck:
 - Strong on illegal reads/writes, undefined values, bad frees, overlaps, and leaks across linked code it can see.
 - Very slow and not Rust-provenance-aware.
 
-Kani, Flux, Verus, and TLA+:
+Kani, Flux, and Verus:
 
 - Kani gives bounded symbolic evidence for named Rust harnesses.
 - Flux checks refinement types at compile time.
 - Verus proves Rust-local deductive obligations.
-- TLA+ models temporal workflows, protocols, and distributed systems.
 
 ## Future Direction
 

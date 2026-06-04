@@ -43,7 +43,7 @@ If local commands and docs disagree, report the conflict and fail closed for req
 - Async/concurrent behavior, scheduler fairness, atomics ordering, or thread interleavings.
 - ABI correctness, inline assembly behavior, external service behavior, file system/network behavior, or CLI output formatting.
 - Verus-style deductive proofs of Rust-local pure logic when Verus is the required proof layer.
-- TLA+ temporal workflow invariants or liveness.
+- Temporal workflow invariants or liveness.
 - Flux RS refinement obligations.
 - Security absence, side-channel freedom, performance, or production runtime behavior without a dedicated model for that claim.
 
@@ -59,10 +59,9 @@ Avoid broad language:
 
 ## Tool Boundaries
 
-- Use TLA+ for temporal state machines, liveness, fairness, distributed coordination, leases, queues, and protocol design.
 - Use Verus for Rust-local deductive proof obligations, algebraic invariants, loop invariants that need unbounded reasoning, and proof functions.
 - Use Flux RS for refinement types, legal-state encodings, range/length/index relationships at compile time, and lightweight contract checking.
-- Use Miri/cargo-careful/sanitizers for UB exploration that Kani does not model well.
+- Use dedicated UB tooling, cargo-careful, or sanitizers for UB exploration that Kani does not model well.
 - Use Loom/Shuttle/Stateright/Lockbud for implementation interleavings and concurrency schedules.
 - Use fuzzing/proptest/Bolero for hostile input spaces and long-running bug discovery.
 

@@ -23,11 +23,6 @@ fileGroups:
     - rust-verification-gauntlet.sh
     - scripts/**/*
     - proofs/**/*
-    - tla/**/*
-    - specs/**/*.tla
-    - specs/**/*.cfg
-    - models/**/*.tla
-    - models/**/*.cfg
     - verus/**/*
     - proofs/verus/**/*
     - crates/*/src/**/*_verus.rs
@@ -37,7 +32,6 @@ fileGroups:
   bead-artifacts:
     - .beads/**/baseline-report.md
     - .beads/**/delivery-scope.jsonl
-    - .beads/**/tla-spec.md
     - .beads/**/proof-obligations.planned.jsonl
     - .beads/**/traceability-matrix.jsonl
     - .beads/**/formal-waivers.jsonl

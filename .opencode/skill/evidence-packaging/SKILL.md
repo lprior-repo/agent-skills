@@ -1,13 +1,11 @@
 ---
 name: evidence-packaging
 description: "Build a truth-serum-audited assurance bundle for bead delivery. Use after formal/test execution and black-hat review, before landing, to prove every requirement maps to raw evidence."
-argument-hint: "[bead-id or assurance artifact root]"
 allowed-tools:
   - Bash
   - Read
   - Grep
   - Write
-disable-model-invocation: true
 ---
 
 ```jsonl
@@ -20,6 +18,7 @@ disable-model-invocation: true
 {"kind":"workflow","id":"evidence_packaging","steps":["Read delivery-scope.jsonl, contract.md, traceability-matrix.jsonl, proof-review.md, test-plan-review.md, formal-verification-report.md, verification-ledger.jsonl, black-hat-review.md, and gate reports.","Check every required artifact exists and is non-empty.","Build assurance-bundle.md with requirement-to-evidence mapping and unresolved waiver/debt table.","Run truth-serum audit in the active execution context against the bundle and raw artifacts.","Write truth-serum-report.md and final-evidence-decision.md with STATUS: APPROVED or STATUS: REJECTED."]}
 {"kind":"artifact","id":"outputs","items":[".beads/<bead-id>/assurance-bundle.md",".beads/<bead-id>/truth-serum-report.md",".beads/<bead-id>/final-evidence-decision.md"]}
 {"kind":"gate","id":"mandatory_verification_gate","text":"Verify required artifacts, JSONL validity, status lines, and raw evidence pointers. Missing or invalid evidence blocks landing."}
+{"kind":"gate","id":"no_conflicted_or_stale_evidence","text":"Reject merge-conflicted artifacts, stale STATUS: REJECTED reviews, missing raw logs, nonexistent paths, behavior waivers, and proof claims without source/test/harness alignment."}
 {"kind":"gate","id":"anti_hallucination","text":"Never invent command output, test counts, verifier status, reviewer approval, commit IDs, paths, or waiver decisions. Mark absent proof as MISSING_EVIDENCE."}
 ```
 
@@ -52,6 +51,7 @@ test -s ".beads/<bead-id>/regression-diff.md"
 jq -c . ".beads/<bead-id>/delivery-scope.jsonl" >/dev/null
 jq -c . ".beads/<bead-id>/traceability-matrix.jsonl" >/dev/null
 jq -c . ".beads/<bead-id>/verification-ledger.jsonl" >/dev/null
+! rg -n '^(<<<<<<<|=======|>>>>>>>)' ".beads/<bead-id>"
 rg -n '^STATUS: APPROVED$|^STATUS: PASS$' ".beads/<bead-id>/proof-review.md" ".beads/<bead-id>/test-plan-review.md" ".beads/<bead-id>/formal-verification-report.md" ".beads/<bead-id>/black-hat-review.md"
 ```
 
@@ -64,6 +64,7 @@ Forbidden:
 - Omitting failed gates from the bundle.
 - Reporting missing tools as passed.
 - Claiming a requirement is covered without a traceability row.
+- Treating Kani `cover!`, copied models, commented-out tests, ignored tests not run, or missing raw logs as proof.
 - Allowing landing before truth-serum evidence audit passes.
 
 Required:

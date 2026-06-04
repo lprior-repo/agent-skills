@@ -1,11 +1,11 @@
 ---
 name: dioxus
-description: "Complete Dioxus 0.7 framework guide covering development, debugging, and testing with WebDriver and Playwright."
+description: "Complete Dioxus 0.7 framework guide covering development, CDP debugging with dioxus-agent-rs, and E2E testing with Playwright."
 ---
 
 # Skill: Dioxus
 
-Complete Dioxus 0.7 framework expertise covering modern development, auto-debugging with WebDriver, and E2E testing with Playwright.
+Complete Dioxus 0.7 framework expertise covering modern development, auto-debugging with `dioxus-agent-rs` over CDP, and E2E testing with Playwright.
 
 ## Core Principles
 
@@ -38,18 +38,20 @@ dx translate --raw "<div class='foo'>...</div>"
 4. Style with Tailwind class strings
 5. Add async data with use_resource
 
-### Phase 2: Debugging with WebDriver
+### Phase 2: Debugging with `dioxus-agent-rs`
 Prerequisites:
-- Start Dioxus app: `dx serve --platform web > /tmp/dx-serve.log 2>&1 &`. Wait for port 8080.
-- Start ChromeDriver: `~/.local/bin/chromedriver --port=4444 > /tmp/chromedriver.log 2>&1 &`.
+- Start the app with the correct compile-time base path. For Seshat: `SESHAT_BASE_PATH=/Seshat moon run :serve`.
+- Use the full app URL including any base path, e.g. `--url http://127.0.0.1:8081/Seshat/`.
+- Use the rebuilt agent at `~/src/dioxus-agent-rs/target/release/dioxus-agent-rs`.
+- ChromeDriver is not required by default. The agent uses CDP unless `--engine dual` is requested.
+- Auto-wait is enabled by default. It rejects the Dioxus rebuild shell and waits for `window.__seshatE2eReady`, `window.__dioxusReady`, `body[data-hydrated="true"]`, or stable app DOM. Use `--no-auto-wait` only for negative tests.
 
 Commands using `dioxus-agent-rs`:
-- `dioxus-agent-rs dom` - Returns full HTML of running Dioxus app
-- `dioxus-agent-rs eval "<js>"` - Evaluates JavaScript, returns JSON result
-- `dioxus-agent-rs click "<css-selector>"` - Simulates click on element
-- `dioxus-agent-rs text "<css-selector>" "<value>"` - Sets text on input field
-- `dioxus-agent-rs screenshot "<path>"` - Takes full-page screenshot
-- `dioxus-agent-rs repl` - Interactive REPL for rapid debugging
+- `~/src/dioxus-agent-rs/target/release/dioxus-agent-rs --url http://127.0.0.1:8081/Seshat/ dom` - Returns full HTML of the hydrated app.
+- `~/src/dioxus-agent-rs/target/release/dioxus-agent-rs --url http://127.0.0.1:8081/Seshat/ --json title` - Verifies the browser sees the app title as JSON.
+- `~/src/dioxus-agent-rs/target/release/dioxus-agent-rs --url http://127.0.0.1:8081/Seshat/ eval "window.__seshatE2eReady"` - Checks app-specific readiness.
+- `~/src/dioxus-agent-rs/target/release/dioxus-agent-rs --url http://127.0.0.1:8081/Seshat/ click "<css-selector>"` - Simulates a click.
+- `~/src/dioxus-agent-rs/target/release/dioxus-agent-rs --url http://127.0.0.1:8081/Seshat/ screenshot "<path>"` - Captures a screenshot.
 
 ### Phase 3: E2E Testing with Playwright
 
@@ -114,10 +116,10 @@ Activate when:
 {"kind":"rule","id":"tailwind_integration","text":"Dioxus 0.7 has automatic Tailwind integration. Use asset!(\"/assets/tailwind.css\") via document::Stylesheet and run dx serve."}
 {"kind":"rule","id":"async_patterns","text":"Use use_resource for async state. Use use_server_future for hydration-safe data. Avoid waterfalls."}
 {"kind":"rule","id":"e2e_wait_for_rebuild","text":"Always waitForNoRebuildOverlay before any Playwright interaction or assertion."}
-{"kind":"tool","name":"dioxus-agent-rs","path":"~/.local/src/dioxus-agent-rs/target/release/dioxus-agent-rs","desc":"Pure-Rust WebDriver CLI for Dioxus automation using fantoccini."}
+{"kind":"tool","name":"dioxus-agent-rs","path":"~/src/dioxus-agent-rs/target/release/dioxus-agent-rs","desc":"Pure-Rust CDP-first CLI for Dioxus automation. Auto-waits for hydrated app DOM by default and rejects rebuild shell pages."}
 {"kind":"workflow","id":"dioxus_dev","steps":["Identify state container (Signal vs Store)","Define props using ReadSignal","Implement UI with rsx! macro","Style with Tailwind class strings","Add async data with use_resource"]}
 {"kind":"cmd","group":"cli","commands":{"dx new":"Create new project","dx serve":"Start dev server with hot-reload","dx bundle":"Build for production","dx translate":"Convert HTML to RSX"}}
-{"kind":"cmd","group":"debugging","commands":{"dioxus-agent-rs dom":"Read UI state","dioxus-agent-rs screenshot":"Take screenshot","dioxus-agent-rs click":"Click element","dioxus-agent-rs repl":"Interactive REPL"}}
+{"kind":"cmd","group":"debugging","commands":{"dioxus-agent-rs --url URL dom":"Read hydrated UI state","dioxus-agent-rs --url URL screenshot PATH":"Take screenshot","dioxus-agent-rs --url URL click SELECTOR":"Click element","dioxus-agent-rs --url URL --no-auto-wait dom":"Bypass readiness wait for negative tests"}}
 {"kind":"ref","file":"reference.md","use":"API signatures and core mechanics"}
 {"kind":"ref","file":"fullstack.md","use":"Server functions and streaming"}
 {"kind":"ref","file":"templates.md","use":"Ready-to-use boilerplate"}
@@ -134,6 +136,10 @@ Activate when:
 ### Issue: Test times out waiting for element
 **Cause**: Rebuild overlay is blocking interaction
 **Solution**: Always call waitForNoRebuildOverlay before interaction
+
+### Issue: Agent sees Dioxus rebuild shell
+**Cause**: The app URL is wrong, the app is still rebuilding, or the compile-time base path is missing
+**Solution**: Start with the correct base path, pass the full base-path URL to `--url`, and keep default auto-wait enabled
 
 ### Issue: Scene loading fails
 **Cause**: Not waiting for rebuild after scene import

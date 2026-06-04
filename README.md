@@ -147,10 +147,9 @@ AI agents do the work. Deterministic tools, adversarial reviewers, raw command e
 
 | Skill | What it does | Use it when |
 | --- | --- | --- |
-| `rust-contract` | Produces contracts, invariants, traceability, TLA+/Verus-first proof obligations, and BDD plans before implementation. | Behavior must be specified before code or tests are written. |
-| `contract-verification-reviewer` | Independently approves or rejects contract and verification-layer artifacts before tests or implementation. | You need to know whether the contract/proof plan is strong enough to build against. |
-| `proof-planner` | Chooses risk-triggered verifier lanes and writes proof obligation planning artifacts. | You need to decide whether TLA+, Verus, Kani, Flux, Loom, Miri, proptest, fuzz, or CI gates matter. |
-| `proof-writer` | Writes verification artifacts only: TLA+ specs, Verus proofs, Kani harnesses, Flux refinements, Loom models, Miri checks, proptest properties, and fuzz targets. | A reviewed proof plan needs concrete proof/model/harness files. |
+| `rust-contract` | Produces contracts, invariants, traceability, core Rust proof seeds, and BDD plans before implementation. | Behavior must be specified before code or tests are written. |
+| `proof-planner` | Chooses risk-triggered verifier lanes and writes proof obligation planning artifacts. | You need to decide whether Verus, Kani, Flux, Loom, proptest, fuzz, CI gates, or a specialist skill matter. |
+| `proof-writer` | Writes verification artifacts only: Verus proofs, Kani harnesses, Flux refinements, Loom models, proptest properties, fuzz targets, and explicitly scoped specialist artifacts. | A reviewed proof plan needs concrete proof/model/harness files. |
 | `proof-reviewer` | Ruthlessly rejects weak, vacuous, unmapped, or under-executed proof artifacts. | Proof artifacts exist and need adversarial review before tests, implementation, or landing. |
 | `formal-verifier` | Executes approved proof-obligation ledgers and records PASS, FAIL_LOCAL, FAIL_REGRESSION, WAIVED, or DEFERRED_GLOBAL evidence. | Proof obligations are approved and need actual verifier execution. |
 | `tla-plus` | Writes, reviews, and repairs TLA+/PlusCal specs, TLC models, invariants, liveness, and counterexample evidence. | The system has temporal behavior, protocols, schedulers, queues, retries, leases, or distributed workflows. |
@@ -158,7 +157,7 @@ AI agents do the work. Deterministic tools, adversarial reviewers, raw command e
 | `kani` | Designs and triages Kani bounded model checking harnesses for Rust execution paths. | You need bounded proof of arithmetic, indexing, parser, codec, state-machine, panic, or unsafe precondition behavior. |
 | `flux-rs` | Uses Flux refinement types for Rust invariants, signatures, predicates, and trusted boundary review. | Type-level refinements can make data constraints mechanically checked. |
 | `loom` | Models Rust concurrency interleavings with Loom and related schedule exploration. | Atomics, locks, cancellation, task coordination, or concurrent state machines need deterministic schedule pressure. |
-| `miri` | Runs and interprets Miri for unsafe Rust, provenance, aliasing, invalid values, leaks, and UB diagnostics. | You need UB detection evidence, especially around unsafe-adjacent or platform-sensitive Rust. |
+| `miri` | Runs and interprets Miri for unsafe Rust, provenance, aliasing, invalid values, leaks, and UB diagnostics. | You need conditional specialist UB evidence, especially around unsafe-adjacent or platform-sensitive Rust. |
 
 ### Rust Engineering, Performance, And Build Discipline
 

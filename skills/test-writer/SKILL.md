@@ -21,7 +21,7 @@ Read `references/rust-test-ecosystem.md` for implementation patterns.
 **Fowler**: Test behaviors, not methods. Test via public API. Tests survive refactoring.
 **North**: Every test name is a sentence. Given-When-Then structure in every test.
 **Farley**: Tests drive design quality. Difficulty writing a test exposes bad design.
-**Beck**: One logical assertion per test. DAMP over DRY. No logic in tests. **Write a LOT
+**Beck**: One proven behavior per test. DAMP over DRY. Test logic is allowed when it expands bounded coverage without weakening assertions. **Write a LOT
 of unit tests.** Unit tests are fast, precise, and give surgical feedback when they fail.
 **Google SWE Book**: Prefer real implementations. Test state not interactions. Fakes > Stubs > Mocks.
 **Testing Trophy**: Integration tests are the widest layer AND unit tests must be exhaustive.
@@ -59,11 +59,13 @@ Before writing a single test:
    existing `tests/` directory, any `#[cfg(test)]` modules.
 
 4. Identify the test layers needed:
-   - Calc layer pure functions → inline `#[cfg(test)]` unit tests
-   - Component boundary behaviors → `/tests/` integration tests
-   - Parsers/deserializers → fuzz targets
-   - Critical invariants → Kani harnesses
-   - Pure functions with multiple inputs → proptest
+    - Calc layer pure functions → inline `#[cfg(test)]` unit tests
+    - Component boundary behaviors → `/tests/` integration tests
+    - Parsers/deserializers → fuzz targets
+    - Critical invariants → Kani harnesses
+    - Pure functions with multiple inputs → proptest
+
+   Kani/proof harnesses do not replace behavior tests. When a proof-to-implementation map exists, write executable tests against production APIs that would fail if the production behavior were deleted or the proof harness were disconnected.
 
 ---
 
@@ -74,10 +76,11 @@ Work in this order. Do not skip layers.
 ### Layer 0: Compile-Time Verification
 
 ```bash
-cargo clippy --all-targets --all-features -- -D warnings 2>&1
+cargo clippy --workspace --all-features -- -D warnings 2>&1
+cargo test --all-features --no-run 2>&1
 ```
 
-Fix all warnings first. Clippy catches real bugs, not just style.
+Fix production/source warnings and compile failures first. Test implementation style warnings are not a gate.
 
 ### Layer 1: Unit Tests (Calc Layer)
 
@@ -158,7 +161,8 @@ Add `rstest` to dev-dependencies: `rstest = "0.26.1"`
 - `result.is_ok()` without asserting the inner value → **REJECTED**
 - `result.is_err()` without asserting the error variant → **REJECTED**
 - `assert!(something)` on a complex expression → **REJECTED**
-- Tests with conditional logic (`if`, `match`, loops) → **REJECTED**
+
+Loops, `if`/`match`, table-driven cases, helper functions, and local mutability in tests are allowed when they expand coverage and every case has sharp assertions. Reject only logic that skips assertions, hides which case failed, or creates nondeterminism.
 
 ### Layer 2: Integration Tests (`/tests/`)
 
@@ -312,11 +316,12 @@ criterion_main!(benches);
 
 After writing all tests, run each gate in sequence. Do NOT skip any.
 
-### Gate 1: Compilation + Lint
+### Gate 1: Source Lint + Test Compile
 ```bash
-cargo clippy --all-targets --all-features -- -D warnings 2>&1
+cargo clippy --workspace --all-features -- -D warnings 2>&1
+cargo test --all-features --no-run 2>&1
 ```
-Must produce zero warnings. Fix all before proceeding.
+Source clippy must produce zero warnings, and tests must compile. Test clippy/style warnings are not failures.
 
 ### Gate 2: Tests Pass (with TDD Guard)
 ```bash
@@ -369,9 +374,9 @@ After writing tests and before declaring done, audit your own suite with these q
 - [ ] Every `if` branch in the implementation is exercised
 - [ ] Every `match` arm is covered
 
-**Quality gates:**
+**Effectiveness gates:**
 - [ ] Zero tests asserting only `is_ok()` or `is_err()`
-- [ ] Zero tests with conditional logic inside
+- [ ] Zero test logic that skips assertions, hides failed cases, or creates nondeterminism
 - [ ] Zero tests that would pass if the function returned a hardcoded value
 - [ ] Every test name reads as a behavior description, not a method name
 - [ ] Every test body is self-contained (DAMP)
@@ -404,7 +409,6 @@ These patterns make the test suite a liability. Reject them in your own code and
 | `sleep(Duration::from_secs(1))` | Flaky, slow | Use channels, callbacks, or event polling |
 | `#[ignore]` test | It's broken and you know it | Fix the test or delete the feature |
 | Shared mutable state across tests | Nondeterministic | Each test creates its own state |
-| Test named `test_foo` | Meaningless on failure | `foo_returns_x_when_y` |
 | Test that passes with empty implementation | No real assertion | Add assertion on actual value |
 | Interaction test on a query function | Brittle | Test the state that the query returns |
 
@@ -429,7 +433,8 @@ When all gates pass, output:
 - TOTAL tests executed: N
 
 ### Gate Results
-- [x] Clippy: 0 warnings
+- [x] Source clippy: 0 warnings
+- [x] Test compile: pass
 - [x] nextest: N passed, 0 failed
 - [x] Mutation kill rate: X% (target ≥90%)
 - [x] Line coverage: X% overall (target ≥90%), X% Calc layer (target ≥95%)

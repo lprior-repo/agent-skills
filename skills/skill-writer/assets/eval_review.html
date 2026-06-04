@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trigger Eval Review</title>
+  <style>
+    body { font-family: system-ui, sans-serif; margin: 2rem; background: #f8fafc; color: #17202a; }
+    table { width: 100%; border-collapse: collapse; background: white; }
+    th, td { border: 1px solid #d9e2ec; padding: 0.6rem; text-align: left; vertical-align: top; }
+    th { background: #102a43; color: white; }
+    pre { white-space: pre-wrap; }
+    .pass { color: #2f7d46; font-weight: 700; }
+    .fail { color: #a33b34; font-weight: 700; }
+  </style>
+</head>
+<body>
+  <h1>Trigger Eval Review: __SKILL_NAME_PLACEHOLDER__</h1>
+  <p><strong>Description:</strong> __SKILL_DESCRIPTION_PLACEHOLDER__</p>
+  <table>
+    <thead><tr><th>Query</th><th>Expected</th><th>Detected</th><th>Result</th></tr></thead>
+    <tbody id="rows"></tbody>
+  </table>
+  <script>
+    const EVAL_DATA = __EVAL_DATA_PLACEHOLDER__;
+    function esc(value) { const div = document.createElement("div"); div.textContent = value == null ? "" : String(value); return div.innerHTML; }
+    document.getElementById("rows").innerHTML = (EVAL_DATA.records || []).map(function(row) {
+      const ok = row.expected === row.detected;
+      return "<tr><td><pre>" + esc(row.query) + "</pre></td><td>" + esc(row.expected) + "</td><td>" + esc(row.detected) + "</td><td class='" + (ok ? "pass" : "fail") + "'>" + (ok ? "PASS" : "FAIL") + "</td></tr>";
+    }).join("");
+  </script>
+</body>
+</html>

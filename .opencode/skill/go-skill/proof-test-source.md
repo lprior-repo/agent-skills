@@ -6,9 +6,7 @@ Behavior-affecting proof claims need a closed chain:
 
 ## Non-Negotiable Rules
 
-- TLA+ approval is not Rust implementation evidence.
 - `rust-refinement-obligations.jsonl` uses `rust-refinement-obligation/v1` from `references/proof-schemas.md`.
-- `proof_claim_ref` is canonical; `tla_action_or_invariant` is not required.
 - State 7 may use `mapping_status: planned`; State 12 rejects `planned`.
 - `source_refs` must be concrete `path::symbol` refs.
 - `behavior_test_refs` must be independent executable behavior checks.
@@ -42,7 +40,6 @@ Behavior-affecting proof claims need a closed chain:
 
 ## Closure Failures
 
-- `E_TLA_NO_RUST_BRIDGE`
 - `E_BRIDGE_REFS_NOT_DISJOINT`
 - `E_SOURCE_REF_SHAPE`
 - `E_MAPPING_PLANNED_AT_CLOSURE`

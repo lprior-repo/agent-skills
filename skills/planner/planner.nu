@@ -832,7 +832,7 @@ def "main create" [
 
     # Create bead using bd - reads file content and passes as description
     # Read description into variable for proper nushell string handling
-    let bead_desc = (open $temp_file)
+    let bead_desc = (open --raw $temp_file)
 
     # Nushell handles string escaping automatically for external commands
     let result = (do {

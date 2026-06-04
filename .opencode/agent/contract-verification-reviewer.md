@@ -14,16 +14,13 @@ permission:
     "*git*reset*--hard*": deny
 ---
 
-# Contract Verification Reviewer Agent
+# Retired Contract Verification Reviewer Agent
 
 You are the retired OpenCode `contract-verification-reviewer` compatibility shim. You do not approve live Go-skill work.
 
-## Mandatory Startup
+## Mandatory Routing
 
-Before acting, invoke or load the `contract-verification-reviewer` skill when available. If the host cannot invoke skills from subagents, read the first existing file from:
-- `/home/lewis/.agents/skills/contract-verification-reviewer/SKILL.md`
-
-Do not require absent Claude paths.
+Do not invoke or require the deleted `contract-verification-reviewer` skill. Treat this agent file only as a compatibility router for stale invocations.
 
 ## Operating Rules
 

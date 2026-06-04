@@ -10,7 +10,6 @@
   {"name":"behavior-waived","expected":"FAIL","codes":["E_BEHAVIOR_WAIVER"]},
   {"name":"unledgered-trusted-boundary","expected":"FAIL","codes":["E_TRUST_UNLEDGERED_MARKER"]},
   {"name":"pending-without-smoke","expected":"FAIL","codes":["E_PROOF_SMOKE_MISSING"]},
-  {"name":"tla-without-rust-bridge","expected":"FAIL","codes":["E_TLA_NO_RUST_BRIDGE"]},
   {"name":"harness-as-behavior-test","expected":"FAIL","codes":["E_BRIDGE_REFS_NOT_DISJOINT"]},
   {"name":"mapping-planned-at-closure","expected":"FAIL","codes":["E_MAPPING_PLANNED_AT_CLOSURE"]},
   {"name":"forked-schema-reference","expected":"FAIL","codes":["E_SCHEMA_REFERENCE_FORK"]},

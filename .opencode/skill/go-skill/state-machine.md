@@ -30,9 +30,9 @@ Do not renumber states. Validator output beats Markdown. Work happens in the iso
 ## Hard Routing Rules
 
 - Every failed gate has at most 7 attempts and must route to the nearest invalidated state.
-- `proof-plan-reviewer` replaces pre-proof `contract-verification-reviewer` duties.
-- `proof-reviewer` replaces post-proof contract/proof adequacy review.
-- `proof-to-implementation` owns State 7 bridge mapping artifacts; `proof-reviewer` owns the bridge review approval; TLA+ is not Rust evidence.
+- `proof-plan-reviewer` owns pre-proof plan review.
+- `proof-reviewer` owns post-proof artifact and bridge review.
+- `proof-to-implementation` owns State 7 bridge mapping artifacts; `proof-reviewer` owns the bridge review approval.
 - `test-reviewer` reviews behavior tests only.
 - Behavior-affecting waivers are forbidden.
 - Verifier harnesses are never behavior tests.

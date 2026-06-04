@@ -86,6 +86,14 @@ Bundled helpers are available when local files can be executed:
 - `scripts/aggregate_benchmark.py` aggregates `grading.json` artifacts.
 - `eval-viewer/generate_review.py` creates a local review UI for outputs and feedback.
 
+### 5a. GEPA-Style Skill Optimization
+
+When the user asks to optimize, learn, evolve, or GEPA-tune skills, prompts, review rubrics, harness components, or trigger descriptions, read `references/gepa-skill-optimization.md` and use the local GEPA site mirror only as targeted reference material.
+
+Prefer GEPA `optimize_anything` when one evaluator can score a text artifact. Use a full `GEPAAdapter` pattern only when the run needs batched evaluation, custom trajectory capture, per-component reflective datasets, or persisted adapter state. Treat skill components as `candidate: dict[str, str]`, eval prompts as task inputs, transcripts/tool output as trajectories, and grading results as rollout outputs.
+
+Capture Actionable Side Information from real traces: selected skills, transcripts, command output, changed files, reviewer findings, timing/token/cost when available, and final pass/fail. Return per-task failure scores instead of hiding errors, and expose multi-objective scores for task success, trigger accuracy, evidence strength, safety, minimality, cost, and latency when measured.
+
 ### 6. Grade and Analyze
 
 Grade each run against expectations using evidence from transcripts and output files. A pass requires real task completion, not surface compliance. Also extract claims made by the executor and verify them where possible.
@@ -165,5 +173,8 @@ Additional resources for progressive disclosure:
 - [templates.md](templates.md)
 - [checklist.md](checklist.md)
 - [examples.md](examples.md)
+- [references/gepa-adapter-guide.md](references/gepa-adapter-guide.md)
+- [references/gepa-skill-optimization.md](references/gepa-skill-optimization.md)
+- [references/gepa-site/README.md](references/gepa-site/README.md)
 - [scripts/](scripts/)
 - [eval-viewer/](eval-viewer/)

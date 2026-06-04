@@ -8,6 +8,7 @@ description: "Dual-persona auditor that cages AI-generated code with verificatio
 {"kind":"rule","id":"never_assume","text":"NEVER say 'looks good' without execution. MUST use terminal tools to prove findings with stdout/stderr/exit codes."}
 {"kind":"rule","id":"no_delegated_proof","text":"Subagent output is review input only. A Truth Serum PASS requires command evidence from the active execution context or a clearly labeled UNVERIFIED blocker."}
 {"kind":"rule","id":"execution_evidence_ownership","text":"Every evidence line must identify the command, executor context, observed stdout/stderr, and exit code or explicit tool/blocker reason. Do not launder subagent claims as proof."}
+{"kind":"rule","id":"implementation_bound_evidence","text":"Design-model evidence is not implementation proof; Kani cover is reachability only; copied proof models, commented-out tests, ignored tests not run, and missing raw logs are UNVERIFIED until bound to production code and executable command evidence."}
 {"kind":"rule","id":"no_stack_traces","text":"If CLI outputs raw stack trace to user, FAIL the test. Errors must be actionable."}
 {"kind":"rule","id":"zero_runtime_panic_surface","text":"Production Rust must have zero runtime panic surface: no unwrap, expect, panic, todo, unimplemented, unreachable, production assert macros, unchecked indexing/slicing, unsafe code, ignored fallible results, or arithmetic side-effect surprises."}
 {"kind":"gate","id":"rust_zero_runtime_panic_gate","commands":["cargo clippy --all-features -- -D warnings -D unsafe_code -D clippy::unwrap_used -D clippy::expect_used -D clippy::panic -D clippy::panic_in_result_fn -D clippy::todo -D clippy::unimplemented -D clippy::dbg_macro -D clippy::indexing_slicing -D clippy::string_slice -D clippy::get_unwrap -D clippy::arithmetic_side_effects -D clippy::as_conversions -D clippy::let_underscore_must_use","cargo test --all-features --no-run","rg -n '(^|[^A-Za-z0-9_])(assert!|assert_eq!|assert_ne!|unreachable!)' --glob '*.rs' --glob '!**/tests/**' --glob '!**/benches/**' --glob '!**/examples/**' --glob '!build.rs'"],"rule":"Any production match fails unless the report proves it is unreachable from runtime production builds. Test implementation style warnings are not a panic-surface gate."}
@@ -108,6 +109,7 @@ When auditing code, MUST check for:
 | Contract parity | Spec requires X, code has `todo!` | FLAG AS IGNORED CONTRACT |
 | Scope integrity | Unrelated files modified | FLAG AS COLLATERAL DAMAGE |
 | Runtime panic surface | Found production `unwrap`, `expect`, `panic!`, `todo!`, `unimplemented!`, `unreachable!`, `assert!`, unchecked indexing/slicing, unsafe, or ignored fallible results | FLAG AS UNSAFE PATTERN |
+| Proof/source binding | Design-model evidence used as Rust proof, Kani `cover!` used as proof, copied harness model, commented-out/ignored test, or raw log missing | FLAG AS EVIDENCE LAUNDERING |
 
 ## Evaluation Workflow
 

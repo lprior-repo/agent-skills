@@ -1,6 +1,6 @@
 ---
 name: architectural-drift
-description: "Runbook for checking architectural drift, enforcing <300 line files, and applying Scott Wlaschin DDD principles."
+description: "Runbook for checking architectural drift, enforcing under 300 line files, and applying Scott Wlaschin DDD principles."
 ---
 
 # Architectural Drift Protocol

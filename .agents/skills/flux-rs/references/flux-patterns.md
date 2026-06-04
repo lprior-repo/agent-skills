@@ -134,7 +134,7 @@ enum MyOption<T> {
 }
 ```
 
-Refined enums are good for parser outcomes, validated/unvalidated modes, and small protocol-like state machines. Use TLA+ instead when the property is temporal, distributed, or scheduling-dependent.
+Refined enums are good for parser outcomes, validated/unvalidated modes, and small protocol-like state machines. Use a dedicated temporal or interleaving model instead when the property is temporal, distributed, or scheduling-dependent.
 
 ## Vector Length Facts
 
@@ -261,7 +261,7 @@ Flux does not provide native async data-fetching or lifecycle models. Use a trus
 async/network/database adapter -> thin trusted or extern boundary -> verified parser/state transition/core function
 ```
 
-If the correctness property is about ordering, retries, cancellation, fairness, leases, or eventuality, model it with TLA+ or an interleaving tool rather than Flux alone.
+If the correctness property is about ordering, retries, cancellation, fairness, leases, or eventuality, use a dedicated temporal or interleaving model rather than Flux alone.
 
 ## Anti-Patterns
 

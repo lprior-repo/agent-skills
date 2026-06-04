@@ -1,8 +1,6 @@
 ---
 name: holzman-rust
 description: "OpenCode skill bridge for NASA/JPL Power-of-Ten Rust implementation, repair, review, and performance work. Uses the canonical Holzman Rust doctrine mirrored in ~/.agents and ~/.claude."
-argument-hint: "[target path, crate, diff, bead id, or optimization goal]"
-agent: holzman-rust
 allowed-tools:
   - read
   - grep

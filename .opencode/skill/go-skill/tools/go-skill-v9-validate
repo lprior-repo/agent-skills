@@ -76,7 +76,8 @@ INDEPENDENT_REVIEW_FILES = {
     "final-evidence-decision.md": "evidence-packaging",
 }
 
-CORE_VERIFIERS = {"tla-plus", "verus", "kani", "flux-rs", "loom", "miri", "proptest", "cargo-fuzz"}
+DEFAULT_RUST_VERIFIERS = {"verus", "kani", "flux-rs", "proptest"}
+VALID_VERIFIERS = DEFAULT_RUST_VERIFIERS | {"loom", "miri", "cargo-fuzz"}
 DISCOVERY_AGENT_FILES = [
     "architectural-drift.md",
     "black-hat-reviewer.md",
@@ -101,7 +102,6 @@ DISCOVERY_AGENT_FILES = [
     "test-planner.md",
     "test-writer.md",
     "test-reviewer.md",
-    "tla-plus.md",
     "truth-serum.md",
     "verus.md",
 ]
@@ -109,6 +109,14 @@ LEDGER_RESULTS = {"PASS", "FAIL_LOCAL", "FAIL_REGRESSION", "FAIL_GLOBAL", "WAIVE
 SOURCE_REF = re.compile(r"^[A-Za-z0-9_./-]+::[A-Za-z0-9_:.-]+$")
 STATUS = re.compile(r"^\s*(?:#+\s*)?(?:\*\*)?\s*STATUS:\s*(APPROVED|PASS|REJECTED|FAIL|UNVERIFIED)\b", re.M)
 TRUST_RE = re.compile(r"\b(assume|ASSUME|axiom|admit|sorry|trusted|external_body|ignore|stub|disabled_check)\b")
+CONFLICT_RE = re.compile(r"^(<<<<<<<|=======|>>>>>>>)", re.M)
+KANI_COVER_RE = re.compile(r"\bkani::cover!\s*\(")
+KANI_ASSERT_TRUE_RE = re.compile(r"\b(?:kani::assert\s*\(\s*true|assert!\s*\(\s*true)")
+KANI_MEANINGFUL_RE = re.compile(r"\b(?:kani::assert|assert!|assert_eq!|assert_ne!|ensures|requires|postcondition|invariant)\b")
+BEHAVIOR_TEST_FORBIDDEN_RE = re.compile(r"(?:^|/)(verification|proofs?)/|\b(kani|verus|flux|loom|miri)\b", re.I)
+CONCURRENCY_RE = re.compile(r"\b(concurrency|concurrent|interleaving|atomic|lock|mutex|channel|shutdown|cancel|cancellation|task|spawn|thread|race)\b", re.I)
+UNSAFE_RE = re.compile(r"\b(unsafe|ffi|layout|alias|aliasing|provenance|raw[ -]?pointer|maybeuninit|ub|undefined behavior|invalid value)\b", re.I)
+FUZZ_RE = re.compile(r"\b(parser|parse|codec|decode|deserialize|hostile input|payload|ipc|storage|persisted|yaml|binary|wire|canonicalization)\b", re.I)
 
 PROOF_SEED_FIELDS = {"schema_version", "id", "requirement_id", "contract_clause", "domain_claim", "risk_tags", "suggested_layers", "behavior_affecting", "model_boundary", "notes"}
 LANE_FIELDS = {"schema_version", "id", "requirement_id", "contract_clause", "proof_seed_id", "verifier", "risk_tags", "applicability", "decision_reason", "required_obligation_ids", "non_applicability_evidence_refs", "limitation_kind", "owner_state", "status"}
@@ -270,7 +278,44 @@ def artifact_path(root: Path, value: Any) -> Path | None:
         return p
     if value.startswith(".beads/"):
         return root.parent.parent / p
-    return root / p
+    candidate = root / p
+    if candidate.exists():
+        return candidate
+    workspace_candidate = root.parent.parent / p
+    if workspace_candidate.exists():
+        return workspace_candidate
+    return candidate
+
+
+def seed_text(row: dict[str, Any]) -> str:
+    values: list[str] = []
+    for key in ["requirement_id", "contract_clause", "domain_claim", "model_boundary", "notes"]:
+        value = row.get(key)
+        if isinstance(value, str):
+            values.append(value)
+    for key in ["risk_tags", "suggested_layers"]:
+        value = row.get(key)
+        if isinstance(value, list):
+            values.extend(str(v) for v in value)
+        elif isinstance(value, str):
+            values.append(value)
+    return " ".join(values)
+
+
+def required_verifiers_for_seed(seed: dict[str, Any]) -> set[str]:
+    haystack = seed_text(seed)
+    required: set[str] = set()
+    if seed.get("behavior_affecting") is True:
+        required.update(DEFAULT_RUST_VERIFIERS)
+    if CONCURRENCY_RE.search(haystack):
+        required.add("loom")
+    if UNSAFE_RE.search(haystack):
+        required.add("miri")
+    if FUZZ_RE.search(haystack):
+        required.add("cargo-fuzz")
+    if not required:
+        required.update(DEFAULT_RUST_VERIFIERS)
+    return required
 
 
 def expected_hash_for(hashes: Any, rel: Any, index: int) -> Any:
@@ -356,10 +401,27 @@ def check_review_provenance(root: Path, invocations: list[dict[str, Any]], findi
             findings.append(Finding("E_INVOCATION_LEDGER_FORGED", rel, "invocation row skill/status mismatch"))
 
 
+def check_conflict_markers(root: Path, findings: list[Finding]) -> None:
+    if not root.exists():
+        return
+    suffixes = {".md", ".json", ".jsonl", ".rs", ".tla", ".cfg", ".toml", ".yaml", ".yml"}
+    for p in root.rglob("*"):
+        if not p.is_file() or p.suffix.lower() not in suffixes:
+            continue
+        try:
+            body = text(p)
+        except OSError:
+            continue
+        if CONFLICT_RE.search(body):
+            findings.append(Finding("E_CONFLICT_MARKER", str(p.relative_to(root)), "merge conflict marker in evidence artifact"))
+
+
 def check_lane_decisions(root: Path, state: int, invocations: list[dict[str, Any]], findings: list[Finding]) -> None:
     seeds = jsonl(root / "proof-seeds.jsonl", findings)
     lanes = jsonl(root / "verifier-lane-decisions.jsonl", findings)
     reviews = jsonl(root / "verifier-lane-review.jsonl", findings)
+    obligations = jsonl(root / "proof-obligations.planned.jsonl", findings)
+    obligations_by_id = {row.get("id"): row for row in obligations}
     check_fields(seeds, PROOF_SEED_FIELDS, "proof-seed/v1", root / "proof-seeds.jsonl", findings)
     check_fields(lanes, LANE_FIELDS, "verifier-lane-decision/v1", root / "verifier-lane-decisions.jsonl", findings)
     check_fields(reviews, LANE_REVIEW_FIELDS, "verifier-lane-review/v1", root / "verifier-lane-review.jsonl", findings)
@@ -375,6 +437,17 @@ def check_lane_decisions(root: Path, state: int, invocations: list[dict[str, Any
         active.add(key)
         if row.get("applicability") == "required" and not row.get("required_obligation_ids"):
             findings.append(Finding("E_LANE_DECISION_WEAK", "verifier-lane-decisions.jsonl", "required lane has no obligation IDs", idx))
+        if row.get("verifier") not in VALID_VERIFIERS:
+            findings.append(Finding("E_LANE_DECISION_WEAK", "verifier-lane-decisions.jsonl", f"unknown verifier {row.get('verifier')}", idx))
+        if row.get("applicability") == "required" and isinstance(row.get("required_obligation_ids"), list):
+            for obligation_id in row.get("required_obligation_ids", []):
+                obligation = obligations_by_id.get(obligation_id)
+                if not obligation:
+                    findings.append(Finding("E_LANE_OBLIGATION_MISSING", "verifier-lane-decisions.jsonl", f"required obligation {obligation_id} does not exist", idx))
+                    continue
+                for field in ["requirement_id", "contract_clause", "verifier"]:
+                    if obligation.get(field) != row.get(field):
+                        findings.append(Finding("E_LANE_OBLIGATION_MISMATCH", "verifier-lane-decisions.jsonl", f"obligation {obligation_id} {field} mismatch", idx))
         if row.get("applicability") == "not_applicable" and not row.get("non_applicability_evidence_refs"):
             findings.append(Finding("E_LANE_DECISION_WEAK", "verifier-lane-decisions.jsonl", "not_applicable needs evidence refs", idx))
         if row.get("applicability") == "blocked_tooling" and state >= 4:
@@ -397,7 +470,7 @@ def check_lane_decisions(root: Path, state: int, invocations: list[dict[str, Any
         if not inv or inv.get("skill") != "proof-plan-reviewer" or inv.get("status") != "completed":
             findings.append(Finding("E_INVOCATION_LEDGER_MISSING", "verifier-lane-review.jsonl", "missing completed proof-plan-reviewer invocation", idx))
     for seed in seeds:
-        for verifier in CORE_VERIFIERS:
+        for verifier in required_verifiers_for_seed(seed):
             key = (seed.get("requirement_id"), seed.get("contract_clause"), seed.get("id"), verifier)
             if key not in active and state >= 4:
                 findings.append(Finding("E_LANE_DECISION_MISSING", "verifier-lane-decisions.jsonl", f"missing lane decision {key}"))
@@ -466,6 +539,36 @@ def check_blocked_tooling(root: Path, state: int, obligations: list[dict[str, An
                 findings.append(Finding("E_BLOCKED_TOOLING_ADVANCE", str(rel), "proof artifact contains BLOCKED_TOOLING blocker"))
 
 
+def iter_refs(value: Any) -> list[Any]:
+    if isinstance(value, list):
+        return value
+    if value in (None, ""):
+        return []
+    return [value]
+
+
+def check_kani_artifacts(root: Path, obligations: list[dict[str, Any]], findings: list[Finding]) -> None:
+    for idx, row in enumerate(obligations, 1):
+        if row.get("verifier") != "kani":
+            continue
+        refs = iter_refs(row.get("artifact")) + iter_refs(row.get("target"))
+        saw_artifact = False
+        saw_meaningful = False
+        saw_cover = False
+        for ref in refs:
+            p = artifact_path(root, ref)
+            if not p or not p.is_file():
+                continue
+            saw_artifact = True
+            body = text(p)
+            saw_cover = saw_cover or bool(KANI_COVER_RE.search(body))
+            saw_meaningful = saw_meaningful or bool(KANI_MEANINGFUL_RE.search(body))
+            if KANI_ASSERT_TRUE_RE.search(body):
+                findings.append(Finding("E_KANI_ASSUMPTION_VACUITY", str(ref), "Kani artifact contains assert(true)-style proof theater"))
+        if row.get("behavior_affecting") is True and saw_artifact and saw_cover and not saw_meaningful:
+            findings.append(Finding("E_KANI_COVER_ONLY", "proof-obligations.planned.jsonl", "behavior-affecting Kani obligation is satisfied only by cover! reachability", idx))
+
+
 def check_rro(root: Path, state: int, findings: list[Finding]) -> list[dict[str, Any]]:
     rows = jsonl(root / "rust-refinement-obligations.jsonl", findings)
     check_fields(rows, RRO_FIELDS, "rust-refinement-obligation/v1", root / "rust-refinement-obligations.jsonl", findings)
@@ -474,14 +577,49 @@ def check_rro(root: Path, state: int, findings: list[Finding]) -> list[dict[str,
         tests = row.get("behavior_test_refs", [])
         harnesses = row.get("refinement_harness_refs", [])
         if row.get("behavior_affecting") is True and not tests:
-            findings.append(Finding("E_TLA_NO_RUST_BRIDGE", "rust-refinement-obligations.jsonl", "behavior-affecting row lacks behavior tests", idx))
+            findings.append(Finding("E_PROOF_TO_RUST_MISSING", "rust-refinement-obligations.jsonl", "behavior-affecting row lacks behavior tests", idx))
+        if row.get("behavior_affecting") is True and not harnesses:
+            findings.append(Finding("E_REFINEMENT_HARNESS_MISSING", "rust-refinement-obligations.jsonl", "behavior-affecting row lacks separate refinement harness refs", idx))
+        if isinstance(tests, list):
+            for test_ref in tests:
+                if not isinstance(test_ref, str) or BEHAVIOR_TEST_FORBIDDEN_RE.search(test_ref):
+                    findings.append(Finding("E_BEHAVIOR_TEST_NOT_INDEPENDENT", "rust-refinement-obligations.jsonl", "behavior_test_refs must be independent executable behavior checks, not verifier harness refs", idx))
         if not isinstance(srcs, list) or not srcs or any(not isinstance(s, str) or not SOURCE_REF.match(s) for s in srcs):
             findings.append(Finding("E_SOURCE_REF_SHAPE", "rust-refinement-obligations.jsonl", "source_refs must be concrete path::symbol refs", idx))
         if isinstance(tests, list) and isinstance(harnesses, list) and set(tests).intersection(harnesses):
             findings.append(Finding("E_BRIDGE_REFS_NOT_DISJOINT", "rust-refinement-obligations.jsonl", "behavior tests overlap verifier harnesses", idx))
+        if state >= 12 and row.get("behavior_affecting") is True:
+            for field in ["evidence_command", "evidence_workdir", "evidence_artifact"]:
+                if row.get(field) in (None, "", []):
+                    findings.append(Finding("E_COMMAND_EVIDENCE_MISSING", "rust-refinement-obligations.jsonl", f"verified bridge row missing {field}", idx))
+            if row.get("mapping_status") != "verified":
+                findings.append(Finding("E_MAPPING_PLANNED_AT_CLOSURE", "rust-refinement-obligations.jsonl", "behavior-affecting bridge row not verified at closure", idx))
         if state >= 12 and row.get("mapping_status") == "planned":
             findings.append(Finding("E_MAPPING_PLANNED_AT_CLOSURE", "rust-refinement-obligations.jsonl", "planned bridge row at closure", idx))
     return rows
+
+
+def check_proof_to_rust_completeness(state: int, obligations: list[dict[str, Any]], rros: list[dict[str, Any]], findings: list[Finding]) -> None:
+    if state < 7:
+        return
+    rros_by_proof: dict[Any, list[dict[str, Any]]] = {}
+    for row in rros:
+        rros_by_proof.setdefault(row.get("proof_id"), []).append(row)
+    for idx, row in enumerate(obligations, 1):
+        if row.get("behavior_affecting") is not True:
+            continue
+        proof_id = row.get("id")
+        matches = rros_by_proof.get(proof_id, [])
+        if not matches:
+            findings.append(Finding("E_PROOF_TO_RUST_MISSING", "rust-refinement-obligations.jsonl", f"behavior-affecting proof obligation {proof_id} lacks Rust source/test/harness bridge", idx))
+            continue
+        for bridge in matches:
+            if bridge.get("requirement_id") != row.get("requirement_id") or bridge.get("contract_clause") != row.get("contract_clause"):
+                findings.append(Finding("E_PROOF_TO_RUST_MISMATCH", "rust-refinement-obligations.jsonl", f"bridge for {proof_id} does not preserve requirement/contract identity", idx))
+            if bridge.get("behavior_affecting") is not True:
+                findings.append(Finding("E_SCOPE_MISCLASSIFIED_BEHAVIOR", "rust-refinement-obligations.jsonl", f"bridge for behavior-affecting proof {proof_id} is not behavior_affecting", idx))
+            if bridge.get("verifier") != row.get("verifier"):
+                findings.append(Finding("E_PROOF_TO_RUST_MISMATCH", "rust-refinement-obligations.jsonl", f"bridge for {proof_id} verifier does not match proof obligation", idx))
 
 
 def check_waivers(root: Path, invocations: list[dict[str, Any]], findings: list[Finding]) -> dict[Any, tuple[dict[str, Any], str]]:
@@ -532,11 +670,13 @@ def check_waivers(root: Path, invocations: list[dict[str, Any]], findings: list[
     return formal_by_id
 
 
-def check_ledger(root: Path, state: int, formal_waivers: dict[Any, tuple[dict[str, Any], str]], findings: list[Finding]) -> None:
+def check_ledger(root: Path, state: int, formal_waivers: dict[Any, tuple[dict[str, Any], str]], obligations: list[dict[str, Any]], rros: list[dict[str, Any]], findings: list[Finding]) -> None:
     rows = jsonl(root / "verification-ledger.jsonl", findings)
     check_fields(rows, LEDGER_FIELDS, "verification-ledger/v1", root / "verification-ledger.jsonl", findings)
     seen_waiver_results: set[Any] = set()
+    rows_by_obligation: dict[Any, list[dict[str, Any]]] = {}
     for idx, row in enumerate(rows, 1):
+        rows_by_obligation.setdefault(row.get("obligation_id"), []).append(row)
         result = row.get("result")
         if result not in LEDGER_RESULTS:
             findings.append(Finding("E_LEDGER_RESULT_INVALID", "verification-ledger.jsonl", f"invalid result {result}", idx))
@@ -544,6 +684,9 @@ def check_ledger(root: Path, state: int, formal_waivers: dict[Any, tuple[dict[st
             for field in ["command", "workdir", "exit_status", "tool_version", "raw_log", "evidence_artifact", "formal_verifier_invocation_id"]:
                 if row.get(field) in (None, "", []):
                     findings.append(Finding("E_COMMAND_EVIDENCE_MISSING", "verification-ledger.jsonl", f"PASS row missing {field}", idx))
+            evidence = artifact_path(root, row.get("evidence_artifact"))
+            if not evidence or not evidence.is_file():
+                findings.append(Finding("E_COMMAND_EVIDENCE_MISSING", "verification-ledger.jsonl", "PASS row evidence_artifact is missing", idx))
         if result == "WAIVED":
             if row.get("behavior_affecting") is True:
                 findings.append(Finding("E_BEHAVIOR_WAIVER", "verification-ledger.jsonl", "behavior-affecting ledger waiver", idx))
@@ -567,6 +710,21 @@ def check_ledger(root: Path, state: int, formal_waivers: dict[Any, tuple[dict[st
     for waiver_id, (formal_row, _) in formal_waivers.items():
         if formal_row.get("status") == "approved" and waiver_id not in seen_waiver_results:
             findings.append(Finding("E_WAIVER_LIFECYCLE_INVALID", "formal-waivers.jsonl", f"approved waiver {waiver_id} lacks WAIVED ledger row"))
+    if state >= 12:
+        for row in obligations:
+            if row.get("required") is not True:
+                continue
+            ledger_rows = rows_by_obligation.get(row.get("id"), [])
+            if row.get("behavior_affecting") is True and not any(item.get("result") == "PASS" for item in ledger_rows):
+                findings.append(Finding("E_FORMAL_PENDING_AT_CLOSURE", "verification-ledger.jsonl", f"behavior-affecting proof obligation {row.get('id')} lacks PASS ledger evidence"))
+            elif not ledger_rows:
+                findings.append(Finding("E_FORMAL_PENDING_AT_CLOSURE", "verification-ledger.jsonl", f"required proof obligation {row.get('id')} lacks ledger evidence"))
+        for row in rros:
+            if row.get("required") is not True:
+                continue
+            ledger_rows = rows_by_obligation.get(row.get("id"), [])
+            if row.get("behavior_affecting") is True and not any(item.get("result") == "PASS" for item in ledger_rows):
+                findings.append(Finding("E_FORMAL_PENDING_AT_CLOSURE", "verification-ledger.jsonl", f"behavior-affecting Rust bridge obligation {row.get('id')} lacks PASS ledger evidence"))
 
 
 def check_alignment(root: Path, findings: list[Finding]) -> None:
@@ -661,19 +819,22 @@ def main() -> int:
     check_provenance(artifact_root, version, state_range, findings)
     invocations = invocation_rows(artifact_root, findings)
     check_review_provenance(artifact_root, invocations, findings)
+    check_conflict_markers(artifact_root, findings)
     check_deferred_global(artifact_root, findings)
 
     for rel in APPROVAL_FILES:
-        check_status(artifact_root, rel, findings, allow_pass=rel == "machine-gate-report.md")
+        check_status(artifact_root, rel, findings, allow_pass=rel in {"formal-verification-report.md", "refinement-verification-report.md"})
 
     check_lane_decisions(artifact_root, state, invocations, findings)
     proof_obligations = check_proof_obligations(artifact_root, findings)
+    check_kani_artifacts(artifact_root, proof_obligations, findings)
     check_trusted_base(artifact_root, state, findings)
     check_pending_smoke(artifact_root, findings)
     check_blocked_tooling(artifact_root, state, proof_obligations, findings)
-    check_rro(artifact_root, state, findings)
+    rros = check_rro(artifact_root, state, findings)
+    check_proof_to_rust_completeness(state, proof_obligations, rros, findings)
     formal_waivers = check_waivers(artifact_root, invocations, findings)
-    check_ledger(artifact_root, state, formal_waivers, findings)
+    check_ledger(artifact_root, state, formal_waivers, proof_obligations, rros, findings)
     check_alignment(artifact_root, findings)
     check_matrices(artifact_root, findings)
 

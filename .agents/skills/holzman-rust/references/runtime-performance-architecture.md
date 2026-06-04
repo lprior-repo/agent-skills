@@ -384,16 +384,15 @@ Pinned nightly gives more checking and performance options; it does not permit u
 [toolchain]
 channel = "nightly-YYYY-MM-DD"
 profile = "minimal"
-components = ["rustfmt", "clippy", "rust-src", "miri", "llvm-tools-preview"]
+components = ["rustfmt", "clippy", "rust-src", "llvm-tools-preview"]
 targets = ["x86_64-unknown-linux-gnu"]
 ```
 
 Allowed source features by default: `portable_simd` and `try_blocks`. `RUSTC_BOOTSTRAP`, arbitrary feature gates, specialization, and first-party `std::arch` intrinsics fail policy.
 
-Use Miri and sanitizers as extra verification, not as proof by themselves:
+Use sanitizers and dedicated UB tooling as extra verification, not as proof by themselves:
 
 ```bash
-cargo +nightly miri test --workspace --all-features
 RUSTFLAGS="-Zsanitizer=address" cargo +nightly test -Zbuild-std --target x86_64-unknown-linux-gnu
 RUSTFLAGS="-Zsanitizer=thread" cargo +nightly test -Zbuild-std --target x86_64-unknown-linux-gnu
 ```
@@ -482,7 +481,6 @@ cargo +nightly -Zallow-features=portable_simd,try_blocks check --workspace --all
 cargo +nightly -Zallow-features=portable_simd,try_blocks clippy --workspace --all-features -- -D warnings -D unsafe_code -D clippy::unwrap_used -D clippy::expect_used -D clippy::panic -D clippy::panic_in_result_fn -D clippy::todo -D clippy::unimplemented -D clippy::dbg_macro -D clippy::indexing_slicing -D clippy::string_slice -D clippy::get_unwrap -D clippy::arithmetic_side_effects -D clippy::as_conversions -D clippy::let_underscore_must_use -D clippy::await_holding_lock
 cargo +nightly nextest run --workspace --all-features
 cargo +nightly doc --workspace --all-features --no-deps
-cargo +nightly miri test --workspace --all-features
 if rg -n '(^|[^A-Za-z0-9_])(assert!|assert_eq!|assert_ne!|unreachable!)' --glob '*.rs' --glob '!**/tests/**' --glob '!**/benches/**' --glob '!**/examples/**' --glob '!build.rs'; then exit 1; else true; fi
 cargo audit
 cargo deny check

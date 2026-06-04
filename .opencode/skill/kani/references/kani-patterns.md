@@ -104,7 +104,6 @@ fn verify_machine_preserves_invariant_one_step() {
 Rules:
 
 - This checks one bounded implementation step, not temporal behavior over arbitrary traces.
-- For workflows, first model the design in TLA+ when lifecycle, fairness, retries, leases, or distributed coordination matter.
 - Use additional bounded trace harnesses only as implementation evidence, not as a replacement for temporal specs.
 
 ## Negative Harnesses

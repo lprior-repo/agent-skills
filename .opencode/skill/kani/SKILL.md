@@ -1,7 +1,6 @@
 ---
 name: kani
 description: "Kani bounded model checking skill for Rust. Use when writing, reviewing, repairing, or running Kani proof harnesses, `cargo kani`, `#[kani::proof]`, `kani::any`, `kani::assume`, `kani::cover`, `#[kani::unwind]`, `#[kani::should_panic]`, function contracts, stubs, bounded panic-freedom, arithmetic/index/state-transition verification, unsafe-code harnesses, or Kani counterexample triage."
-argument-hint: "[crate-or-harness] [cargo-kani-command]"
 allowed-tools:
   - Read
   - Write
@@ -18,10 +17,11 @@ Kani proves Rust proof harnesses by bounded symbolic execution over all modeled 
 {"kind":"meta","skill":"kani","version":"1.0.1","format":"markdown-with-embedded-jsonl"}
 {"kind":"mission","goal":"Write, review, and repair Kani harnesses without hidden bounds, vacuous assumptions, unreported stubs/contracts, unsupported-feature blind spots, or hallucinated cargo-kani output."}
 {"kind":"scope","owns":["Kani proof harnesses","cargo kani commands","harness inventory","symbolic inputs with kani::any and kani::bounded_any","assumption and cover discipline","loop unwinding bounds","panic/assertion/arithmetic/index checks","bounded state-transition checks","unsafe-code harness evidence","function contract harnesses","stubbing and verified stubbing audits","Kani counterexample and concrete-playback triage","kani-report.md evidence"]}
-{"kind":"scope","does_not_own":["TLA+ temporal or distributed design models","Verus proof bodies for Rust-local deductive proofs","Flux RS refinement annotations","Miri-only UB exploration","Loom/Shuttle/Stateright concurrency interleavings","runtime end-to-end CLI/API behavior","claiming unbounded whole-program correctness","inventing Kani output or tool availability"]}
+{"kind":"scope","does_not_own":["Verus proof bodies for Rust-local deductive proofs","Flux RS refinement annotations","UB-interpreter-only exploration","Loom/Shuttle/Stateright concurrency interleavings","runtime end-to-end CLI/API behavior","claiming unbounded whole-program correctness","inventing Kani output or tool availability"]}
 {"kind":"rule","id":"bounded_claims_only","text":"Kani is bounded model checking. State claims as verified for named harnesses under recorded input bounds, unwind bounds, assumptions, feature flags, and supported constructs. Never generalize bounded Vec/string/depth proofs beyond their bounds."}
 {"kind":"rule","id":"harness_inventory_first","text":"Every claim must map to named `#[kani::proof]` or `#[kani::proof_for_contract]` harnesses. Run or record `cargo kani list --format json` when available before claiming coverage."}
 {"kind":"rule","id":"assumptions_are_debt","text":"`kani::assume`, `kani::any_where`, contract `requires`, manual `Arbitrary`, and bounded generators shrink or shape the state space. Audit each one and require `kani::cover` or equivalent non-vacuity evidence for critical domains."}
+{"kind":"rule","id":"cover_not_proof","text":"`kani::cover!` is reachability/non-vacuity evidence only. It never proves safety, equality, injectivity, ordering, rejection, or field sensitivity without a corresponding `kani::assert`, contract postcondition, or checked panic/return property over production code."}
 {"kind":"rule","id":"unwind_is_proof_context","text":"Loop and recursion bounds are part of the proof. Any unwinding assertion failure, under-unwind workaround, timeout, `UNDETERMINED`, unsupported-feature warning, or resource exhaustion invalidates success for that obligation."}
 {"kind":"rule","id":"stubs_and_contracts_are_trust_boundaries","text":"Plain `#[kani::stub]` is an abstraction, not proof of equivalence. `#[kani::stub_verified]` requires separate successful contract harness evidence for the target. Report all stubs, contracts, modifies clauses, and feature flags separately from implementation checks."}
 {"kind":"rule","id":"unsafe_caveat","text":"Kani checks many modeled panic, arithmetic, bounds, and pointer-dereference failures, but it does not prove full Rust UB freedom, aliasing-model compliance, data-race freedom, ABI correctness, inline assembly, or concurrency correctness. Label unsafe residual risks explicitly."}
@@ -30,7 +30,7 @@ Kani proves Rust proof harnesses by bounded symbolic execution over all modeled 
 {"kind":"rule","id":"disabled_checks_are_blockers","text":"Kani flags that disable, skip, or weaken verification, including `--no-default-checks`, `--no-memory-safety-checks`, `--no-overflow-checks`, `--no-undefined-function-checks`, `--no-unwinding-checks`, `--no-assertion-reach-checks`, `--prove-safety-only`, `--only-codegen`, `--no-codegen`, and `--ignore-global-asm`, are `BLOCKER` for any claim relying on that property class. Waived use must downgrade the claim and record owner, reason, and compensating evidence."}
 {"kind":"rule","id":"resource_governance","text":"CBMC can consume tens of GiB per harness. Default broad or unknown Kani runs to `-j 1` and execute them inside a cgroup memory cap such as `systemd-run --user --scope --collect -p MemoryHigh=20G -p MemoryMax=24G -p MemorySwapMax=0 ...`. Running unbounded `cargo kani`, especially with `-j > 1`, is a review blocker unless the user explicitly accepts the machine risk."}
 {"kind":"rule","id":"no_hallucinated_evidence","text":"Never invent Kani version, harness list, command success, property counts, SARIF paths, concrete playback output, counterexamples, unsupported-feature status, or CBMC/Kani diagnostics."}
-{"kind":"rule","id":"pipeline_boundary","text":"In the Rust proof stack, Kani owns bounded implementation evidence for numeric, indexing, panic-freedom, state-transition, and selected unsafe-code harnesses. TLA+ owns temporal behavior; Verus owns Rust-local deductive proofs; Flux owns refinement-type obligations; Miri/fuzz/Loom/Shuttle/Stateright remain complementary where scoped."}
+{"kind":"rule","id":"pipeline_boundary","text":"In the Rust proof stack, Kani owns bounded implementation evidence for numeric, indexing, panic-freedom, state-transition, and selected unsafe-code harnesses. Verus owns Rust-local deductive proofs; Flux owns refinement-type obligations; fuzz/Loom/Shuttle/Stateright remain complementary where scoped."}
 {"kind":"ref","file":"references/kani-practice.md","use":"Practical mental model, official scope, tool boundaries, evidence wording, and non-claims."}
 {"kind":"ref","file":"references/kani-patterns.md","use":"Harness idioms, bounded inputs, assumptions, cover points, contracts, stubs, unsafe harnesses, and anti-patterns."}
 {"kind":"ref","file":"references/kani-harness.md","use":"CLI-first command selection, install/setup, evidence capture, scans, artifact contract, and failure triage."}
@@ -98,9 +98,10 @@ Accepted Kani evidence must include command, exit status, Kani version, harness 
 3. Build a harness inventory and map each claimed property to exact `#[kani::proof]` or `#[kani::proof_for_contract]` harnesses.
 4. Record assumptions, input bounds, `bounded_any` sizes, manual `Arbitrary`, and unwind sources before interpreting success.
 5. Add or demand `kani::cover` evidence for critical assumption domains and boundary values.
-6. Keep stubs, contracts, FFI models, unsafe code, and experimental `-Z` flags explicit in the trusted surface.
-7. Run the exact Kani command, then triage counterexamples, unwinding failures, unsupported features, and vacuity before changing code.
-8. Report bounded evidence, limitations, trusted abstractions, residual unsafe risk, and blockers.
+6. Reject `cover!`-only harnesses, `assert(true)`, copied production models, and hardcoded structural inputs for behavior/property obligations.
+7. Keep stubs, contracts, FFI models, unsafe code, and experimental `-Z` flags explicit in the trusted surface.
+8. Run the exact Kani command, then triage counterexamples, unwinding failures, unsupported features, and vacuity before changing code.
+9. Report bounded evidence, limitations, trusted abstractions, residual unsafe risk, and blockers.
 
 ## Output Contract
 

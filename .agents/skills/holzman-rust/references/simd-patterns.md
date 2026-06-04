@@ -48,7 +48,7 @@ Do not write this by default. If FFI or target intrinsics make unsafe unavoidabl
 - Why safe Rust, auto-vectorization, and safe SIMD APIs are insufficient.
 - CPU features and fallback behavior.
 - Bounds, alignment, aliasing, lifetime, initialization, and remainder invariants.
-- Tests: scalar-vs-optimized equivalence, edge cases, Miri/sanitizer where applicable.
+- Tests: scalar-vs-optimized equivalence, edge cases, sanitizer or dedicated UB tooling where applicable.
 - Benchmarks proving the unsafe path wins on the target workload.
 
 Nightly max-performance waiver mode may evaluate `stdarch_x86_avx512`, `#[target_feature]`, runtime feature dispatch, `core_intrinsics::likely`, `core_intrinsics::unlikely`, `core_intrinsics::assume`, unchecked arithmetic, or `unreachable_unchecked`. Each use needs explicit approval, current nightly API verification, scalar fallback, target hardware, correctness proof, and before/after benchmark evidence.
@@ -159,7 +159,6 @@ cargo +nightly -Zallow-features=portable_simd,try_blocks check --workspace --all
 cargo +nightly -Zallow-features=portable_simd,try_blocks clippy --workspace --all-features -- -D warnings -D unsafe_code -D clippy::unwrap_used -D clippy::expect_used -D clippy::panic -D clippy::panic_in_result_fn -D clippy::todo -D clippy::unimplemented -D clippy::dbg_macro -D clippy::indexing_slicing -D clippy::string_slice -D clippy::get_unwrap -D clippy::arithmetic_side_effects -D clippy::as_conversions -D clippy::let_underscore_must_use -D clippy::await_holding_lock
 cargo +nightly nextest run --workspace --all-features
 cargo +nightly doc --workspace --all-features --no-deps
-cargo +nightly miri test --workspace --all-features
 if rg -n '(^|[^A-Za-z0-9_])(assert!|assert_eq!|assert_ne!|unreachable!)' --glob '*.rs' --glob '!**/tests/**' --glob '!**/benches/**' --glob '!**/examples/**' --glob '!build.rs'; then exit 1; else true; fi
 cargo audit
 cargo deny check

@@ -7,8 +7,8 @@ import "list"
 
 #Task: {
 	// Required fields
-	id:          string & =~"^task-[0-9]{3,}$"
-	title:       string & =~"^[a-z-]+: .+$" // Format: "component: action"
+	id:          string & =~"^[a-z][a-z0-9-]+$" // Format: semantic slug (oya-moon-security-fix, task-001, vel-3fs)
+	title:       string & !="" // Non-empty title
 	type:        "feature" | "bug" | "task" | "epic" | "chore"
 	priority:    >=0 & <=4 // 0=critical, 4=backlog
 	effort:      "15min" | "30min" | "1hr" | "2hr" | "4hr"

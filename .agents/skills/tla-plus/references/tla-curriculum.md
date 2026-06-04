@@ -58,7 +58,7 @@ Local workflow note: use these sources through a CLI-first path. Do not make VS 
 
 - Connect model variables to Rust state.
 - Connect model actions to Rust functions, commands, events, or database transitions.
-- Identify what TLA+ does not prove and route those gaps to Verus, Kani, Miri, fuzzing, Loom, Stateright, QA, or tests.
+- Identify what TLA+ does not prove and route those gaps to Verus, Kani, fuzzing, Loom, Stateright, QA, dedicated UB tooling, or tests.
 
 ## Evaluation Tasks
 
@@ -78,4 +78,4 @@ A competent TLA+ agent must be able to:
 
 ## Current Stack Fit
 
-Use TLA+ first for temporal design. Use Verus first for Rust-local pure/core invariants. Use Lean/Aeneas/Hax only for tiny theorem kernels beyond Verus. Use Kani/Crux for bounded counterexamples and panic/unsafe contracts. Use Miri/cargo-careful/sanitizers for UB-sensitive Rust. Use fuzz/Bolero/proptest for hostile input spaces. Use Loom/Shuttle/Stateright/Lockbud for implementation interleavings and protocol realization. Use mutation/coverage/static/supply-chain gates when scoped by risk.
+Use TLA+ first for temporal design. Use Verus first for Rust-local pure/core invariants. Use Lean/Aeneas/Hax only for tiny theorem kernels beyond Verus. Use Kani/Crux for bounded counterexamples and panic/unsafe contracts. Use cargo-careful/sanitizers or dedicated UB tooling for UB-sensitive Rust. Use fuzz/Bolero/proptest for hostile input spaces. Use Loom/Shuttle/Stateright/Lockbud for implementation interleavings and protocol realization. Use mutation/coverage/static/supply-chain gates when scoped by risk.

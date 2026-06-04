@@ -66,7 +66,7 @@ Same-bead fanout is allowed only over frozen inputs and separate outputs:
 | State | Safe fanout |
 |---|---|
 | 4 | `proof-planner`, then `proof-plan-reviewer` after planner artifacts are frozen. |
-| 6 | `proof-reviewer`; `contract-verification-reviewer` is historical and not a live gate. |
+| 6 | `proof-reviewer` after proof artifacts are frozen. |
 | 12 | Machine-gate capture and `formal-verifier` in parallel when both consume frozen artifacts. |
 | 13 | `black-hat-reviewer` per bead, parallel across beads. |
 | 14 | Evidence packaging across beads; each bead still needs truth/evidence approval before landing. |

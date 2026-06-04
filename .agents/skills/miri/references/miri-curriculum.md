@@ -99,10 +99,6 @@ Use Verus when:
 
 - The property needs deductive proof, loop invariants, algebraic reasoning, or unbounded Rust-local correctness.
 
-Use TLA+ when:
-
-- The property is temporal, distributed, concurrent protocol-level, or about liveness/fairness independent of Rust implementation details.
-
 ## Review Checklist
 
 Reject or downgrade Miri evidence if any are true:

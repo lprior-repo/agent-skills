@@ -1,6 +1,6 @@
 ---
 name: proof-reviewer
-description: "Extreme adversarial review gate for written proof artifacts and evidence. Rejects vacuous models, assumption-shaped proofs, shallow bounds, disconnected Verus specs, weak TLA+ invariants, dishonest Kani harnesses, toy Loom models, Miri runs that miss unsafe paths, Flux trusted/ignore abuse, missing raw command evidence, and unapproved pending execution. Writes review artifacts only."
+description: "Extreme adversarial review gate for written proof artifacts and evidence. Rejects vacuous models, assumption-shaped proofs, shallow bounds, disconnected Verus specs, dishonest Kani harnesses, toy Loom models, Flux trusted/ignore abuse, missing raw command evidence, and unapproved pending execution. Writes review artifacts only."
 ---
 
 # Proof Reviewer
@@ -26,20 +26,20 @@ Assume the proof writer was lazy and tried to pass toy artifacts. Find the lie.
 2. Validate planned obligations, proof evidence, trust ledger, and changed proof/model/harness artifacts.
 3. Run or inspect cheap verifier/smoke commands when available; missing evidence is not approval.
 4. Scan trust markers using shared patterns and require `trusted-base-ledger/v1` rows.
-5. Attack non-vacuity: TLA+ counterexample probes, Kani cover, Flux invalid-state rejection, Loom meaningful interleavings, Miri risky-path reachability.
+5. Attack non-vacuity: Kani cover as reachability only, Flux invalid-state rejection, Loom meaningful interleavings, and risky-path reachability where scoped.
 6. Reject proofs disconnected from contract clauses or executable Rust realization.
-7. When reviewing bridge mapping, reject missing source refs, missing independent behavior tests, harness/test overlap, or TLA+ claims without Rust event/state mapping.
-8. Reject `PENDING_FORMAL_EXECUTION` without cheap smoke/typecheck evidence.
-9. Approve only when every required obligation has non-vacuous artifact evidence or an explicit blocker that prevents advancement.
+7. Reject implementation claims proved only against copied harness models, hardcoded graph builders, comments, `cover!`, or `assert(true)`.
+8. When reviewing bridge mapping, reject missing source refs, missing independent behavior tests, or harness/test overlap.
+9. Reject `PENDING_FORMAL_EXECUTION` without cheap smoke/typecheck evidence.
+10. Approve only when every required obligation has non-vacuous artifact evidence or an explicit blocker that prevents advancement.
 
 ## Lethal Findings
 
-- Weak TLA+ model: missing TypeOK, meaningful invariant, deadlock stance, fairness/liveness decision, or non-toy bounds.
 - Disconnected Verus spec or proof that encodes the desired result in `requires`.
-- Kani assumptions that remove bad inputs or no cover/non-vacuity evidence.
+- Kani assumptions that remove bad inputs, `cover!` used as proof, `assert(true)`, hardcoded structural inputs, or no cover/non-vacuity evidence.
 - Flux broad `trusted` / `ignore` or tautological refinements.
 - Loom model that does not match production synchronization or misses cancellation/drop.
-- Miri run that skips unsafe/provenance-sensitive path.
+- Proof artifact with merge-conflict markers, missing command evidence, nonexistent file refs, or stale rejected review status.
 - Unledgered trust marker or pending trusted-base disposition.
 
 ## References

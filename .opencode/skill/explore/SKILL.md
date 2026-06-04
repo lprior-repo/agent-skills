@@ -1,13 +1,11 @@
 ---
 name: explore
 description: "Codebase scout for bead delivery. Use before contract/proof/test work to map relevant files, APIs, crates, risks, dependencies, and existing verification artifacts without modifying production code."
-argument-hint: "[bead-id, delivery goal, module, or scope path]"
 allowed-tools:
   - Bash
   - Read
   - Grep
   - Write
-disable-model-invocation: true
 ---
 
 ```jsonl

@@ -22,6 +22,5 @@ Do not renumber Go-skill states. Rewire responsibilities inside the existing 1..
 - Validator beats Markdown.
 - Behavior-affecting waivers are forbidden.
 - Verifier harnesses are not behavior tests.
-- TLA+ is temporal evidence, not Rust implementation evidence.
 - `PENDING_FORMAL_EXECUTION`, `mapping_status: planned`, and pending trusted-base dispositions must be closed by State 12.
 - Review approval requires `agent-invocation-ledger.jsonl`; Markdown headers alone are forgeable.

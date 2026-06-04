@@ -137,7 +137,7 @@ let guard = results.lock().unwrap();             // line 21
 a previous holder panicked). In an async context, a panic in a spawned task
 poisons the Mutex, and then every subsequent `.lock().unwrap()` panics as well,
 causing a cascade failure across the entire runtime. This violates the
-functional-rust zero-panic mandate and rule `arc_over_rc`.
+holzman-rust zero-panic mandate and rule `arc_over_rc`.
 
 ### MAJOR-2: Arc<Mutex<Vec<...>>> without priority ladder justification
 
@@ -300,9 +300,9 @@ four separate layers. This violates rule `max_await_points` (level: error).
 
 ---
 
-## PHASE-AGNOSTIC: Functional Rust Sync Core Violations
+## PHASE-AGNOSTIC: Holzman Rust Sync Core Violations
 
-These are delegated to functional-rust but observed here:
+These are delegated to holzman-rust but observed here:
 
 - **MAJOR-10**: `.unwrap()` on `Mutex::lock()` at lines 13 and 21 -- zero-panic
   mandate violated.

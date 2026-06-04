@@ -31,3 +31,14 @@
 - New or revised expectations would fail for at least one plausible bad output
 - Trigger optimization evals use boolean `should_trigger` labels; unlabeled cases are rejected instead of scored as success
 - Final report states what was strengthened, what was verified, and what hardening remains
+
+## GEPA-Style Optimization Checks
+
+- Text components to optimize are named explicitly, such as description, workflow, safety policy, output contract, or review rubric
+- Eval tasks define inputs, expected outputs, forbidden outputs, required evidence, and trigger labels where relevant
+- Baseline comparison is fixed before optimization starts and the final test set is held out
+- Trajectories capture actionable side information from real transcripts, command output, changed files, reviews, timing, tokens, or cost when available
+- `evaluate` returns per-example scores and records individual task failures instead of aborting the whole run silently
+- Reflective dataset records include `Inputs`, `Generated Outputs`, and actionable `Feedback` for each component being updated
+- Multi-objective scoring preserves specialists across task success, trigger behavior, evidence strength, safety, minimality, latency, and cost
+- Local GEPA docs are used as targeted references; the full mirrored HTML site is not dumped into model context

@@ -1,0 +1,136 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Eval Review</title>
+  <style>
+    :root { --bg: #f7f2e8; --panel: #fffaf0; --ink: #1e1a16; --muted: #756b5f; --line: #ded0bd; --accent: #a44f2a; --good: #2f7d46; --bad: #a33b34; }
+    * { box-sizing: border-box; }
+    body { margin: 0; min-height: 100vh; display: grid; grid-template-rows: auto 1fr auto; font-family: ui-serif, Georgia, serif; color: var(--ink); background: var(--bg); }
+    header { padding: 1rem 1.5rem; background: #201914; color: white; display: flex; justify-content: space-between; gap: 1rem; align-items: center; }
+    header h1 { margin: 0; font: 700 1.1rem system-ui, sans-serif; }
+    header p { margin: 0.25rem 0 0; color: #dbcdbd; font-size: 0.85rem; }
+    main { padding: 1rem; overflow: auto; }
+    .card { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; margin-bottom: 1rem; overflow: hidden; }
+    .card h2 { margin: 0; padding: 0.75rem 1rem; font: 700 0.78rem system-ui, sans-serif; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); border-bottom: 1px solid var(--line); background: rgba(255,255,255,0.45); }
+    .body { padding: 1rem; }
+    pre { white-space: pre-wrap; word-break: break-word; margin: 0; font: 0.86rem ui-monospace, SFMono-Regular, Menlo, monospace; }
+    .file { border: 1px solid var(--line); border-radius: 8px; margin-bottom: 0.75rem; background: white; overflow: hidden; }
+    .file-head { padding: 0.55rem 0.75rem; background: #f2e7d8; font: 700 0.78rem ui-monospace, SFMono-Regular, Menlo, monospace; display: flex; justify-content: space-between; gap: 1rem; }
+    .file-body { padding: 0.75rem; overflow: auto; }
+    .file img, .file iframe { max-width: 100%; border: 0; }
+    textarea { width: 100%; min-height: 120px; resize: vertical; border: 1px solid var(--line); border-radius: 8px; padding: 0.8rem; font: 1rem ui-serif, Georgia, serif; background: white; color: var(--ink); }
+    footer { padding: 0.9rem 1.5rem; display: flex; justify-content: space-between; gap: 1rem; background: var(--panel); border-top: 1px solid var(--line); }
+    button { border: 1px solid var(--line); background: white; color: var(--ink); border-radius: 999px; padding: 0.55rem 1rem; cursor: pointer; font-weight: 700; }
+    button:disabled { opacity: 0.45; cursor: not-allowed; }
+    .primary { background: var(--accent); color: white; border-color: var(--accent); }
+    .grade-pass { color: var(--good); font-weight: 700; }
+    .grade-fail { color: var(--bad); font-weight: 700; }
+    .muted { color: var(--muted); }
+  </style>
+</head>
+<body>
+  <header>
+    <div><h1 id="title">Eval Review</h1><p>Review real outputs, leave feedback, and submit when finished.</p></div>
+    <div id="progress"></div>
+  </header>
+  <main>
+    <section class="card"><h2>Prompt</h2><div class="body"><pre id="prompt"></pre></div></section>
+    <section class="card"><h2>Outputs</h2><div class="body" id="outputs"></div></section>
+    <section class="card" id="grades-card"><h2>Grades</h2><div class="body" id="grades"></div></section>
+    <section class="card"><h2>Feedback</h2><div class="body"><textarea id="feedback" placeholder="What is wrong, missing, risky, or good about this output?"></textarea><p class="muted" id="save-status"></p></div></section>
+  </main>
+  <footer>
+    <button id="prev" onclick="move(-1)">Prev</button>
+    <button class="primary" onclick="submitAll()">Submit Reviews</button>
+    <button id="next" onclick="move(1)">Next</button>
+  </footer>
+  <script>
+    /*__EMBEDDED_DATA__*/
+    let current = 0;
+    let feedback = {};
+
+    function escapeHtml(text) {
+      const div = document.createElement("div");
+      div.textContent = text == null ? "" : String(text);
+      return div.innerHTML;
+    }
+
+    function downloadHref(file) {
+      if (file.data_uri) return file.data_uri;
+      if (file.data_b64) return "data:" + (file.mime || "application/octet-stream") + ";base64," + file.data_b64;
+      return "data:text/plain;charset=utf-8," + encodeURIComponent(file.content || "");
+    }
+
+    function renderFile(file) {
+      let body = "";
+      if (file.type === "text") body = "<pre>" + escapeHtml(file.content) + "</pre>";
+      else if (file.type === "image") body = '<img src="' + file.data_uri + '" alt="' + escapeHtml(file.name) + '">';
+      else if (file.type === "pdf") body = '<iframe style="height:70vh;width:100%" src="' + file.data_uri + '"></iframe>';
+      else body = '<a download="' + escapeHtml(file.name) + '" href="' + downloadHref(file) + '">Download file</a>';
+      return '<div class="file"><div class="file-head"><span>' + escapeHtml(file.name) + '</span><a download="' + escapeHtml(file.name) + '" href="' + downloadHref(file) + '">Download</a></div><div class="file-body">' + body + '</div></div>';
+    }
+
+    function renderGrades(run) {
+      const card = document.getElementById("grades-card");
+      const target = document.getElementById("grades");
+      if (!run.grading) { card.style.display = "none"; return; }
+      card.style.display = "block";
+      const expectations = run.grading.expectations || [];
+      target.innerHTML = expectations.map(function(exp) {
+        const cls = exp.passed ? "grade-pass" : "grade-fail";
+        const label = exp.passed ? "PASS" : "FAIL";
+        return '<p><span class="' + cls + '">' + label + '</span> ' + escapeHtml(exp.text) + '<br><span class="muted">' + escapeHtml(exp.evidence || "") + '</span></p>';
+      }).join("") || '<p class="muted">No grade details.</p>';
+    }
+
+    function show(index) {
+      const runs = EMBEDDED_DATA.runs || [];
+      if (!runs.length) {
+        document.getElementById("prompt").textContent = "No runs found.";
+        document.getElementById("outputs").innerHTML = "";
+        return;
+      }
+      current = Math.max(0, Math.min(index, runs.length - 1));
+      const run = runs[current];
+      document.getElementById("title").textContent = "Eval Review: " + (EMBEDDED_DATA.skill_name || "skill");
+      document.getElementById("progress").textContent = (current + 1) + " / " + runs.length;
+      document.getElementById("prompt").textContent = run.prompt || run.id;
+      document.getElementById("outputs").innerHTML = (run.outputs || []).map(renderFile).join("") || '<p class="muted">No output files.</p>';
+      renderGrades(run);
+      document.getElementById("feedback").value = feedback[run.id] || "";
+      document.getElementById("prev").disabled = current === 0;
+      document.getElementById("next").disabled = current === runs.length - 1;
+    }
+
+    function saveCurrent() {
+      const run = (EMBEDDED_DATA.runs || [])[current];
+      if (!run) return;
+      feedback[run.id] = document.getElementById("feedback").value;
+      document.getElementById("save-status").textContent = "Saved locally";
+    }
+
+    function move(delta) { saveCurrent(); show(current + delta); }
+
+    async function submitAll() {
+      saveCurrent();
+      const payload = { status: "complete", reviews: Object.entries(feedback).map(function(pair) { return { run_id: pair[0], feedback: pair[1] }; }) };
+      try {
+        await fetch("/api/feedback", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload, null, 2) });
+        document.getElementById("save-status").textContent = "Submitted feedback.json";
+      } catch (err) {
+        const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url; a.download = "feedback.json"; a.click(); URL.revokeObjectURL(url);
+        document.getElementById("save-status").textContent = "Downloaded feedback.json";
+      }
+    }
+
+    document.getElementById("feedback").addEventListener("input", saveCurrent);
+    document.addEventListener("keydown", function(e) { if (e.target.tagName === "TEXTAREA") return; if (e.key === "ArrowLeft") move(-1); if (e.key === "ArrowRight") move(1); });
+    show(0);
+  </script>
+</body>
+</html>

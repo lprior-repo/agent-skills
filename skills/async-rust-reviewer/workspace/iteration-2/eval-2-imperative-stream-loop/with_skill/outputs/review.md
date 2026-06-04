@@ -23,11 +23,11 @@
 
 ## DELEGATED FINDINGS (3)
 
-1. `mut results` at line 6 and `results.push(result)` at line 11 -- mutable accumulation via push loop. Handled by functional-rust (no-mut rule). The combinator pipeline via `.collect()` eliminates this entirely.
+1. `mut results` at line 6 and `results.push(result)` at line 11 -- mutable accumulation via push loop. Handled by holzman-rust bounded-mutation rules. The combinator pipeline via `.collect()` eliminates this entirely.
 
-2. Return type mismatch: function signature declares no return type (implicitly `()`), but body ends with `Ok(results)` which requires `Result<Vec<_>, _>`. This code does not compile as written. Handled by functional-rust (type correctness).
+2. Return type mismatch: function signature declares no return type (implicitly `()`), but body ends with `Ok(results)` which requires `Result<Vec<_>, _>`. This code does not compile as written. Handled by holzman-rust type correctness.
 
-3. `event.is_relevant()` at line 8 is a sync call inside an async function -- acceptable if fast, but no timing evidence provided. Handled by functional-rust (sync/async boundary).
+3. `event.is_relevant()` at line 8 is a sync call inside an async function -- acceptable if fast, but no timing evidence provided. Handled by holzman-rust performance-boundary rules.
 
 ## CRITICAL FINDINGS (1)
 

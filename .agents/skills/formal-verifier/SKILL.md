@@ -12,7 +12,7 @@ Run commands and record truth. This skill does not design proofs, write proofs, 
 - `formal-verification-report.md`
 - `refinement-verification-report.md`
 - `verification-ledger.jsonl`
-- verifier layer reports such as `tla-report.md`, `verus-report.md`, `kani-report.md`, `flux-report.md`, `loom-report.md`, `miri-report.md`
+- verifier layer reports such as `tla-report.md`, `verus-report.md`, `kani-report.md`, `flux-report.md`, `loom-report.md`
 - `proof-test-source-alignment.md`
 - `proof-test-source-alignment.jsonl`
 - `formal-waivers.jsonl` for valid non-behavior exceptions only
@@ -36,7 +36,9 @@ Run commands and record truth. This skill does not design proofs, write proofs, 
 5. Validate `formal-waivers.jsonl` against approved waiver candidates and invocation provenance.
 6. Verify `mapping_status` is not `planned` and all source/test/harness refs exist at closure.
 7. Verify trusted-base dispositions are not pending.
-8. Write `verification-ledger/v1` rows with raw command evidence and close every obligation.
+8. Verify every behavior-affecting proof obligation has a matching Rust refinement obligation and executed behavior-test evidence.
+9. Verify PASS rows have exit status 0, existing workdir, existing raw log, existing evidence artifact, and command text matching the planned obligation or approved derivation.
+10. Write `verification-ledger/v1` rows with raw command evidence and close every obligation.
 
 ## Failure Behavior
 
@@ -44,6 +46,7 @@ Run commands and record truth. This skill does not design proofs, write proofs, 
 - Missing raw command evidence: reject.
 - Behavior-affecting waiver: reject.
 - Planned bridge, pending formal execution, or pending trusted-base disposition at State 12: reject.
+- BLOCKED_TOOLING, BLOCKED_DEAD_CODE, cover-only Kani, commented-out tests, or ignored tests not run: reject for behavior-affecting closure.
 - Existing unrelated global failures: classify honestly; do not turn them into proof success.
 
 ## References

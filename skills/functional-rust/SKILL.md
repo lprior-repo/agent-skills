@@ -49,7 +49,7 @@ description: "Strict functional-first Rust generator combining zero-panic purity
 {"kind":"stack","crate":"anyhow","use":"shell boundary error contexts","when":"shell / main"}
 {"kind":"stack","crate":"tap","use":"linear pipe() control flow","when":"core + shell"}
 
-{"kind":"bifurcation","id":"source_vs_test","text":"Source: clippy-mandatory, zero unwrap/mut/panic. Tests: whatever compiles.","source":{"clippy":"mandatory","quality":"flawless","unwrap":"banned","mut":"avoid"},"test":{"clippy":"ignore","quality":"irrelevant","unwrap":"allowed","mut":"allowed"}}
+{"kind":"bifurcation","id":"source_vs_test","text":"Source: clippy-mandatory, zero unwrap/mut/panic. Tests: implementation style irrelevant; test design and exact assertions mandatory.","source":{"clippy":"mandatory","quality":"flawless","unwrap":"banned","mut":"avoid"},"test":{"clippy":"ignore","style":"irrelevant","design":"mandatory","assertions":"exact","loops":"allowed","unwrap":"allowed","mut":"allowed"}}
 
 {"kind":"lint","id":"file_header","scope":"source","lines":["#![deny(clippy::unwrap_used)]","#![deny(clippy::expect_used)]","#![deny(clippy::panic)]","#![warn(clippy::pedantic)]","#![warn(clippy::nursery)]","#![warn(clippy::complexity)]","#![warn(clippy::cognitive_complexity)]","#![forbid(unsafe_code)]"]}
 

@@ -1,7 +1,6 @@
 ---
 name: bdd-enforcer
 description: "BDD scenario enforcer. After writing code, ensures every behavior has executable Given/When/Then scenarios that prove it works end-to-end. Writes missing scenarios, runs them, fixes failures. Scenarios ARE the specification — no scenario means no proof means no ship. Use after implementation to enforce behavioral correctness."
-argument-hint: "<bead-id or feature description>"
 allowed-tools: ["Bash", "Read", "Write", "Edit", "Glob", "Grep"]
 ---
 

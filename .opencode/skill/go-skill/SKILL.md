@@ -5,11 +5,12 @@ compatibility: "Requires shell/read access and a host subagent/delegation adapte
 ---
 
 ```jsonl
-{"kind":"meta","skill":"go-skill","version":"10.0.0","format":"compact-with-references","mode":"control-plane-only"}
+{"kind":"meta","skill":"go-skill","version":"10.1.0","format":"compact-with-references","mode":"control-plane-only"}
 {"kind":"state_sequence","range":{"start":1,"end":16},"rule":"Use only whole-number states 1..16; do not renumber."}
 {"kind":"gate","id":"validator_wins","text":"Run tools/go-skill-v9-validate before every state advance. Validator findings block even when Markdown says approved."}
 {"kind":"gate","id":"runtime_provenance","text":"State 1 writes runtime-skill-provenance.json and agent-invocation-ledger.jsonl before specialist work is accepted."}
 {"kind":"gate","id":"proof_pipeline","text":"rust-contract emits proof seeds only; proof-planner emits lane decisions and planned obligations; proof-plan-reviewer writes independent lane review and approves before proof-writer; proof-reviewer approves before bridge/tests/implementation."}
+{"kind":"gate","id":"implementation_bound_default","text":"Rust behavior defaults to implementation-bound lanes: Verus/Kani/Flux plus executable behavior/property evidence."}
 {"kind":"gate","id":"no_behavior_waiver","text":"Behavior-affecting proof/refinement/test obligations cannot be waived."}
 {"kind":"gate","id":"harness_not_behavior_test","text":"Verifier harnesses never satisfy behavior_test_refs."}
 ```
@@ -41,12 +42,13 @@ You are the control-plane supervisor for bead delivery. You do not implement pro
 
 - Work after State 1 happens only in the isolated bead workspace.
 - `agent-invocation-ledger.jsonl` is required for independent review provenance.
-- `verifier-lane-decisions.jsonl` must cover every `(requirement_id, contract_clause, proof_seed_id, verifier)` tuple in the core verifier set.
+- `verifier-lane-decisions.jsonl` must cover every verifier required by the seed's lane profile; Rust behavior uses implementation-bound lanes by default.
 - `verifier-lane-review.jsonl` must independently accept every lane before proof writing.
 - `trusted-base-ledger.jsonl` is required for every trust marker.
 - `PENDING_FORMAL_EXECUTION`, `mapping_status: planned`, and pending trusted-base dispositions must close by State 12.
-- TLA+ is temporal evidence, not Rust implementation evidence.
-- `contract-verification-reviewer` is historical; do not use it as a live gate.
+
+- Kani `cover!` is non-vacuity evidence only; property obligations require assertions over production code or extracted production helpers.
+- Proof artifacts that copy production logic are model evidence only unless a separate bridge proves the copy cannot diverge from production.
 - `test-reviewer` reviews behavior tests only.
 
 ## Required References

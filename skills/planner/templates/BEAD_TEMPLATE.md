@@ -1174,7 +1174,7 @@ Before submitting a bead, verify:
 3. **Clarification Test**: Are ALL ambiguities explicitly resolved (Section 0)?
 4. **EARS Coverage Test**: Are all 6 EARS patterns considered?
 
-### Test Quality
+### Test Design / Assertion Strength
 5. **90% Coverage Test**: Are there tests for 90%+ of code paths?
 6. **No Mocks Test**: Are ALL tests using real data and real commands?
 7. **Soup-to-Nuts Test**: Is there an E2E test proving the full pipeline works?

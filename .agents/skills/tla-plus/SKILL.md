@@ -1,7 +1,6 @@
 ---
 name: tla-plus
-description: "TLA+ and TLC model-checking skill for writing, reviewing, and repairing temporal specs, PlusCal models, .tla/.cfg files, invariants, liveness/fairness properties, deadlock checks, counterexample traces, optional Apalache symbolic checks, and Rust proof-obligation evidence. Use for TLA+, TLC, PlusCal, tla2tools.jar, Apalache, temporal properties, state machines, protocols, schedulers, queues, retries, leases, and distributed or concurrent workflows."
-argument-hint: "[spec_file] [command]"
+description: "TLA+ and TLC model-checking skill for temporal specs, PlusCal models, .tla/.cfg files, invariants, liveness/fairness properties, deadlock checks, counterexample traces, and optional Apalache checks. Use for TLA+, TLC, PlusCal, temporal properties, state machines, protocols, schedulers, queues, retries, leases, replay/recovery ordering, and distributed or concurrent workflows. Do not use as Rust implementation proof."
 allowed-tools:
   - Read
   - Write
@@ -13,7 +12,7 @@ allowed-tools:
 
 # TLA+ Temporal Model Engineer
 
-TLA+ is the default design model for temporal and state-over-time behavior. TLC proves finite bounded models by exhaustive reachable-state exploration. Treat TLA+ output as evidence only when the exact model, config, bounds, properties, and command are recorded.
+TLA+ is the design model for temporal and state-over-time behavior. TLC proves finite bounded models by exhaustive reachable-state exploration. Treat TLA+ output as evidence only when the exact model, config, bounds, properties, and command are recorded. TLA+ is not Rust implementation evidence; behavior-affecting Rust claims need a proof-to-implementation bridge plus executable Rust evidence.
 
 ```jsonl
 {"kind":"meta","skill":"tla-plus","version":"1.1.0","format":"markdown-with-embedded-jsonl"}
@@ -21,6 +20,7 @@ TLA+ is the default design model for temporal and state-over-time behavior. TLC 
 {"kind":"scope","owns":["TLA+ specs","PlusCal models",".cfg model configs","Init/Next behavior specs","state variables","actions","safety invariants","temporal properties","fairness/liveness","deadlock checks","finite model bounds","TLC commands","optional Apalache commands","counterexample trace interpretation","Rust/runtime refinement maps"]}
 {"kind":"scope","does_not_own":["Rust-local pure proof bodies owned by Verus","tiny theorem kernels owned by Lean/Aeneas/Hax","implementation interleaving tests owned by Loom/Shuttle/Stateright/Lockbud","test helper/loop/table-style judgments","inventing model-checker output"]}
 {"kind":"rule","id":"temporal_default","text":"Use TLA+ by default for workflows, protocols, schedulers, queues, retries, claim/lease logic, lifecycle transitions, distributed coordination, concurrency protocols, eventuality, fairness, and deadlock freedom."}
+{"kind":"rule","id":"not_rust_implementation_evidence","text":"Do not use TLA+ to prove Rust-local field sensitivity, digest coverage, arithmetic/index safety, parser behavior, or API behavior. Model the temporal design, then require Rust bridge evidence from Verus/Kani/Flux/Loom/proptest/fuzz as appropriate."}
 {"kind":"rule","id":"cli_first_local_workflow","text":"In this environment, do not make VS Code or Toolbox part of the operating path. Use editor-agnostic files plus command-line Java/tla2tools/TLC. Mention VS Code only as external ecosystem context when asked; treat Toolbox as legacy/unmaintained."}
 {"kind":"rule","id":"canonical_mental_model","text":"A state assigns values to variables; a behavior is a sequence of states; a state predicate talks about one state; an action relates old unprimed variables to new primed variables; the default complete safety spec is Init /\\ [][Next]_vars."}
 {"kind":"rule","id":"safety_first_practice","text":"Model the design before code, start with a tiny finite model, write TypeOK plus one strong semantic invariant first, let TLC find counterexamples early, and add fairness/liveness only after safety and deadlock behavior are stable."}
@@ -32,7 +32,7 @@ TLA+ is the default design model for temporal and state-over-time behavior. TLC 
 {"kind":"rule","id":"liveness_caveat","text":"Liveness and fairness need a temporal behavior spec. Distributed TLC and some reductions do not support liveness; simulation is bug-finding only, not proof."}
 {"kind":"rule","id":"trace_first_debugging","text":"On TLC failure, read the shortest counterexample trace before changing the model. Prefer JSON trace export when available for reproducible diagnosis."}
 {"kind":"rule","id":"no_hallucinated_evidence","text":"Never invent TLC, Apalache, SANY, Toolbox, TLAPS, state counts, trace steps, deadlock status, temporal success, or tool availability."}
-{"kind":"rule","id":"pipeline_boundary","text":"In the Rust proof stack, TLA+ owns temporal workflow/protocol behavior. Verus owns Rust-local pure/core invariants. Lean/Aeneas/Hax own tiny theorem kernels beyond Verus. Kani/Miri/fuzz/Loom/Stateright and related tools are risk-selected implementation evidence."}
+{"kind":"rule","id":"pipeline_boundary","text":"In the Rust proof stack, TLA+ owns temporal workflow/protocol behavior. Verus owns Rust-local pure/core invariants. Lean/Aeneas/Hax own tiny theorem kernels beyond Verus. Kani/fuzz/Loom/Stateright and related tools are risk-selected implementation evidence."}
 {"kind":"ref","file":"references/effective-tla-practice.md","use":"CLI-first practical TLA+ guide: core concepts, canonical spec shape, safety-first workflow, PlusCal/raw TLA+ choice, counterexample debugging, learning path, examples, and black-hat review checklist."}
 {"kind":"ref","file":"references/tla-patterns.md","use":"Spec shape, modeling idioms, temporal properties, refinement maps, and anti-patterns."}
 {"kind":"ref","file":"references/tlc-harness.md","use":"TLC-first command selection, optional Apalache bounded evidence, trace export, tool availability, and failure triage."}

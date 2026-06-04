@@ -131,8 +131,6 @@ An agent using this skill should be able to:
 
 Choose Flux for lightweight Rust refinement properties: bounds, legal states, length/index facts, panic preconditions, and ownership-aware mutation.
 
-Choose TLA+ for temporal workflows, protocols, retries, queues, leases, distributed state, fairness, and liveness.
-
 Choose Verus for richer Rust-local proof engineering, ghost/proof code, loop proofs, and functional correctness beyond Flux's lightweight refinement style.
 
-Choose Kani, Miri, fuzzing, Loom, Shuttle, or Stateright for concrete execution exploration, UB checks, malformed input, thread interleavings, and runtime-sensitive defects.
+Choose Kani, fuzzing, Loom, Shuttle, Stateright, or dedicated UB tooling for concrete execution exploration, malformed input, thread interleavings, and runtime-sensitive defects.

@@ -41,13 +41,13 @@ This code fails on nearly every axis of async Rust discipline. The domain crate 
 
 ## DELEGATED FINDINGS (4)
 
-1. **DELEGATED**: `.unwrap()` at line 13 (`results_clone.lock().unwrap()`) and line 18 (`results.lock().unwrap()`) -- panicked mutex guard. Handled by functional-rust zero-unwrap rule.
+1. **DELEGATED**: `.unwrap()` at line 13 (`results_clone.lock().unwrap()`) and line 18 (`results.lock().unwrap()`) -- panicked mutex guard. Handled by holzman-rust zero-unwrap rule.
 
-2. **DELEGATED**: `guard.push(saved)` at line 13 -- mutation via `push`. Handled by functional-rust no-mut rule.
+2. **DELEGATED**: `guard.push(saved)` at line 13 -- mutation via `push`. Handled by holzman-rust bounded-mutation rule.
 
-3. **DELEGATED**: `guard.clone()` at line 19 -- unnecessary clone of the entire results vector. Handled by functional-rust zero-copy/performance rules.
+3. **DELEGATED**: `guard.clone()` at line 19 -- unnecessary clone of the entire results vector. Handled by holzman-rust zero-copy/performance rules.
 
-4. **DELEGATED**: Missing type definitions for `Order`, `ProcessedOrder`, `AppError`, `validate_order`, `price_order`, `save_to_db` -- cannot verify domain type purity. Handled by functional-rust DDD types rules.
+4. **DELEGATED**: Missing type definitions for `Order`, `ProcessedOrder`, `AppError`, `validate_order`, `price_order`, `save_to_db` -- cannot verify domain type purity. Handled by holzman-rust DDD/type rules.
 
 ---
 
@@ -89,7 +89,7 @@ Mode: SNIPPET (no Cargo.toml on disk). All results are static scan predictions, 
 | `clippy::await_holding_lock` | WOULD NOT fire | The `MutexGuard` is obtained and dropped within the sync portion of the spawned task (lines 13-14), not held across an `.await`. The `.lock().unwrap()` and `.push()` are sync operations. However, the `.await` at line 12 (`save_to_db`) does not hold the lock. |
 | `clippy::unused_async` | WOULD NOT fire | The function does contain `.await` points (lines 12, 16), so it is not "unused" async. |
 | `clippy::large_futures` | MIGHT fire | The spawned async block captures `order` (moved), `results_clone` (Arc clone), and contains the full state machine for validate/price/save. Depends on the size of `Order` and `ProcessedOrder`. Worth investigating if Order is large. |
-| `clippy::unwrap_used` | WOULD fire | Lines 13 and 18 both use `.lock().unwrap()`. Under functional-rust rules this is denied. |
+| `clippy::unwrap_used` | WOULD fire | Lines 13 and 18 both use `.lock().unwrap()`. Under holzman-rust rules this is denied. |
 
 ### Architecture Boundary Scan (Predicted)
 

@@ -1,136 +1,71 @@
 ---
 name: rust-contract
-description: "Design-by-contract and Martin Fowler test planning for Rust. Produces contracts, invariants, and Given-When-Then plans."
+description: "Turn a Rust bead or feature request into a Fowler/Wlaschin domain model and type-level contract: ubiquitous language, value objects, typestates, workflows, railway error taxonomy, functional-core/imperative-shell boundary, hazards, and proof seeds. Use before proof planning, tests, or implementation. Does not write verifier artifacts, tests, implementation, or final proof plans."
 ---
 
-# Rust Contract (Design by Contract + Martin Fowler Tests)
+# Rust Contract
 
-This skill generates **contract-first specifications** and **Martin Fowler style test plans** for Rust work. It does **not** implement code.
+Model the domain before anyone writes proofs, tests, or production Rust. Make illegal states unrepresentable and emit proof seeds, not proof obligations.
 
-```jsonl
-{"kind":"meta","skill":"rust-contract","version":"1.0.0","updated":"2026-02","format":"markdown-with-embedded-jsonl"}
-{"kind":"principle","id":"contract_first","text":"Define preconditions, postconditions, invariants, and error taxonomy before any implementation."}
-{"kind":"principle","id":"fowler_tests","text":"Tests are executable specifications: expressive names, Given-When-Then, happy/error/edge coverage."}
-{"kind":"principle","id":"no_implementation","text":"Do not write production code. Output only contracts and test plans."}
-{"kind":"principle","id":"railway_oriented","text":"All fallible operations must be expressed as Result<T, Error> in the contract signatures."}
-```
+## Owns
+
+- Ubiquitous language, entities, value objects, aggregates, commands, events, policies.
+- Type contracts: newtypes, smart constructors, typestates, parsers at boundaries, railway errors.
+- Workflow model: legal states, transitions, guards, outcomes, terminal states.
+- Boundary map: pure core, imperative shell, async shell, storage/network/time/FFI/unsafe/parser boundaries.
+- Hazard analysis and proof seeds.
+
+## Does Not Own
+
+- Verus, Kani, Flux, Loom, proptest, fuzz, or proof artifacts.
+- Final proof obligations or verifier commands.
+- Test plans, test code, production code, or review approval.
 
 ## Inputs
 
-- Bead ID or feature description
-- Any existing constraints, APIs, or domain language
-
-If information is missing, list **open questions** and **assumptions** explicitly.
+- Bead ID or feature request.
+- Existing docs, source context, API boundaries, and `delivery-scope.jsonl` when present.
+- Domain language and constraints from the user or repository.
 
 ## Outputs
 
-Produce two artifacts:
-
-1) `contract-spec.md` - Design by contract specification
-2) `martin-fowler-tests.md` - Test plan with Given-When-Then scenarios
+- `domain-model.md`
+- `type-contracts.md`
+- `workflow-model.md`
+- `error-taxonomy.md`
+- `boundary-map.md`
+- `hazard-analysis.md`
+- `contract.md`
+- `proof-seeds.jsonl`
+- `traceability-matrix.jsonl`
 
 ## Workflow
 
-### Step 1: Gather Context
+1. Extract domain language and reject primitive obsession, boolean behavior flags, stringly IDs, and `Option` lifecycle state.
+2. Define value objects and parsers so invalid external input cannot enter the core unchecked.
+3. Define workflows as typed state transitions with explicit outcomes and semantic errors.
+4. Split pure core from imperative shell, async shell, storage, network, time, FFI, unsafe, and parser boundaries.
+5. Write hazards: temporal, Rust-core invariant, bounded state, refinement, concurrency, unsafe/provenance, hostile input, performance, release/API.
+6. Classify each proof seed's intended lane profile: Rust-local implementation, temporal workflow/protocol, concurrency, unsafe/provenance, hostile input, or performance/release. This is a hint only; proof-planner owns final lane decisions.
+7. Emit `proof-seeds.jsonl` using `proof-seed/v1`; do not choose final commands or claim proof coverage.
+8. Stop if the model cannot make illegal states unrepresentable; report the missing domain decision instead of papering over it.
 
-- Read relevant docs or bead description
-- Identify domain terms and constraints
-- List open questions (if any)
+## Proof Seed Intent
 
-### Step 2: Design by Contract
+- Rust-local implementation seeds should point toward Verus/Kani/Flux/proptest by default.
+- Temporal workflow/protocol/replay/recovery/lifecycle seeds should name the Rust events, states, or APIs that will need bridge evidence later.
+- Hostile input seeds should mention fuzz/proptest surfaces.
+- Concurrency seeds should mention Loom or equivalent schedule exploration.
+- Unsafe/provenance seeds should mark the risk explicitly and require specialist review only when that risk is present.
 
-Define the contract **before** tests:
+## References
 
-- Preconditions (what must be true before)
-- Postconditions (what must be true after)
-- Invariants (what is always true)
-- Error taxonomy (exhaustive, semantic error variants)
-- Function signatures (Result<T, Error> for all fallible ops)
+- `references/domain-model-template.md`
+- `references/type-contract-checklist.md`
+- `references/workflow-hazard-template.md`
+- `references/proof-seed-guide.md`
+- `../go-skill/references/proof-schemas.md`
 
-### Step 3: Martin Fowler Test Plan
+## Final Response
 
-Create test cases that fully specify behavior:
-
-- Happy path tests (expressive names)
-- Error path tests (each failure mode)
-- Edge case tests (boundaries, empty, extremes)
-- Contract verification tests (pre/post/invariants)
-- At least one end-to-end scenario (if applicable)
-
-### Step 4: Exit Criteria
-
-Only finalize if:
-
-- Every failure mode has a corresponding error variant
-- Every pre/post/invariant has at least one test
-- Test names describe behavior unambiguously
-
-## Output Templates
-
-### contract-spec.md
-
-```markdown
-# Contract Specification
-
-## Context
-- Feature:
-- Domain terms:
-- Assumptions:
-- Open questions:
-
-## Preconditions
-- [ ]
-
-## Postconditions
-- [ ]
-
-## Invariants
-- [ ]
-
-## Error Taxonomy
-- Error::InvalidInput - when ...
-- Error::NotFound - when ...
-- Error::PreconditionViolation - when ...
-
-## Contract Signatures
-- fn ... -> Result<..., Error>
-
-## Non-goals
-- [ ]
-```
-
-### martin-fowler-tests.md
-
-```markdown
-# Martin Fowler Test Plan
-
-## Happy Path Tests
-- test_returns_success_when_valid_input_provided
-- test_creates_resource_when_preconditions_met
-
-## Error Path Tests
-- test_returns_error_when_invalid_input
-- test_returns_error_when_resource_not_found
-
-## Edge Case Tests
-- test_handles_empty_input_gracefully
-- test_handles_boundary_values_correctly
-
-## Contract Verification Tests
-- test_precondition_<name>
-- test_postcondition_<name>
-- test_invariant_<name>
-
-## Given-When-Then Scenarios
-### Scenario 1: <name>
-Given: ...
-When: ...
-Then:
-- ...
-```
-
-## Notes
-
-- Do not implement code in this skill.
-- Use ASCII only unless the repo already uses non-ASCII.
-- Keep outputs precise, testable, and unambiguous.
+List artifacts written, open domain questions, illegal-state risks that remain representable, and proof seeds emitted. Never say proof is complete.

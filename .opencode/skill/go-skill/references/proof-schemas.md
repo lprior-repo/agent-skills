@@ -16,18 +16,21 @@ Canonical schemas for the Go-skill proof pipeline. `schema_version` is mandatory
 - `agent-invocation/v1`
 - `finding/v1`
 
-## Core Verifier Set
+## Verifier Lane Profiles
 
-Every `(requirement_id, contract_clause, proof_seed_id)` tuple needs one lane decision for each verifier:
+Every `(requirement_id, contract_clause, proof_seed_id)` tuple needs lane decisions for the seed's profile. No verifier is silently omitted: if a profile requires a verifier, the lane decision is `required`, `not_applicable`, or `blocked_tooling` with reviewer acceptance.
 
-- `tla-plus`
-- `verus`
+Default Rust behavior profile:
+
 - `kani`
+- `verus`
 - `flux-rs`
-- `loom`
-- `miri`
 - `proptest`
-- `cargo-fuzz`
+
+Conditional profile additions:
+
+- `loom` for implementation concurrency, cancellation, shutdown, atomics, channels, locks, task ownership, or interleaving risk.
+- `cargo-fuzz` for parsers, codecs, binary/persisted payloads, hostile input, YAML/IPC/storage decoding, or fuzzable canonicalization boundaries.
 
 ## `proof-seed/v1`
 
@@ -55,17 +58,23 @@ Required fields: `schema_version`, `id`, `requirement_id`, `contract_clause`, `d
 
 `target` is canonical. Legacy aliases `layer`, `checker`, and alias-only `claim` are invalid.
 
+For implementation-bound behavior claims, proof obligations must target production code directly or an extracted production helper. Duplicated harness models are allowed only as model evidence and require bridge rows that state the copy/reality risk.
+
 ## `trusted-base-ledger/v1`
 
 Required fields: `schema_version`, `id`, `obligation_id`, `artifact`, `location`, `marker`, `trusted_kind`, `reason`, `scope`, `impact`, `behavior_affecting`, `compensating_evidence`, `owner`, `expiry`, `reviewer_disposition`, `status`.
 
 Every `assume`, `axiom`, `admit`, `external_body`, `trusted`, `ignore`, stub, disabled check, model bound, or model reduction needs one row.
 
+Kani `cover!` is non-vacuity evidence only. It cannot be the sole satisfaction evidence for a safety, equality, injectivity, ordering, panic-freedom, or field-sensitivity obligation.
+
 ## `rust-refinement-obligation/v1`
 
 Required fields: `schema_version`, `id`, `proof_id`, `requirement_id`, `contract_clause`, `proof_claim_ref`, `rust_target`, `behavior_affecting`, `source_refs`, `behavior_test_refs`, `refinement_harness_refs`, `refinement_claim`, `verifier`, `evidence_command`, `evidence_workdir`, `evidence_artifact`, `expected_evidence`, `mapping_status`, `required`, `owner_state`, `rerun_from`, `status`.
 
 Allowed `mapping_status`: `planned`, `materialized`, `verified`. `planned` is allowed at State 7 and rejected at State 12 closure.
+
+Every behavior-affecting proof obligation needs a matching Rust refinement obligation with concrete source refs, independent behavior tests, separate refinement harness refs, and executed command evidence by State 12.
 
 ## Waivers
 

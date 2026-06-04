@@ -1,52 +1,51 @@
-# Holzmann's 12 Rules — Applied to Tests
+# Test Evidence Rules — Applied to Rust Suites
 
-Gerard Holzmann's original 10 rules for mission-critical C code, extended to 12 for
-AI-assisted development, mapped concretely to test code. Each rule has a specific
-failure condition and a specific grep/audit command.
+These rules gate test evidence, not test implementation style. Loops, conditionals,
+table-driven tests, helpers, and local mutability are acceptable when they increase
+coverage and keep assertions exact. Reject only patterns that hide behavior, weaken
+assertions, or create nondeterminism.
 
 Rules 11 (read every line) and 12 (tests first) are enforced by the go-skill pipeline
 order, not by the test-reviewer. They are omitted here.
 
 ---
 
-## Rule 1 — Keep it Linear
+## Rule 1 — Keep Evidence Traceable
 
-**General**: No deep nesting. Code reads top-to-bottom.
+**General**: A failing test should point to a specific behavior and expected value.
 
 **Applied to tests**:
-- Test body has one clear Given → When → Then flow. No nested conditionals.
-- Test helper chains ≤ 1 level deep. `setup()` calling `create_fixture()` calling
-  `init_state()` = three levels = unreadable on failure.
-- Early-exit chains (`if x { return; }` patterns) inside tests = hidden branching = MINOR.
+- Test body has clear Given → When → Then evidence.
+- Conditionals and helper chains are allowed if every path asserts an exact expected value.
+- Early-exit chains (`if x { return; }` patterns) that skip assertions are evidence holes.
 
 **Audit**:
 ```bash
-# Nesting depth heuristic — flag tests with >2 indent levels
+# Branching heuristic — inspect only for skipped assertions or hidden cases
 grep -n "        if \|        match " tests/ src/
 ```
 
-**Failure**: Nested conditional inside test body = **MINOR**.
-More than 1 layer of test helper abstraction = **MINOR**.
+**Failure**: Conditional/helper path that skips assertions or hides which case failed = **MAJOR**.
 
 ---
 
-## Rule 2 — Bound Every Loop
+## Rule 2 — Bound Generated Coverage
 
 **General**: Every iteration needs an explicit maximum.
 
 **Applied to tests**:
-- No loops in test bodies. Period. A test with a loop is a test with hidden logic.
-  It is no longer a straight-line proof. It is a program. Programs have bugs.
-- If you need to test N items, use `rstest` cartesian product or a proptest invariant.
-  Not a loop.
+- Loops, table-driven tests, and generated cases are allowed.
+- Every generated space must be bounded or reproducible: fixed vectors, named cases,
+  proptest strategies with committed regressions, or fuzz corpora with seeds.
+- Each case must assert exact values or exact error variants.
 
 **Audit**:
 ```bash
 grep -rn "for .* in \|while \|loop {" tests/ src/
 ```
-Filter to `#[test]` function bodies only.
+Inspect only for unbounded iteration, nondeterministic generation, or cases without assertions.
 
-**Failure**: Any loop in a test body = **LETHAL**.
+**Failure**: Unbounded/random generation without reproducibility, or generated cases with weak assertions = **LETHAL**.
 
 ---
 
@@ -73,25 +72,22 @@ grep -rn "tempdir\|tempfile\|TempDir" tests/
 
 ---
 
-## Rule 4 — One Function, One Job
+## Rule 4 — One Behavior, Exact Evidence
 
 **General**: Each function does exactly one thing. ≤ 60 lines.
 
 **Applied to tests**:
-- One test = one logical assertion. One behavior proven. One failure tells you
-  exactly one thing about what broke.
-- Test body ≤ 20 lines. If longer: the Given setup is too complex (extract a
-  builder), or the test is testing multiple behaviors (split it).
+- One test should prove one behavior or invariant. Multiple assertions are fine when
+  they prove the same observable behavior.
+- Long tests are acceptable if the setup and assertions remain readable and precise.
 - Test name must describe the one thing being proven.
 
 **Audit**:
 ```bash
-# Find long test functions (approximate — counts lines between fn and closing brace)
-awk '/fn .*\(\)/{count=0; name=$0} /#\[test\]/{in_test=1} in_test{count++} /^    \}$/{if(in_test && count>20) print NR": "count" lines: "name; in_test=0}' tests/*.rs
+# Manual review: does a failure identify the exact behavior/value that broke?
 ```
 
-**Failure**: Test body > 20 lines = **MINOR**.
-Test asserting multiple independent behaviors = **MINOR**.
+**Failure**: Test asserting unrelated behaviors with ambiguous failure evidence = **MINOR**.
 
 ---
 
@@ -103,16 +99,15 @@ Test asserting multiple independent behaviors = **MINOR**.
 - Every test must have an explicit `// Given` block that states preconditions.
   Not implied. Written out. A reader should know the system state without
   tracing setup helpers.
-- DAMP: Descriptive And Meaningful Phrases. Each test is self-contained.
-  Copy the relevant setup inline rather than hiding it in a shared fixture
-  that requires cross-referencing.
+- DAMP: Descriptive And Meaningful Phrases. Shared helpers are fine if the call site
+  still makes the preconditions obvious.
 - Fixtures built with the builder pattern are acceptable IF the builder call
   makes the intent clear at the test site.
 
 **Audit**: Manual review — scan for tests with `setup()` calls where the
 preconditions are not obvious from the test body itself.
 
-**Failure**: Test whose Given state requires reading another file to understand = **MINOR**.
+**Failure**: Test whose Given state is not inferable at the assertion site = **MINOR**.
 
 ---
 
@@ -144,7 +139,7 @@ grep -rn "\.unwrap()" tests/ src/ | grep -v "// setup\|// Given"
 **General**: Data should live as close to its use as possible. No global state.
 
 **Applied to tests**:
-- Each test creates its own state from scratch. No shared mutable state between tests.
+- Local mutable state inside one test is fine. Shared mutable state between tests is not.
 - `static mut` in test code = **LETHAL**. Non-deterministic test ordering.
 - `lazy_static!` or `once_cell::sync::Lazy` with mutable interior (`Mutex`, `RwLock`)
   in test code = **LETHAL** unless explicitly designed as a one-time init with no
@@ -157,7 +152,7 @@ grep -rn "static mut\|lazy_static!\|Lazy::new" tests/ src/
 grep -rn "Mutex\|RwLock" tests/ src/ | grep "static\|Lazy"
 ```
 
-**Failure**: Shared mutable state in test code = **LETHAL**.
+**Failure**: Shared mutable state that can affect another test = **LETHAL**.
 
 ---
 
@@ -176,41 +171,40 @@ grep -rn "Mutex\|RwLock" tests/ src/ | grep "static\|Lazy"
 **Audit**: Manual — read every helper function called from test bodies. Does the
 name advertise the side effect?
 
-**Failure**: Side-effectful test helper with an innocent name = **MINOR**.
+**Failure**: Side-effectful test helper that hides setup or cleanup obligations = **MINOR**.
 
 ---
 
-## Rule 9 — One Layer of Magic
+## Rule 9 — Preserve Failure Locality
 
-**General**: Every layer of indirection makes tracing harder.
+**General**: Every failure must identify the exact case and expected value.
 
 **Applied to tests**:
-- Max 1 layer of test helper abstraction. Test calls helper. Helper does thing.
-  Helper does not call another helper.
-- Deep fixture chains (`test → setup → create → init → configure`) = when the
-  test fails you spend 10 minutes tracing setup. That is not a test — it is a mystery.
-- `rstest` fixtures: 1 level deep. Fixtures that depend on other fixtures = 2 levels =
-  flag.
+- Helper abstraction depth is not a failure by itself.
+- Table/fixture/helper code must preserve case names, input values, and expected values
+  in failure output.
+- If a helper hides the expected value or turns multiple cases into one vague failure,
+  the test evidence is weak.
 
-**Audit**: Manual — trace the call depth from test body to terminal side effect.
+**Audit**: Manual — trace a hypothetical failure. Does the output tell you the broken behavior?
 
-**Failure**: Helper abstraction depth > 2 = **MINOR**.
+**Failure**: Helper/fixture indirection that obscures the failing behavior or expected value = **MAJOR**.
 
 ---
 
-## Rule 10 — Warnings Are Errors
+## Rule 10 — Tests Compile and Execute
 
-**General**: Zero compiler warnings from day one.
+**General**: Tests must compile and run; style warnings in test code are not a rejection gate.
 
 **Applied to tests**:
-- `cargo clippy --tests --all-features -- -D warnings` must produce zero output.
-- Unused test variables, dead test code, deprecated test APIs = warnings = failures.
-- Clippy catches real test bugs: `assert_eq!(a, b)` vs `assert_eq!(b, a)` argument
-  order produces a clippy hint. Treat it as a defect.
+- `cargo test --all-features --no-run` must pass.
+- `cargo nextest run` must pass deterministically.
+- Strict clippy applies to production/source targets. Do not fail a suite for test
+  implementation style warnings unless they also weaken evidence or determinism.
 
 **Audit**:
 ```bash
-cargo clippy --tests --all-features -- -D warnings 2>&1
+cargo test --all-features --no-run 2>&1
 ```
 
-**Failure**: Any clippy warning in test code = **LETHAL**.
+**Failure**: Test compile failure or execution failure = **LETHAL**.

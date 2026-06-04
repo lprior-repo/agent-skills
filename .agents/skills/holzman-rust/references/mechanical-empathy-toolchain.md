@@ -19,7 +19,7 @@ Do not report template commands as executed. Replace `actual_*` placeholders wit
 | Vectorization or bounds-check removal | `cargo asm`, `cargo llvm-ir`, `perf stat`, scalar oracle benchmark | Target-specific assembly/IR plus scalar fallback correctness and benchmark delta. |
 | Public API compatibility | `cargo semver-checks` | Baseline revision, package name, pass/fail output, explicit accepted breaking changes. |
 | Release provenance | `cargo auditable`, `cargo cyclonedx`, `cargo deny`, `cargo vet` | Auditable binary or SBOM artifact, dependency policy report, residual supply-chain risk. |
-| Unsafe waiver or bit-precise kernel | Miri, Kani, fuzz, Crux, SAW, Hax as required by obligation | Proof/harness command, assumptions, covered function, unsupported language features. |
+| Unsafe waiver or bit-precise kernel | Kani, fuzz, Crux, SAW, Hax, or dedicated UB tooling as required by obligation | Proof/harness command, assumptions, covered function, unsupported language features. |
 
 ## Assembly And IR Evidence
 
@@ -52,7 +52,7 @@ cargo vet
 
 ## Formal Second Ring
 
-Crux, SAW, and Hax are not universal gates. Use them only when the contract or proof-obligations file asks for bit-precise reasoning, extracted model checking, cryptographic/codec proof, unsafe boundary proof, or refinement beyond Lean/Kani/Miri/fuzz.
+Crux, SAW, and Hax are not universal gates. Use them only when the contract or proof-obligations file asks for bit-precise reasoning, extracted model checking, cryptographic/codec proof, unsafe boundary proof, or refinement beyond Lean/Kani/fuzz.
 
 Expected reporting:
 

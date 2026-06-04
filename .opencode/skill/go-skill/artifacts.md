@@ -30,6 +30,5 @@ All canonical artifacts live under `.beads/<bead-id>/` in the isolated workspace
 
 - JSONL artifacts use canonical schemas in `references/proof-schemas.md`.
 - Legacy proof aliases `layer`, `checker`, and alias-only `claim` are invalid in v1 proof obligations.
-- `contract-verification-review.md` is historical and not a live approval gate.
 - `proof-plan-review.md`, `proof-review.md`, `proof-to-rust-review.md`, test reviews, black-hat, truth-serum, and final evidence decisions need explicit status lines and reviewer provenance where independent review is required.
 - Validator findings block state advancement.

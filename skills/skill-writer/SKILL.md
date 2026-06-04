@@ -1,34 +1,180 @@
 ---
 name: skill-writer
-description: "Meta skill for authoring Claude skills using contract-first design, JSONL-first prompts, and progressive disclosure."
+description: "Create, strengthen, evaluate, and optimize portable agent skills. Use when users want to draft a new skill, harden or port an existing skill, remove vendor-specific assumptions, benchmark skill behavior, tune trigger descriptions, or package skills for a CLI-agnostic agent environment."
 ---
 
-```jsonl
-{"kind":"meta","skill":"skill-writer","version":"1.1.0","format":"jsonl-progressive","mode":"contract-first","token_strategy":"top_block_plus_jsonl"}
-{"kind":"input","arguments":"$ARGUMENTS","rule":"If no explicit arguments are provided, infer target from current request context and repository skill conventions."}
-{"kind":"mission","goal":"Design and write high-quality Claude skills with clear activation behavior, least-privilege tools, and predictable outputs."}
-{"kind":"rule","id":"proper_top_block","text":"Always produce valid YAML frontmatter first, then keep the operational payload JSONL-oriented for token efficiency."}
-{"kind":"rule","id":"progressive_disclosure","text":"Keep SKILL.md compact. Move long guidance to support docs and link them clearly.","refs":["reference.md","templates.md","checklist.md","examples.md"]}
-{"kind":"rule","id":"least_privilege","text":"Set allowed-tools to the minimum toolset required for the skill's actual job."}
-{"kind":"rule","id":"invocation_control","text":"Choose invocation flags by risk: side effects => disable-model-invocation true; background context => user-invocable false."}
-{"kind":"decision","id":"invocation_mode_matrix","options":[{"mode":"default","when":"advisory or low-risk skills","frontmatter":{}},{"mode":"manual_only","when":"deploy, commit, billing, destructive operations","frontmatter":{"disable-model-invocation":true}},{"mode":"model_only","when":"background knowledge overlays","frontmatter":{"user-invocable":false}}]}
-{"kind":"workflow","id":"author_or_refactor_skill","steps":["Define skill contract (goal, trigger language, invocation mode)","Select frontmatter fields intentionally","Draft concise SKILL.md behavior block","Push heavy detail into support docs","Link support docs from SKILL.md","MANDATORY: Verify YAML frontmatter parses correctly","MANDATORY: Invoke /truth-serum to audit the new skill for laziness and missing execution gates before finalizing"]}
-{"kind":"frontmatter_fields","fields":["name","description","argument-hint","allowed-tools","model","disable-model-invocation","user-invocable","context","agent","hooks"]}
-{"kind":"output_contract","for":"meta_skill_response","sections":["1) Proposed skill contract","2) Final frontmatter block","3) SKILL.md body","4) Support files to add/update","5) Rationale for key decisions"]}
-{"kind":"anti_pattern","id":"bloated_skill_md","problem":"Long monolithic SKILL.md with mixed reference and execution details","fix":"Use progressive disclosure docs and link by purpose"}
-{"kind":"anti_pattern","id":"ambiguous_description","problem":"Description too vague to trigger reliably","fix":"Include what + when + natural trigger wording"}
-{"kind":"anti_pattern","id":"tool_over_permissioning","problem":"Granting broad tools by default","fix":"Constrain allowed-tools to actual needs"}
-{"kind":"ref","file":"reference.md","use":"Frontmatter guidance, invocation decisions, and execution patterns"}
-{"kind":"ref","file":"templates.md","use":"Copy/paste templates for common skill archetypes"}
-{"kind":"ref","file":"checklist.md","use":"Preflight and acceptance checks before shipping a skill"}
-{"kind":"ref","file":"examples.md","use":"High-signal examples of good and bad skill designs"}
-{"kind":"gate","id":"truth_serum_audit","text":"You MUST run the truth-serum skill on every skill you create to prove it contains actionable constraints, not just lazy prompt text."}
-{"kind":"gate","id":"hardware_level_enforcement","text":"Every generated skill MUST include a 'Mandatory Verification Gate' section with bash commands (like tests or linters) that the AI must run before exiting."}
-{"kind":"gate","id":"anti_hallucination","text":"Every generated skill MUST explicitly forbid hallucinated CLI output."}
+# Skill Writer
+
+Create or strengthen skills through a portable lifecycle: capture intent, draft or audit the skill, run realistic evals, compare against a baseline, gather human feedback, iterate, optimize the trigger description, and package only when the result is validated.
+
+## Core Rules
+
+- Treat host-specific commands, slash commands, metadata fields, and runner names as adapters. Do not bake a specific assistant product or CLI into a general skill unless the skill is explicitly for that platform.
+- Use neutral terms in portable skills: agent, model, host CLI, skill runner, subagent, workspace, tool, transcript, output, and skill registry.
+- The portable frontmatter floor is `name` and `description`. Add optional fields only when the target host documents them, and describe host requirements in `compatibility` or the body instead of inventing metadata.
+- Keep `SKILL.md` compact and operational. Move schemas, long examples, scripts, fixtures, and reference material into bundled resources with explicit links.
+- Never report invented command output, benchmark data, trigger rates, or eval results. If a run was not executed, say it was not executed.
+- Do not create skills that mislead users, hide behavior, exfiltrate data, bypass authorization, or surprise the user beyond the stated purpose.
+
+## Lifecycle
+
+### 1. Locate the User's Stage
+
+First determine whether the user is creating a new skill, strengthening an existing skill, porting a skill between environments, optimizing a trigger description, adding evals, or packaging a finished skill. If the conversation already contains the desired workflow, extract the steps, tool use, corrections, edge cases, inputs, outputs, and success criteria before asking follow-up questions.
+
+### 2. Capture Intent
+
+Answer these before drafting:
+
+1. What should the skill enable an agent to do?
+2. When should it trigger, including natural user phrases and contextual cues?
+3. What should it not trigger for?
+4. What output format or side effects are expected?
+5. Which tools, files, services, or credentials are required?
+6. Can success be objectively tested, or is human review the right evaluation mode?
+
+Ask only for missing information that changes the design. Research examples, host conventions, and dependencies proactively when tools are available.
+
+### 3. Draft the Skill
+
+Write a skill folder around this shape:
+
+```text
+skill-name/
+|-- SKILL.md
+|-- scripts/       optional deterministic helpers
+|-- references/    optional long-form docs and schemas
+|-- assets/        optional templates or static files
+`-- evals/         optional test prompts and fixtures, excluded from packages when appropriate
 ```
+
+In `SKILL.md`, include valid YAML frontmatter and imperative instructions. The `description` is the primary trigger surface in most skill systems, so make it specific and a little assertive: what the skill does, when to use it, and near-miss cases where it should or should not win.
+
+Prefer explaining why instructions matter over stacking rigid `MUST` rules. Reserve hard requirements for safety, data integrity, externally visible side effects, output contracts, and verification.
+
+### 4. Create Evals
+
+For objectively checkable skills, create 2-3 realistic initial prompts before large-scale testing. Use prompts a real user would type, including messy details, file paths, ambiguous wording, and edge cases. Save them in `evals/evals.json` when a filesystem is available.
+
+Draft expectations after the intent is clear. Good expectations are hard to satisfy accidentally: they check substance, not just filenames or superficial wording.
+
+For subjective skills, use human review prompts and qualitative rubrics instead of fake precision.
+
+### 5. Run With-Skill and Baseline Cases
+
+Use the strongest runner available in the current environment:
+
+- If subagents or isolated sessions are available, run each eval with the skill and with the baseline in parallel.
+- If only a CLI prompt runner is available, run the same prompt once with the skill enabled and once without it, capturing transcripts and outputs.
+- If no automation is available, manually execute the evals, record exactly what was done, and mark timing/token fields as unavailable instead of inventing them.
+
+Use `<skill-name>-workspace/iteration-N/` as the default results area. For a new skill, the baseline is no skill. For an existing skill, snapshot the original skill before editing and use that snapshot as the baseline.
+
+Capture these artifacts when possible:
+
+- `eval_metadata.json` with prompt and expectations
+- `outputs/` with produced files and `user_notes.md` for uncertainties
+- `transcript.md` or equivalent runner log
+- `timing.json` with real timing/token data if the runner exposes it
+- `grading.json` with pass/fail evidence
+- `benchmark.json` and `benchmark.md` for aggregate comparisons
+
+Bundled helpers are available when local files can be executed:
+
+- `scripts/quick_validate.py` validates portable frontmatter and basic structure.
+- `scripts/run_eval.py` runs eval prompts through a caller-supplied host command template.
+- `scripts/aggregate_benchmark.py` aggregates `grading.json` artifacts.
+- `eval-viewer/generate_review.py` creates a local review UI for outputs and feedback.
+
+### 5a. GEPA-Style Skill Optimization
+
+When the user asks to optimize, learn, evolve, or GEPA-tune skills, prompts, review rubrics, harness components, or trigger descriptions, read `references/gepa-skill-optimization.md` and use the local GEPA site mirror only as targeted reference material.
+
+Prefer GEPA `optimize_anything` when one evaluator can score a text artifact. Use a full `GEPAAdapter` pattern only when the run needs batched evaluation, custom trajectory capture, per-component reflective datasets, or persisted adapter state. Treat skill components as `candidate: dict[str, str]`, eval prompts as task inputs, transcripts/tool output as trajectories, and grading results as rollout outputs.
+
+Capture Actionable Side Information from real traces: selected skills, transcripts, command output, changed files, reviewer findings, timing/token/cost when available, and final pass/fail. Return per-task failure scores instead of hiding errors, and expose multi-objective scores for task success, trigger accuracy, evidence strength, safety, minimality, cost, and latency when measured.
+
+### 6. Grade and Analyze
+
+Grade each run against expectations using evidence from transcripts and output files. A pass requires real task completion, not surface compliance. Also extract claims made by the executor and verify them where possible.
+
+After grading, analyze patterns the aggregate score hides: weak assertions, high variance, failures that occur in both baseline and with-skill runs, resource overhead, and cases where the skill hurts performance.
+
+If an eval viewer or review generator exists in the target environment, use it. If not, present a concise inline review with links to outputs, grades, benchmark summaries, and open questions for the user.
+
+### 7. Improve the Skill
+
+Revise from evidence and user feedback. Generalize from failures instead of overfitting to a single eval. Remove instructions that cause wasted work. Add scripts only when repeated runs recreate the same deterministic helper logic. Keep the skill lean enough that future agents actually read and follow it.
+
+Repeat the eval loop until the user is satisfied, the feedback is empty, or the changes stop improving outcomes.
+
+### 8. Optimize Trigger Description
+
+After the behavior is stable, tune the `description` field:
+
+- Create roughly 20 trigger eval queries with a balanced mix of should-trigger and should-not-trigger cases.
+- Make negative cases hard near-misses, not irrelevant prompts.
+- Test against the host's actual skill-selection mechanism when possible.
+- Split training and held-out cases if an automated loop is available to avoid overfitting.
+- Keep the final description distinctive, intent-focused, and under the target host's length limit.
+
+### 9. Package or Install
+
+Package only after validation. Exclude eval workspaces, caches, generated reports, secrets, and local-only artifacts. Preserve the original name when updating an existing skill unless the user explicitly requests a rename.
+
+Use `scripts/package_skill.py` for local `.skill` archives when Python is available. It intentionally excludes eval workspaces and common local artifacts.
+
+## Part II: Strengthen Existing Skills
+
+When the user asks to harden, improve, strengthen, audit, refactor, modernize, or make an existing skill more reliable, treat the current skill as the baseline. Do not rewrite it from scratch unless the current structure blocks the requested outcome.
+
+### Strengthening Workflow
+
+1. Preserve the skill contract: identify the current purpose, triggers, non-triggers, outputs, side effects, host assumptions, and bundled resources before editing.
+2. Find evidence gaps: check whether the skill has evals, verification commands, output contracts, safety boundaries, examples, and package exclusions that prove the behavior.
+3. Tighten the trigger surface: make the description more specific, add natural synonyms, remove broad keywords, and document near-misses that should lose to other skills.
+4. Sharpen the operational path: replace vague advice with ordered actions, decision points, failure handling, and explicit final response requirements.
+5. Push bulk out of `SKILL.md`: move long references, schemas, examples, prompts, and generated assets into linked support files.
+6. Isolate host coupling: convert fixed CLI names, slash commands, registry paths, and product metadata into adapter notes or `compatibility` requirements.
+7. Add or improve evals: cover happy path, edge path, near-miss trigger path, and one plausible failure path. Use the original skill snapshot as the baseline.
+8. Verify the hardening: run validation and the cheapest relevant eval or manual review. Report skipped checks explicitly.
+
+### Strengthening Moves
+
+- Trigger hardening: split broad skills, add near-miss exclusions, remove keyword-only descriptions, and tune against trigger evals.
+- Contract hardening: state required inputs, outputs, side effects, failure behavior, and what evidence proves success.
+- Workflow hardening: add prerequisites, checkpoints, rollback notes, and deterministic helper scripts only where they remove repeated manual work.
+- Safety hardening: require confirmation for destructive, externally visible, credential, billing, or privacy-sensitive actions.
+- Portability hardening: move host-specific behavior behind explicit adapters and keep portable instructions neutral.
+- Evaluation hardening: strengthen expectations so plausible bad outputs fail, capture transcripts, and compare against the original skill.
+- Maintainability hardening: keep names stable, keep `SKILL.md` compact, link support docs by purpose, and remove stale or contradictory guidance.
+
+### Existing-Skill Final Report
+
+For strengthening work, report:
+
+1. Baseline contract found in the original skill.
+2. Weaknesses fixed, grouped by trigger, workflow, safety, portability, eval, and packaging concerns.
+3. Files changed and why each change strengthens the skill.
+4. Verification performed against the original or current skill.
+5. Remaining risks or follow-up hardening opportunities.
+
+## Required Final Response
+
+When finishing a skill authoring task, report:
+
+1. Files created or changed.
+2. The skill contract: purpose, trigger conditions, expected outputs, and host compatibility assumptions.
+3. Verification performed with real commands, eval runs, or manual checks.
+4. Known gaps, skipped checks, or environment limits.
 
 Additional resources for progressive disclosure:
 - [reference.md](reference.md)
 - [templates.md](templates.md)
 - [checklist.md](checklist.md)
 - [examples.md](examples.md)
+- [references/gepa-adapter-guide.md](references/gepa-adapter-guide.md)
+- [references/gepa-skill-optimization.md](references/gepa-skill-optimization.md)
+- [references/gepa-site/README.md](references/gepa-site/README.md)
+- [scripts/](scripts/)
+- [eval-viewer/](eval-viewer/)

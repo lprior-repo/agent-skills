@@ -7,7 +7,6 @@ description: >
   findings with real terminal output as evidence. Does NOT write or modify code.
   Trigger: "test this by hand", "manually test", "does this actually work",
   "try all the paths", "smoke test", "hand-test this CLI/API".
-argument-hint: <target> (binary path, API base URL, or project directory)
 allowed-tools:
   - Bash
   - Read

@@ -26,7 +26,7 @@ None.
 
 ## DELEGATED FINDINGS (0)
 
-None that are visible in the submitted snippet. The domain types use owned `String` in newtype wrappers without `#[derive(...)]` visible, but that is a functional-rust concern, not an async concern.
+None that are visible in the submitted snippet. The domain types use owned `String` in newtype wrappers without `#[derive(...)]` visible, but that is a holzman-rust concern, not an async concern.
 
 ---
 
@@ -236,7 +236,7 @@ The submitted code is an inline snippet with no Cargo.toml on disk. The verifica
 | `clippy::await_holding_lock` | WOULD NOT FIRE | No locks held across `.await` |
 | `clippy::await_holding_refcell_ref` | WOULD NOT FIRE | No `RefCell` borrows across `.await` |
 | `clippy::large_futures` | WOULD NOT FIRE | Future is small: one `.await`, simple stack types |
-| `clippy::pedantic` | POSSIBLE WARNINGS | Newtype wrappers without `Debug`/`Display` derives, but these are functional-rust concerns |
+| `clippy::pedantic` | POSSIBLE WARNINGS | Newtype wrappers without `Debug`/`Display` derives, but these are holzman-rust concerns |
 
 ### Verification Gate (Predicted)
 
