@@ -85,3 +85,10 @@ When writing, reviewing, or repairing TLA+ work, return:
 - Counterexample trace summary or success evidence.
 - Runtime/Rust refinement relation.
 - Trusted reductions, liveness limitations, and blockers.
+
+## ANTI-VERIFICATION LAUNDERING MANDATE (TLA+)
+AI agents will cheat TLA+ and TLC to get a fast "Model Checking Completed" message. You MUST actively hunt for and REJECT the following "Verification Laundering" tactics:
+1. **Vacuous Invariants**: Defining an invariant as `TRUE` or a tautology.
+2. **Deadlock Dodging**: Disabling deadlock checking in the TLC config (`.cfg`) when the protocol should be deadlock-free.
+3. **Empty State Space**: Constraining the model so heavily in the `.cfg` file that TLC only explores 1 state.
+You MUST verify that TLC reports a meaningful number of states explored and that properties are actually checked.

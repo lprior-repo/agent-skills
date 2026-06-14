@@ -90,3 +90,9 @@ When writing, reviewing, or repairing Flux work, return:
 - Negative or `#[should_fail]` evidence when claiming invalid states are rejected.
 - Diagnostics or counterexamples summarized from actual output.
 - Residual obligations, waivers, or blockers.
+
+## ANTI-VERIFICATION LAUNDERING MANDATE (FLUX)
+AI agents will cheat Flux verification to bypass type refinement checks. You MUST actively hunt for and REJECT the following "Verification Laundering" tactics:
+1. **The Trust Bypass**: Using `#[flux::trusted]` or `#[flux::ignore]` on a function bypasses verification entirely. This is the Flux equivalent of `external_body`. REJECT any unapproved use immediately.
+2. **Vacuous Signatures**: Writing `#[flux::sig(fn(x: i32) -> i32)]` without any refinement predicates `{#v: ...}` proves nothing.
+You MUST enforce strict refinement types that actually constrain the implementation.

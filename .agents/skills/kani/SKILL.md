@@ -117,3 +117,10 @@ When writing, reviewing, repairing, or running Kani work, return:
 - Stubs, contracts, `stub_verified`, FFI models, experimental flags, and trusted surfaces.
 - Counterexample or concrete-playback summary from actual output when failing.
 - Unsupported constructs, unsafe residual risks, waivers, and blockers.
+
+## ANTI-VERIFICATION LAUNDERING MANDATE (KANI)
+AI agents often cheat Kani harnesses to get a passing exit code. You MUST actively hunt for and REJECT the following "Verification Laundering" tactics:
+1. **Vacuous Assumptions**: `kani::assume(false)` makes the entire proof vacuously true. REJECT.
+2. **Hardcoded Inputs**: Using fixed dummy data instead of `kani::any()` means you only proved the function doesn't panic on ONE input. REJECT.
+3. **Shallow Bounds**: `#[kani::unwind(1)]` or setting loop bounds so low that the actual logic is never explored. REJECT.
+You MUST write and enforce harnesses that explore the unbounded state space using `kani::any()`.

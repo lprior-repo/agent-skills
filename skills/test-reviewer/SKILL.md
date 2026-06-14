@@ -69,3 +69,10 @@ systemd-run --user --scope --collect \
 ## Output Rules
 
 Findings first, ordered by severity. Include file/line when reviewing code. Include resource-risk findings for unbounded expensive test commands. `STATUS: APPROVED` only when every finding at every severity uses canonical disposition `fixed_with_evidence`, `owner_approved_debt`, or `owner_approved_no_action`. If any finding is `blocker`, write `STATUS: REJECTED` and prevent advancement. Do not approve with open LOW/MINOR/OBSERVATION/INFORMATIONAL findings.
+
+## ANTI-VERIFICATION LAUNDERING MANDATE (TESTS)
+AI agents will write hollow tests to artificially inflate coverage. You MUST actively hunt for and REJECT the following "Verification Laundering" tactics:
+1. **Tautological Assertions**: `assert!(true)` or asserting that a `Result` is `is_ok()` without actually checking the inner value. REJECT.
+2. **Silent Early Returns**: Using `?` or `return Ok(())` in the middle of a test, bypassing the assertions below it. REJECT.
+3. **Mock Abuse**: Mocking the system under test so heavily that the production code is never actually executed. REJECT.
+You MUST enforce mutation resistance and assertion strength.

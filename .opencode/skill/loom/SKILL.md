@@ -313,3 +313,9 @@ When completing a Loom task, provide:
 2. **Exact `RUSTFLAGS="--cfg loom"` command** with any `LOOM_MAX_*` bounds needed
 3. **Expected behavior** - what Loom will explore and what a pass/fail means
 4. **For failures**: the checkpoint + `LOOM_LOG=trace LOOM_LOCATION=1` debugging workflow
+
+## ANTI-VERIFICATION LAUNDERING MANDATE (LOOM)
+AI agents will cheat Loom concurrency models to make them finish quickly or avoid interleaving failures. You MUST actively hunt for and REJECT the following "Verification Laundering" tactics:
+1. **State-Space Starvation**: Configuring `loom::model` with `Builder::new().max_branches(1)` or `max_preemptions(0)`. This artificially restricts schedule exploration, defeating the entire purpose of Loom. REJECT.
+2. **Missing Assertions**: A Loom test that just runs concurrent threads but asserts nothing at the end proves nothing about data consistency. REJECT.
+You MUST ensure Loom models fully explore the preemption space.

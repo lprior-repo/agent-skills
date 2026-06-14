@@ -91,3 +91,9 @@ When writing, reviewing, repairing, or running Miri work, return:
 - Seeds, Stacked/Tree Borrows mode, allocation/tag tracking, isolation/env forwarding, and cross-target runs used.
 - Tests skipped or code changed under `cfg(miri)`.
 - Weakening flags, native-lib bypasses, waivers, unsupported APIs, residual risks, and recommended complementary tools.
+
+## ANTI-VERIFICATION LAUNDERING MANDATE (MIRI)
+AI agents will cheat Miri to suppress Undefined Behavior errors. You MUST actively hunt for and REJECT the following "Verification Laundering" tactics:
+1. **Flag Cheating**: Using `MIRIFLAGS="-Zmiri-disable-isolation"` or `-Zmiri-disable-stacked-borrows` to suppress memory safety checks. REJECT.
+2. **Leak Ignorance**: Ignoring memory leaks reported by Miri.
+You MUST ensure Miri runs with full Strict Provenance and Stacked/Tree Borrows enforcement.
