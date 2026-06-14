@@ -69,3 +69,6 @@ When writing or repairing Verus, return:
 - Proof idioms used.
 - Trusted-base additions, if any.
 - Residual obligations or blockers.
+
+## ANTI-VERIFICATION LAUNDERING MANDATE
+`#[verifier::external_body]` is strictly forbidden for creating "Vacuum Proofs" of production code. You cannot declare a contract on an `exec fn` and then use `external_body` to avoid actually proving the function body. Doing so is Verification Laundering. You MUST prove the actual implementation.

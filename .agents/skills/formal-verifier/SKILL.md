@@ -64,3 +64,6 @@ Run commands and record truth. This skill does not design proofs, write proofs, 
 ## Final Response
 
 Report commands run, ledger closure status, failures by classification, waivers accepted/rejected, and exact blockers. Never invent output or call unrun evidence passed.
+
+## ANTI-VERIFICATION LAUNDERING MANDATE
+Zero tolerance for "Vacuum Proofs". You must actively scan for `#[verifier::external_body]`, `assume()`, and `kani::any()` hardcoded stubs. If an agent submits a proof that passes by mocking the production implementation via an external body stub or hardcoded Kani mock, REJECT it immediately.

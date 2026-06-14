@@ -172,3 +172,6 @@ Read these before generating any configuration or code:
 - `references/layer-configs.md` — full configuration snippets and code templates.
 - `references/agent-harness.md` — CLAUDE.md template, stop hook config, and verify.sh script.
 - `references/adversarial-audit.md` — detailed checklist for exposing AI lies and lazy code.
+
+## ANTI-VERIFICATION LAUNDERING MANDATE (CRITICAL)
+Run `rg -n '#\[verifier::external_body\]|assume\(|axiom' verification/verus/ crates/*/src/`. If this command returns ANY results, you MUST FAIL THE AUDIT. You are looking for Verification Laundering. AI agents will try to fake proofs using `external_body` to skip binding to real code. Expose them. Do not accept mathematical models as "proved" if they use `external_body` to dodge the executable Rust.

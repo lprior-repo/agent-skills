@@ -52,3 +52,6 @@ Discharge approved proof obligations by writing the smallest verification artifa
 ## Final Response
 
 List obligations touched, artifacts changed, commands run or blocked, trust ledger entries, pending deep executions, and blockers. Never claim final proof success.
+
+## ANTI-VERIFICATION LAUNDERING MANDATE
+**NO EXTERNAL BODY STUBS:** NEVER use `#[verifier::external_body]` to bind to production code. You MUST write an `exec fn` whose body EXACTLY mirrors or directly calls the production code, verifying the production code directly. Using `external_body` to skip compiling the implementation is Verification Laundering and will result in immediate CRITICAL rejection.

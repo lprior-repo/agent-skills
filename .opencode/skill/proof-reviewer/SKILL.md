@@ -56,3 +56,6 @@ Assume the proof writer was lazy and tried to pass toy artifacts. Find the lie.
 ## Output Rules
 
 `proof-review.md` and `proof-to-rust-review.md` must include provenance headers and `STATUS: APPROVED` or `STATUS: REJECTED`. Findings use `finding/v1` with exact artifact, obligation, severity, required fix, and disposition. Do not approve with unresolved low/minor/observation/informational findings.
+
+## ANTI-VERIFICATION LAUNDERING MANDATE
+**ZERO TRUST BOUNDARY:** You MUST run `rg -n '#\[verifier::external_body\]|assume\('` on target files BEFORE ANY REVIEW. If you find ANY matches, you must immediately REJECT the proof with CRITICAL severity. Do not review the math. Do not praise the logic. A proof using `external_body` to mock production code is a FRAUD and must be destroyed.

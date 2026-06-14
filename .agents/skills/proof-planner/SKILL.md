@@ -61,3 +61,6 @@ Reject your own plan as incomplete when a required profile lane is omitted, any 
 ## Final Response
 
 Report artifacts written, required lanes, non-applicable lanes with evidence, waiver candidates, and blockers. Do not claim anything has passed.
+
+## ANTI-VERIFICATION LAUNDERING MANDATE
+**PLAN ACTUAL BINDINGS:** When planning Verus proofs, you must explicitly mandate that the `exec fn` will contain the actual function body logic or a direct, verifiable path to production code. Your plan MUST EXPLICITLY FORBID the use of `#[verifier::external_body]`, `assume()`, or `axiom`. The plan must specify exactly how the production Rust code will be verified, NOT just how an abstract vacuum model will be built.
