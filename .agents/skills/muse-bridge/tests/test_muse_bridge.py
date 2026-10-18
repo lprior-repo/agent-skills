@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 """Deterministic stdlib-only tests for the Muse bridge subprocess boundary."""
 
+import importlib.machinery
+import importlib.util
 import json
 import os
 import signal
@@ -10,19 +12,27 @@ import tempfile
 import time
 import unittest
 from pathlib import Path
+from unittest import mock
 
 BRIDGE = Path(__file__).resolve().parents[1] / "scripts/muse-bridge"
 
 
 def fake_cli(directory: Path, behavior: str) -> Path:
     binary_dir = directory / "bin"
-    binary_dir.mkdir()
+    binary_dir.mkdir(exist_ok=True)
     fake = binary_dir / "muse"
     body = {
         "success": """
-print('{"type":"assistant","text":"mock-ok"}')
+print('{"schema_version":1,"record_type":"event","payload_type":"run.output.delta","payload":{"kind":"run_output_delta","text":"mock-ok"}}')
+print('{"schema_version":1,"record_type":"event","payload_type":"run.terminal.completed","payload":{"kind":"run_terminal","terminal":"completed","text":"mock-ok"}}')
 print("mock diagnostic", file=sys.stderr)
 """,
+        "empty": "",
+        "malformed": """print("{not-json}")""",
+        "error-only": """print('{"schema_version":1,"record_type":"event","payload_type":"run.error","payload":{"message":"mock provider failure"}}')""",
+        "truncated": """print('{"schema_version":1,"record_type":"event","payload_type":"run.terminal.completed","payload":{"terminal":"completed","text":"mock-ok"}}', end="")""",
+        "invalid-envelope": """print('{"schema_version":999,"record_type":"message","payload_type":"run.terminal.completed","payload":{"terminal":"completed","text":"mock-ok"}}')""",
+        "invalid-schema-type": """print('{"schema_version":true,"record_type":"event","payload_type":"run.terminal.completed","payload":{"terminal":"completed","text":"mock-ok"}}')""",
         "failure": """
 print("mock failure", file=sys.stderr)
 raise SystemExit(17)
@@ -171,6 +181,38 @@ class MuseBridgeTest(unittest.TestCase):
         self.assertEqual(status["status"], "muse-failed")
         self.assertEqual(status["muse_exit_code"], 17)
         self.assertIn(b"mock failure", (output / "stderr.log").read_bytes())
+
+    def test_zero_exit_requires_valid_terminal_answer(self) -> None:
+        for behavior in ("empty", "malformed", "error-only", "truncated", "invalid-envelope", "invalid-schema-type"):
+            with self.subTest(behavior=behavior):
+                output = self.root / f"invalid-{behavior}"
+                result = self.run_bridge(behavior, output)
+                self.assertEqual(result.returncode, 4, result.stderr)
+                status = self.status(output)
+                self.assertEqual(status["status"], "invalid-output")
+                self.assertEqual(status["muse_exit_code"], 0)
+                self.assertNotEqual(status["output_validation"], "valid-terminal-answer")
+
+    def test_signal_during_cleanup_grace_is_cancellation(self) -> None:
+        loader = importlib.machinery.SourceFileLoader("muse_bridge", str(BRIDGE))
+        spec = importlib.util.spec_from_loader("muse_bridge", loader)
+        self.assertIsNotNone(spec)
+        bridge = importlib.util.module_from_spec(spec)
+        loader.exec_module(bridge)
+        bridge._cancel_signal = None
+
+        def cancel_during_cleanup(_process: subprocess.Popen[bytes]) -> None:
+            bridge.on_signal(signal.SIGTERM, None)
+
+        with mock.patch.object(bridge, "stop_group", side_effect=cancel_during_cleanup):
+            result = bridge.run_capped(
+                [sys.executable, "-c", "pass"],
+                self.workspace,
+                self.env(Path(sys.executable).parent),
+                timeout_seconds=3,
+                output_limit=4096,
+            )
+        self.assertEqual(result["reason"], "cancelled")
 
     def wait_child_pid(self, path: Path, process: subprocess.Popen[bytes]) -> int:
         deadline = time.monotonic() + 4

@@ -26,6 +26,7 @@ EXIT_MUSE_FAILED = 3
 EXIT_TIMEOUT = 124
 EXIT_OUTPUT_LIMIT = 125
 EXIT_CANCELLED = 130
+EXIT_INVALID_OUTPUT = 4
 STOP_GRACE_SECONDS = 0.25
 _cancel_signal: int | None = None
 
@@ -144,6 +145,46 @@ def stop_group(process: subprocess.Popen[bytes]) -> None:
         pass
 
 
+def validate_jsonl(data: bytes) -> tuple[bool, str | None]:
+    # Require Muse's terminal success record and a non-empty final answer.
+    if not data:
+        return False, "empty-jsonl"
+    if not data.endswith(b"\n"):
+        return False, "truncated-jsonl"
+
+    terminals: list[dict[str, object]] = []
+    for line_number, line in enumerate(data.splitlines(), 1):
+        try:
+            record = json.loads(line)
+        except (json.JSONDecodeError, UnicodeDecodeError):
+            return False, f"malformed-jsonl-line-{line_number}"
+        if not isinstance(record, dict):
+            return False, f"invalid-jsonl-record-{line_number}"
+        schema_version = record.get("schema_version")
+        if type(schema_version) is not int or schema_version != 1:
+            return False, f"unsupported-jsonl-schema-{line_number}"
+        if record.get("record_type") != "event":
+            return False, f"invalid-jsonl-record-type-{line_number}"
+        payload_type = record.get("payload_type")
+        if not isinstance(payload_type, str):
+            return False, f"missing-jsonl-event-type-{line_number}"
+        lowered = payload_type.lower()
+        if lowered.endswith((".error", ".failed", ".failure")):
+            return False, f"error-event-{payload_type}"
+        if payload_type == "run.terminal.completed":
+            payload = record.get("payload")
+            if not isinstance(payload, dict) or payload.get("terminal") != "completed":
+                return False, "invalid-terminal-event"
+            terminals.append(payload)
+
+    if len(terminals) != 1:
+        return False, "missing-or-duplicate-terminal-event"
+    answer = terminals[0].get("text")
+    if not isinstance(answer, str) or not answer.strip():
+        return False, "missing-final-answer"
+    return True, None
+
+
 def run_capped(
     command: list[str],
     workspace: Path,
@@ -231,6 +272,9 @@ def run_capped(
             if not stream.closed:
                 stream.close()
 
+    # A signal can arrive during the cleanup grace period, after the loop exits.
+    if _cancel_signal is not None:
+        reason = "cancelled"
     return {
         "reason": reason,
         "returncode": process.poll(),
@@ -371,7 +415,14 @@ def main() -> int:
         elif execution["returncode"] != 0:
             outcome, code = "muse-failed", EXIT_MUSE_FAILED
         else:
-            outcome, code = "succeeded", 0
+            valid_output, validation_error = validate_jsonl(execution["stdout"])
+            status["output_validation"] = (
+                "valid-terminal-answer" if valid_output else validation_error
+            )
+            if valid_output:
+                outcome, code = "succeeded", 0
+            else:
+                outcome, code = "invalid-output", EXIT_INVALID_OUTPUT
 
     status["status"] = outcome
     status["wrapper_exit_code"] = code

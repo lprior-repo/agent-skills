@@ -25,4 +25,4 @@ Prepare a short prompt file containing only the requested task and approved cont
   --prompt-file /path/to/prompt.txt
 ```
 
-The helper prints the output directory and a stable status. Inspect `status.json`, `stdout.jsonl`, and `stderr.log`; report the helper and Muse exit statuses without treating silence as success. Never include credentials or unrelated private data in the prompt.
+The helper prints the output directory and a stable status. It reports success only when Muse exits zero and JSONL contains a `run.terminal.completed` event with non-empty final text; malformed, truncated, empty, or error-only output fails closed. Inspect `status.json`, `stdout.jsonl`, and `stderr.log`; report the helper and Muse exit statuses. Never include credentials or unrelated private data in the prompt.
