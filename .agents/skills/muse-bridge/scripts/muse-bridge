@@ -1,0 +1,392 @@
+#!/usr/bin/env python3
+"""Bounded, review-only runner for the locally installed Muse Code CLI."""
+
+from __future__ import annotations
+
+import argparse
+import atexit
+import datetime as dt
+import json
+import os
+import re
+import selectors
+import shutil
+import signal
+import subprocess
+import sys
+import time
+import tempfile
+import uuid
+from pathlib import Path
+
+MODEL = "muse-spark-1.3"
+EFFORT = "low"
+EXIT_INVALID = 2
+EXIT_MUSE_FAILED = 3
+EXIT_TIMEOUT = 124
+EXIT_OUTPUT_LIMIT = 125
+EXIT_CANCELLED = 130
+STOP_GRACE_SECONDS = 0.25
+_cancel_signal: int | None = None
+
+
+def on_signal(signum: int, _frame: object) -> None:
+    global _cancel_signal
+    _cancel_signal = signum
+
+
+def parser() -> argparse.ArgumentParser:
+    result = argparse.ArgumentParser(
+        description="Run an explicitly scoped, bounded Muse review and save its outputs."
+    )
+    result.add_argument("--workspace", required=True, type=Path,
+                        help="explicit directory Muse may inspect; never inferred")
+    result.add_argument("--prompt-file", required=True, type=Path,
+                        help="short, user-approved prompt file (maximum 16 KiB)")
+    result.add_argument("--output-dir", type=Path,
+                        help="new private output directory outside the workspace")
+    result.add_argument("--timeout-seconds", type=int, default=180)
+    result.add_argument("--max-steps", type=int, default=8)
+    result.add_argument("--max-prompt-bytes", type=int, default=16 * 1024)
+    result.add_argument("--max-output-bytes", type=int, default=256 * 1024,
+                        help="cap applied independently to stdout and stderr")
+    result.add_argument("--max-tool-output-bytes", type=int, default=16 * 1024)
+    return result
+
+
+def check_bounds(args: argparse.Namespace) -> None:
+    limits = (
+        ("timeout-seconds", args.timeout_seconds, 1, 180),
+        ("max-steps", args.max_steps, 1, 8),
+        ("max-prompt-bytes", args.max_prompt_bytes, 1, 16 * 1024),
+        ("max-output-bytes", args.max_output_bytes, 1, 256 * 1024),
+        ("max-tool-output-bytes", args.max_tool_output_bytes, 9, 16 * 1024),
+    )
+    for name, value, low, high in limits:
+        if not low <= value <= high:
+            raise ValueError(f"--{name} must be between {low} and {high}")
+
+
+def under(path: Path, parent: Path) -> bool:
+    try:
+        path.relative_to(parent)
+        return True
+    except ValueError:
+        return False
+
+
+def make_output_dir(requested: Path | None, workspace: Path) -> Path:
+    if requested is not None:
+        destination = requested.expanduser().resolve()
+        if under(destination, workspace):
+            raise ValueError("output directory must be outside the Muse workspace")
+        if destination.exists():
+            raise ValueError("output directory already exists; choose a new path")
+        destination.mkdir(parents=True, mode=0o700)
+    else:
+        state_home = Path(os.environ.get("XDG_STATE_HOME", Path.home() / ".local/state"))
+        root = (state_home / "muse-bridge").expanduser().resolve()
+        if under(root, workspace):
+            raise ValueError("default output directory is inside the Muse workspace")
+        root.mkdir(parents=True, mode=0o700, exist_ok=True)
+        stamp = dt.datetime.now(dt.timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+        destination = root / f"run-{stamp}-{uuid.uuid4().hex[:8]}"
+        destination.mkdir(mode=0o700)
+    os.chmod(destination, 0o700)
+    return destination
+
+
+def private_write(path: Path, data: bytes) -> None:
+    fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+    with os.fdopen(fd, "wb") as stream:
+        stream.write(data)
+
+
+def private_replace(path: Path, data: bytes) -> None:
+    fd = os.open(path, os.O_WRONLY | os.O_TRUNC)
+    with os.fdopen(fd, "wb") as stream:
+        stream.write(data)
+
+
+def save_status(output_dir: Path, document: dict[str, object]) -> None:
+    data = (json.dumps(document, indent=2, sort_keys=True) + "\n").encode()
+    temporary = output_dir / ".status.tmp"
+    private_write(temporary, data)
+    os.replace(temporary, output_dir / "status.json")
+
+
+def child_environment(runtime_tmp: Path) -> dict[str, str]:
+    allowed = {
+        "HOME", "PATH", "LANG", "LC_ALL", "LC_CTYPE", "TERM", "TMPDIR",
+        "XDG_CONFIG_HOME", "XDG_DATA_HOME", "XDG_STATE_HOME", "XDG_RUNTIME_DIR",
+        "MUSE_AUTH_PATH",
+    }
+    environment = {key: value for key, value in os.environ.items() if key in allowed}
+    environment["MUSE_NO_AUTO_UPDATE"] = "1"
+    environment["TMPDIR"] = str(runtime_tmp)
+    # Deliberately do not pass META_API_KEY: use the existing Muse account login.
+    return environment
+
+
+def stop_group(process: subprocess.Popen[bytes]) -> None:
+    try:
+        os.killpg(process.pid, signal.SIGTERM)
+    except ProcessLookupError:
+        pass
+    time.sleep(STOP_GRACE_SECONDS)
+    try:
+        os.killpg(process.pid, signal.SIGKILL)
+    except ProcessLookupError:
+        pass
+    try:
+        process.wait(timeout=1)
+    except subprocess.TimeoutExpired:
+        pass
+
+
+def run_capped(
+    command: list[str],
+    workspace: Path,
+    environment: dict[str, str],
+    timeout_seconds: int,
+    output_limit: int,
+) -> dict[str, object]:
+    started = time.monotonic()
+    stdout = bytearray()
+    stderr = bytearray()
+    if _cancel_signal is not None:
+        return {
+            "reason": "cancelled", "returncode": None,
+            "stdout": bytes(stdout), "stderr": bytes(stderr),
+            "duration_seconds": round(time.monotonic() - started, 3),
+        }
+    try:
+        process = subprocess.Popen(
+            command,
+            cwd=workspace,
+            env=environment,
+            stdin=subprocess.DEVNULL,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            bufsize=0,
+            start_new_session=True,
+        )
+    except OSError as error:
+        return {
+            "reason": "start-error",
+            "error": str(error),
+            "returncode": None,
+            "stdout": bytes(stdout),
+            "stderr": bytes(stderr),
+            "duration_seconds": round(time.monotonic() - started, 3),
+        }
+
+    selector = selectors.DefaultSelector()
+    assert process.stdout is not None and process.stderr is not None
+    for stream, buffer in ((process.stdout, stdout), (process.stderr, stderr)):
+        os.set_blocking(stream.fileno(), False)
+        selector.register(stream, selectors.EVENT_READ, buffer)
+
+    reason = "exited"
+    deadline = started + timeout_seconds
+    try:
+        while selector.get_map() or process.poll() is None:
+            if _cancel_signal is not None:
+                reason = "cancelled"
+                break
+            remaining = deadline - time.monotonic()
+            if remaining <= 0:
+                reason = "timeout"
+                break
+            for key, _mask in selector.select(min(0.05, remaining)):
+                buffer = key.data
+                room = output_limit - len(buffer)
+                try:
+                    chunk = os.read(key.fileobj.fileno(), min(65536, room + 1))
+                except BlockingIOError:
+                    continue
+                if not chunk:
+                    selector.unregister(key.fileobj)
+                    key.fileobj.close()
+                    continue
+                buffer.extend(chunk[:room])
+                if len(chunk) > room:
+                    reason = "output-limit"
+                    break
+            if reason == "output-limit":
+                break
+        if reason == "exited":
+            try:
+                process.wait(timeout=1)
+            except subprocess.TimeoutExpired:
+                reason = "timeout"
+    except BaseException:
+        stop_group(process)
+        raise
+    finally:
+        # The process owns a fresh session; clean up any helper it left behind.
+        stop_group(process)
+        selector.close()
+        for stream in (process.stdout, process.stderr):
+            if not stream.closed:
+                stream.close()
+
+    return {
+        "reason": reason,
+        "returncode": process.poll(),
+        "stdout": bytes(stdout),
+        "stderr": bytes(stderr),
+        "duration_seconds": round(time.monotonic() - started, 3),
+    }
+
+
+def summary(output_dir: Path, status: str, code: int) -> int:
+    print(f"muse-bridge: status={status} output={output_dir}")
+    if code:
+        print(f"muse-bridge: exit={code}; inspect status.json and captured logs", file=sys.stderr)
+    return code
+
+
+def main() -> int:
+    os.umask(0o077)
+    args = parser().parse_args()
+    try:
+        check_bounds(args)
+        workspace = args.workspace.expanduser().resolve(strict=True)
+        if not workspace.is_dir():
+            raise ValueError("--workspace must be a directory")
+        temp_root = Path(os.environ.get("TMPDIR", tempfile.gettempdir())).expanduser().resolve()
+        if under(workspace, temp_root):
+            raise ValueError(f"--workspace must be outside TMPDIR ({temp_root}); Muse reserves that tree for runtime output")
+        prompt_source = args.prompt_file.expanduser().resolve(strict=True)
+        if not prompt_source.is_file():
+            raise ValueError("--prompt-file must be a regular file")
+        with prompt_source.open("rb") as stream:
+            prompt = stream.read(args.max_prompt_bytes + 1)
+        if not prompt.strip():
+            raise ValueError("prompt file is empty")
+        if len(prompt) > args.max_prompt_bytes:
+            raise ValueError(f"prompt exceeds {args.max_prompt_bytes} bytes")
+        output_dir = make_output_dir(args.output_dir, workspace)
+    except (OSError, ValueError) as error:
+        print(f"muse-bridge: invalid-input: {error}", file=sys.stderr)
+        return EXIT_INVALID
+
+    started_at = dt.datetime.now(dt.timezone.utc).isoformat()
+    muse = shutil.which("muse")
+    status: dict[str, object] = {
+        "status": "not-started",
+        "model": MODEL,
+        "contributor_mode": "on",
+        "reasoning_effort": EFFORT,
+        "workspace": str(workspace),
+        "started_at_utc": started_at,
+        "timeout_seconds": args.timeout_seconds,
+        "max_prompt_bytes": args.max_prompt_bytes,
+        "max_output_bytes_per_stream": args.max_output_bytes,
+        "max_model_steps": args.max_steps,
+        "max_tool_output_bytes": args.max_tool_output_bytes,
+    }
+    private_write(output_dir / "stdout.jsonl", b"")
+    private_write(output_dir / "stderr.log", b"")
+    private_write(output_dir / "model-profile.stdout", b"")
+    private_write(output_dir / "model-profile.stderr", b"")
+
+    if not muse:
+        status.update(status="cli-not-found", error="muse executable not found on PATH")
+        status["finished_at_utc"] = dt.datetime.now(dt.timezone.utc).isoformat()
+        save_status(output_dir, status)
+        return summary(output_dir, "cli-not-found", EXIT_INVALID)
+
+    runtime_tmp = output_dir / ".runtime-tmp"
+    runtime_tmp.mkdir(mode=0o700)
+    atexit.register(shutil.rmtree, runtime_tmp, ignore_errors=True)
+    environment = child_environment(runtime_tmp)
+    profile_command = [muse, "model-profile", "show", MODEL, "--effort", EFFORT]
+    profile = run_capped(profile_command, workspace, environment, 5, 16 * 1024)
+    private_replace(output_dir / "model-profile.stdout", profile["stdout"])
+    private_replace(output_dir / "model-profile.stderr", profile["stderr"])
+    if profile["reason"] == "cancelled":
+        outcome, code = "cancelled", EXIT_CANCELLED
+    elif profile["reason"] == "timeout":
+        outcome, code = "model-check-timeout", EXIT_TIMEOUT
+    elif profile["reason"] == "output-limit":
+        outcome, code = "model-check-output-limit", EXIT_OUTPUT_LIMIT
+    elif profile["reason"] != "exited" or profile["returncode"] != 0:
+        outcome, code = "model-check-failed", EXIT_INVALID
+    else:
+        model_listed = re.search(
+            rb"^\s*model:\s*muse-spark-1\.3\s*$",
+            profile["stdout"],
+            flags=re.MULTILINE,
+        )
+        if not model_listed:
+            outcome, code = "model-unavailable", EXIT_INVALID
+        else:
+            outcome, code = "", 0
+
+    if not outcome:
+        prompt_path = output_dir / ".prompt"
+        private_write(prompt_path, prompt)
+        command = [
+            muse, "exec", "--json",
+            "--model", MODEL,
+            "--contributor-mode", "on",
+            "--reasoning-effort", EFFORT,
+            "--workspace", str(workspace),
+            "--worktree", "off",
+            "--max-model-steps", str(args.max_steps),
+            "--max-tool-output-bytes", str(args.max_tool_output_bytes),
+            "--prompt-file", str(prompt_path),
+            "--approval-mode", "on-request",
+            "--disable-write",
+            "--disable-shell",
+            "--no-session-log",
+            "--sandbox-network", "restricted",
+        ]
+        try:
+            execution = run_capped(
+                command, workspace, environment, args.timeout_seconds, args.max_output_bytes
+            )
+        finally:
+            prompt_path.unlink(missing_ok=True)
+        private_replace(output_dir / "stdout.jsonl", execution["stdout"])
+        private_replace(output_dir / "stderr.log", execution["stderr"])
+        status["muse_exit_code"] = execution["returncode"]
+        status["duration_seconds"] = execution["duration_seconds"]
+        status["execution_reason"] = execution["reason"]
+        if execution["reason"] == "cancelled":
+            outcome, code = "cancelled", EXIT_CANCELLED
+        elif execution["reason"] == "timeout":
+            outcome, code = "timeout", EXIT_TIMEOUT
+        elif execution["reason"] == "output-limit":
+            outcome, code = "output-limit", EXIT_OUTPUT_LIMIT
+        elif execution["reason"] == "start-error":
+            outcome, code = "start-error", EXIT_INVALID
+            status["error"] = execution.get("error")
+        elif execution["returncode"] != 0:
+            outcome, code = "muse-failed", EXIT_MUSE_FAILED
+        else:
+            outcome, code = "succeeded", 0
+
+    status["status"] = outcome
+    status["wrapper_exit_code"] = code
+    status["finished_at_utc"] = dt.datetime.now(dt.timezone.utc).isoformat()
+    status["model_profile_seconds"] = profile["duration_seconds"]
+    status["model_profile_reason"] = profile["reason"]
+    status["model_profile_exit_code"] = profile["returncode"]
+    if profile.get("error"):
+        status["model_profile_error"] = profile["error"]
+    status["stdout_bytes"] = (output_dir / "stdout.jsonl").stat().st_size
+    status["stderr_bytes"] = (output_dir / "stderr.log").stat().st_size
+    save_status(output_dir, status)
+    return summary(output_dir, outcome, code)
+
+
+if __name__ == "__main__":
+    signal.signal(signal.SIGTERM, on_signal)
+    signal.signal(signal.SIGINT, on_signal)
+    try:
+        raise SystemExit(main())
+    except KeyboardInterrupt:
+        raise SystemExit(EXIT_CANCELLED)
