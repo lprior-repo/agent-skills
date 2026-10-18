@@ -163,7 +163,10 @@ def validate_jsonl(data: bytes) -> tuple[bool, str | None]:
         schema_version = record.get("schema_version")
         if type(schema_version) is not int or schema_version != 1:
             return False, f"unsupported-jsonl-schema-{line_number}"
-        if record.get("record_type") != "event":
+        record_type = record.get("record_type")
+        if not isinstance(record_type, str) or record_type not in {
+            "event", "status", "reconciliation"
+        }:
             return False, f"invalid-jsonl-record-type-{line_number}"
         payload_type = record.get("payload_type")
         if not isinstance(payload_type, str):
@@ -173,7 +176,11 @@ def validate_jsonl(data: bytes) -> tuple[bool, str | None]:
             return False, f"error-event-{payload_type}"
         if payload_type == "run.terminal.completed":
             payload = record.get("payload")
-            if not isinstance(payload, dict) or payload.get("terminal") != "completed":
+            if (
+                record_type != "event"
+                or not isinstance(payload, dict)
+                or payload.get("terminal") != "completed"
+            ):
                 return False, "invalid-terminal-event"
             terminals.append(payload)
 

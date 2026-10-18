@@ -23,7 +23,8 @@ def fake_cli(directory: Path, behavior: str) -> Path:
     fake = binary_dir / "muse"
     body = {
         "success": """
-print('{"schema_version":1,"record_type":"event","payload_type":"run.output.delta","payload":{"kind":"run_output_delta","text":"mock-ok"}}')
+print('{"schema_version":1,"record_type":"reconciliation","payload_type":"runtime.command.accepted","payload":{}}')
+print('{"schema_version":1,"record_type":"status","payload_type":"run.output.delta","payload":{"kind":"run_output_delta","text":"mock-ok"}}')
 print('{"schema_version":1,"record_type":"event","payload_type":"run.terminal.completed","payload":{"kind":"run_terminal","terminal":"completed","text":"mock-ok"}}')
 print("mock diagnostic", file=sys.stderr)
 """,
@@ -31,7 +32,10 @@ print("mock diagnostic", file=sys.stderr)
         "malformed": """print("{not-json}")""",
         "error-only": """print('{"schema_version":1,"record_type":"event","payload_type":"run.error","payload":{"message":"mock provider failure"}}')""",
         "truncated": """print('{"schema_version":1,"record_type":"event","payload_type":"run.terminal.completed","payload":{"terminal":"completed","text":"mock-ok"}}', end="")""",
-        "invalid-envelope": """print('{"schema_version":999,"record_type":"message","payload_type":"run.terminal.completed","payload":{"terminal":"completed","text":"mock-ok"}}')""",
+        "invalid-schema": """print('{"schema_version":999,"record_type":"event","payload_type":"run.terminal.completed","payload":{"terminal":"completed","text":"mock-ok"}}')""",
+        "invalid-record-type": """print('{"schema_version":1,"record_type":"message","payload_type":"run.terminal.completed","payload":{"terminal":"completed","text":"mock-ok"}}')""",
+        "unhashable-record-type": """print('{"schema_version":1,"record_type":[],"payload_type":"run.terminal.completed","payload":{"terminal":"completed","text":"mock-ok"}}')""",
+        "terminal-not-event": """print('{"schema_version":1,"record_type":"status","payload_type":"run.terminal.completed","payload":{"terminal":"completed","text":"mock-ok"}}')""",
         "invalid-schema-type": """print('{"schema_version":true,"record_type":"event","payload_type":"run.terminal.completed","payload":{"terminal":"completed","text":"mock-ok"}}')""",
         "failure": """
 print("mock failure", file=sys.stderr)
@@ -183,7 +187,7 @@ class MuseBridgeTest(unittest.TestCase):
         self.assertIn(b"mock failure", (output / "stderr.log").read_bytes())
 
     def test_zero_exit_requires_valid_terminal_answer(self) -> None:
-        for behavior in ("empty", "malformed", "error-only", "truncated", "invalid-envelope", "invalid-schema-type"):
+        for behavior in ("empty", "malformed", "error-only", "truncated", "invalid-schema", "invalid-record-type", "unhashable-record-type", "terminal-not-event", "invalid-schema-type"):
             with self.subTest(behavior=behavior):
                 output = self.root / f"invalid-{behavior}"
                 result = self.run_bridge(behavior, output)
