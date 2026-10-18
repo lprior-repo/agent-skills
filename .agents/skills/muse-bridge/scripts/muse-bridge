@@ -286,6 +286,8 @@ def main() -> int:
         "max_output_bytes_per_stream": args.max_output_bytes,
         "max_model_steps": args.max_steps,
         "max_tool_output_bytes": args.max_tool_output_bytes,
+        "foreign_personal_context": "disabled",
+        "web_tools": "disabled",
     }
     private_write(output_dir / "stdout.jsonl", b"")
     private_write(output_dir / "stderr.log", b"")
@@ -341,6 +343,8 @@ def main() -> int:
             "--approval-mode", "on-request",
             "--disable-write",
             "--disable-shell",
+            "--no-foreign-personal-context",
+            "--disable-web-tools",
             "--no-session-log",
             "--sandbox-network", "restricted",
         ]

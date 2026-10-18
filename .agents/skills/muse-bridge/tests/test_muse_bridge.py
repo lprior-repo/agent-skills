@@ -64,7 +64,7 @@ pairs = [
 for left, right in pairs:
     if left not in args or args[args.index(left) + 1] != right:
         raise SystemExit(92)
-for flag in ("--json", "--disable-write", "--disable-shell", "--no-session-log"):
+for flag in ("--json", "--disable-write", "--disable-shell", "--no-foreign-personal-context", "--disable-web-tools", "--no-session-log"):
     if flag not in args:
         raise SystemExit(93)
 workspace = Path(args[args.index("--workspace") + 1])
