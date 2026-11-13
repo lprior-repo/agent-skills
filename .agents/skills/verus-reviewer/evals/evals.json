@@ -1,0 +1,434 @@
+{
+  "skill_name": "verus-reviewer",
+  "evals": [
+    {
+      "id": "external-body-laundering",
+      "prompt": "Review a Verus patch where `#[verifier::external_body] fn checksum(bytes: &[u8]) -> (sum: u64) ensures sum == spec_checksum(bytes@)` was added around production checksum code and the final report claims `checksum` is PROVED because `verus src/checksum.rs` exits 0. The patch has no trust ledger.",
+      "expected_output": "Reject with a CRITICAL finding for verification laundering; identify external_body as trusted-base expansion, not proof; require a real verified body or explicit TRUSTED ledger and removal of PROVED claim.",
+      "files": [
+        "evals/fixtures/external-body-laundering.md"
+      ],
+      "assertions": [
+        "Status is REJECTED",
+        "Mentions external_body or trusted-base expansion",
+        "Says the production function body was not proved",
+        "Requires ledger/removal or real proof",
+        "Cites evals/fixtures/external-body-laundering.md",
+        "Includes severity or BLOCKED classification",
+        "States an actionable required fix",
+        "Does not return APPROVED while unresolved findings remain",
+        "Cites exact fixture file:line or file:line-line evidence"
+      ]
+    },
+    {
+      "id": "copied-model-disconnected",
+      "prompt": "Review proof evidence for a Rust `TreeMap::insert` change. The Verus artifact proves a local `spec fn model_insert` and a helper `proof fn lemma_model_insert_preserves_order`, but it never references `TreeMap::insert`, `Node::insert_into_optional`, or the crate module containing production code. The review packet says this proves the implementation.",
+      "expected_output": "Reject for code-parity failure; require exact production source refs, proof artifact refs tied to production symbols or accepted extracted helpers, and independent behavior tests if runtime behavior changed.",
+      "files": [
+        "evals/fixtures/copied-model-disconnected.md"
+      ],
+      "assertions": [
+        "Status is REJECTED",
+        "Mentions copied model or disconnected proof",
+        "Requires production symbol refs",
+        "Does not accept a file-only/prose mapping",
+        "Cites evals/fixtures/copied-model-disconnected.md",
+        "Includes severity or BLOCKED classification",
+        "States an actionable required fix",
+        "Does not return APPROVED while unresolved findings remain",
+        "Cites exact fixture file:line or file:line-line evidence"
+      ]
+    },
+    {
+      "id": "focus-only-evidence",
+      "prompt": "Review a Verus proof PR where the only commands shown are `verus --version`, `cargo verus focus -p storage -- --expand-errors`, and a Rust unit test. No trust-marker scan is included. The changed crate is opted in with `[package.metadata.verus] verify = true`.",
+      "expected_output": "Reject final approval: focus is iteration-only, not final closure; require `cargo verus verify -p storage` or the exact obligation command plus trust scan and verifier summary/exit status.",
+      "files": [
+        "evals/fixtures/focus-only-evidence.md"
+      ],
+      "assertions": [
+        "Status is REJECTED",
+        "States cargo verus focus is not final evidence",
+        "Requires cargo verus verify or exact command",
+        "Requires trust scan",
+        "Cites evals/fixtures/focus-only-evidence.md",
+        "Includes severity or BLOCKED classification",
+        "States an actionable required fix",
+        "Does not return APPROVED while unresolved findings remain",
+        "Cites exact fixture file:line or file:line-line evidence"
+      ]
+    },
+    {
+      "id": "ledgered-io-boundary",
+      "prompt": "Review the fixture for a patch with `#[verifier::external_body] fn print_result(value: u64)` used only for stdout after verified computation. The trust ledger is present and includes owner/reason/scope/expiry/compensating evidence, but the packet omits final verifier command output, trust-scan output, and behavior-test output for the compute proof.",
+      "expected_output": "Do not automatically reject only because external_body exists; classify printing as a TRUSTED boundary. But reject/block current approval because final proof evidence is missing; require exact verifier command output, trust scan, code-parity chain, and behavior evidence before APPROVED.",
+      "files": [
+        "evals/fixtures/ledgered-io-boundary.md"
+      ],
+      "assertions": [
+        "Status is REJECTED or BLOCKED, not APPROVED",
+        "Labels the print boundary TRUSTED",
+        "Checks it is outside production core proof",
+        "Finds missing exact final verifier evidence",
+        "Requires trust scan and behavior evidence before approval",
+        "Cites evals/fixtures/ledgered-io-boundary.md",
+        "Includes severity or BLOCKED classification",
+        "States an actionable required fix",
+        "Does not return APPROVED while unresolved findings remain",
+        "Cites exact fixture file:line or file:line-line evidence"
+      ]
+    },
+    {
+      "id": "trigger-and-rlimit-smell",
+      "prompt": "Review a proof that fixes a timeout by adding `#[verifier::rlimit(2000)]` to a module and using a quantified invariant with trigger `#[trigger] nonnegative(i)` while every use site only mentions `s[i]`. The proof passes locally but no quantifier profile or local proof split is included.",
+      "expected_output": "Reject or require repair for proof maintainability/performance: broad rlimit and bad trigger should be localized or replaced with use-site trigger/proof split; demand evidence if high rlimit is justified.",
+      "files": [
+        "evals/fixtures/trigger-and-rlimit-smell.md"
+      ],
+      "assertions": [
+        "Mentions bad trigger or use-site mismatch",
+        "Mentions broad/global rlimit",
+        "Requires local proof split or trigger repair",
+        "Does not accept pass status alone",
+        "Status is REJECTED or BLOCKED",
+        "Does not approve the proof",
+        "Includes severity and required fix",
+        "Cites evals/fixtures/trigger-and-rlimit-smell.md",
+        "Includes severity or BLOCKED classification",
+        "States an actionable required fix",
+        "Does not return APPROVED while unresolved findings remain",
+        "Cites exact fixture file:line or file:line-line evidence"
+      ]
+    },
+    {
+      "id": "assume-specification-laundering",
+      "prompt": "Review a Verus PR that adds `pub assume_specification<T>[ std::mem::swap::<T> ](a: &mut T, b: &mut T) ensures a@ == old(b)@ && b@ == old(a)@;` and an `external_trait_specification` for a trait used by verified core code. The report claims the core behavior is PROVED because `cargo verus verify -p core` exits 0, but no trust ledger mentions either directive.",
+      "expected_output": "Reject with CRITICAL/HIGH trust-boundary findings: assume_specification and external trait specifications are assumed, not proved; require trust ledger ownership/scope/expiry, remove PROVED claims that depend on them, and include them in the trust scan.",
+      "files": [
+        "evals/fixtures/assume-specification-laundering.md"
+      ],
+      "assertions": [
+        "Status is REJECTED",
+        "Mentions assume_specification",
+        "Mentions external trait specification or external type/trait trust",
+        "Says the behavior is assumed or TRUSTED rather than PROVED",
+        "Requires trust ledger coverage",
+        "Cites evals/fixtures/assume-specification-laundering.md",
+        "Includes severity or BLOCKED classification",
+        "States an actionable required fix",
+        "Does not return APPROVED while unresolved findings remain",
+        "Cites exact fixture file:line or file:line-line evidence"
+      ]
+    },
+    {
+      "id": "cargo-verus-no-crates",
+      "prompt": "Review final evidence for a Cargo-Verus workspace where the only proof command is `cargo verus verify --workspace`, and the log says no crates opted into verification because `[package.metadata.verus] verify = true` is absent. The report still marks all proof obligations complete.",
+      "expected_output": "Reject final proof evidence: cargo-verus verified no opted-in crate, so the command did not cover the target; require manifest opt-in or a project command that actually verifies the changed crate.",
+      "files": [
+        "evals/fixtures/cargo-verus-no-crates.md"
+      ],
+      "assertions": [
+        "Status is REJECTED",
+        "Mentions no opted-in crate or missing package.metadata.verus",
+        "Says cargo verus verified nothing/the wrong scope",
+        "Requires opt-in or exact verifying command",
+        "Cites evals/fixtures/cargo-verus-no-crates.md",
+        "Includes severity or BLOCKED classification",
+        "States an actionable required fix",
+        "Does not return APPROVED while unresolved findings remain",
+        "Cites exact fixture file:line or file:line-line evidence"
+      ]
+    },
+    {
+      "id": "parenthesized-verifier-attribute",
+      "prompt": "Review a Verus proof patch that adds `#[verifier(external_body)] pub fn parse_packet(bytes: &[u8]) -> (p: Packet) ensures p@ == spec_parse(bytes@)` and `#[verifier(external)]` on a helper module. The trust scan only looked for `#[verifier::external_body]` and found nothing, so the report marks parsing PROVED.",
+      "expected_output": "Reject with a trust-scan finding: parenthesized `#[verifier(external_body)]` and `#[verifier(external)]` are trusted boundaries just like the double-colon forms; require the scan to match both syntaxes, ledger the boundary, and remove PROVED claims for parsing unless the body is actually verified.",
+      "files": [
+        "evals/fixtures/parenthesized-verifier-attribute.md"
+      ],
+      "assertions": [
+        "Status is REJECTED",
+        "Mentions verifier(external_body) or parenthesized verifier attribute",
+        "Says it is a trusted boundary",
+        "Requires scan coverage for both attribute syntaxes",
+        "Requires ledger or real verified body",
+        "Cites evals/fixtures/parenthesized-verifier-attribute.md",
+        "Includes severity or BLOCKED classification",
+        "States an actionable required fix",
+        "Does not return APPROVED while unresolved findings remain",
+        "Cites exact fixture file:line or file:line-line evidence"
+      ]
+    },
+    {
+      "id": "remaining-modern-trust-markers",
+      "prompt": "Review a proof patch that adds `#[verifier::assume_termination]` to a recursive proof helper, `external_type_specification` for `std::sync::Arc<T>`, `external_trait_extension` for a serialization trait, and `#[verus_verify(external_body)]` / `#[verus_verify(external)]` around core proof helpers. The report claims these are harmless annotations because `cargo verus verify` exits 0.",
+      "expected_output": "Reject or block approval: each listed marker expands the trusted base and must be scanned, ledgered, scoped, and labeled TRUSTED; claims depending on those markers are not fully PROVED.",
+      "files": [
+        "evals/fixtures/remaining-modern-trust-markers.md"
+      ],
+      "assertions": [
+        "Status is REJECTED",
+        "Mentions assume_termination",
+        "Mentions external_type_specification",
+        "Mentions external_trait_extension",
+        "Mentions verus_verify external markers",
+        "Requires trust ledger or TRUSTED classification",
+        "Cites evals/fixtures/remaining-modern-trust-markers.md",
+        "Includes severity or BLOCKED classification",
+        "States an actionable required fix",
+        "Does not return APPROVED while unresolved findings remain",
+        "Cites exact fixture file:line or file:line-line evidence"
+      ]
+    },
+    {
+      "id": "raw-assume-admit-axiom-verus-only",
+      "prompt": "Review a Verus PR that leaves `assume(false)` in a proof block, calls `admit()` in a broadcast proof lemma, introduces a `broadcast axiom` for sequence ordering, and changes an executable branch under `#[cfg(verus_only)]` so the verifier sees a simpler implementation than runtime. The final report claims all obligations are PROVED because the verifier exits 0.",
+      "expected_output": "Reject with critical laundering findings: raw assume/admit/axiom and cfg(verus_only) runtime forks are not proof; require removal or explicit TRUSTED ledger where legitimate, and do not allow PROVED claims that depend on them.",
+      "files": [
+        "evals/fixtures/raw-assume-admit-axiom-verus-only.md"
+      ],
+      "assertions": [
+        "Status is REJECTED",
+        "Mentions assume",
+        "Mentions admit",
+        "Mentions axiom or broadcast axiom",
+        "Mentions cfg(verus_only)",
+        "Says verifier success is not enough",
+        "Cites evals/fixtures/raw-assume-admit-axiom-verus-only.md",
+        "Includes severity or BLOCKED classification",
+        "States an actionable required fix",
+        "Does not return APPROVED while unresolved findings remain",
+        "Cites exact fixture file:line or file:line-line evidence"
+      ]
+    },
+    {
+      "id": "vacuous-requires-false",
+      "prompt": "Review a proof where `exec fn parse(input: &[u8]) -> (r: Packet) requires false ensures r@ == spec_parse(input@)` verifies and all production callers are unreachable in the proof harness. The report claims parsing is PROVED.",
+      "expected_output": "Reject: the proof is vacuous because requires false or unreachable callers make the obligation unsatisfiable; require a real production caller/witness and behavior evidence before any PROVED claim.",
+      "files": [
+        "evals/fixtures/vacuous-requires-false.md"
+      ],
+      "assertions": [
+        "Status is REJECTED",
+        "Mentions vacuous or unsatisfiable requires",
+        "Requires reachable production caller or witness",
+        "Does not accept verifier success alone",
+        "Cites evals/fixtures/vacuous-requires-false.md",
+        "Includes severity or BLOCKED classification",
+        "States an actionable required fix",
+        "Does not return APPROVED while unresolved findings remain",
+        "Cites exact fixture file:line or file:line-line evidence"
+      ]
+    },
+    {
+      "id": "contract-delta-weakened-ensures",
+      "prompt": "Review a diff where the old contract for `Account::withdraw` ensured `balance == old(balance) - amount`, but the new Verus proof weakens it to `balance <= old(balance)` and deletes the overdraft invariant. The verifier exits 0 and tests were not updated.",
+      "expected_output": "Reject for contract laundering: weakened ensures and deleted invariant change the obligation; require approved contract delta, restored invariant/ensures, and independent behavior tests.",
+      "files": [
+        "evals/fixtures/contract-delta-weakened-ensures.md"
+      ],
+      "assertions": [
+        "Status is REJECTED",
+        "Mentions weakened ensures or deleted invariant",
+        "Mentions contract laundering or contract delta",
+        "Requires approval or restored contract",
+        "Cites evals/fixtures/contract-delta-weakened-ensures.md",
+        "Includes severity or BLOCKED classification",
+        "States an actionable required fix",
+        "Does not return APPROVED while unresolved findings remain",
+        "Cites exact fixture file:line or file:line-line evidence"
+      ]
+    },
+    {
+      "id": "extracted-helper-bridge-missing",
+      "prompt": "Review a proof where `verified_normalize(input@)` is proved, then production `normalize(input: &str)` calls an unverified parser and sometimes bypasses the verified helper on empty strings. The report provides no argument/view or return/error equivalence bridge.",
+      "expected_output": "Reject for missing extracted-helper bridge: require production call-site refs, input/view equivalence, return/error/state equivalence, bypass analysis, wrapper proof evidence, and behavior tests.",
+      "files": [
+        "evals/fixtures/extracted-helper-bridge-missing.md"
+      ],
+      "assertions": [
+        "Status is REJECTED",
+        "Mentions extracted helper or helper bridge",
+        "Requires production call-site refs",
+        "Requires input/output equivalence or bypass analysis",
+        "Cites evals/fixtures/extracted-helper-bridge-missing.md",
+        "Includes severity or BLOCKED classification",
+        "States an actionable required fix",
+        "Does not return APPROVED while unresolved findings remain",
+        "Cites exact fixture file:line or file:line-line evidence"
+      ]
+    },
+    {
+      "id": "exec-spec-unverified-core",
+      "prompt": "Review proof evidence generated by `exec_spec_unverified!` for a core packet parser. The final report treats the generated spec-exec relation as PROVED and does not list it in the trust ledger.",
+      "expected_output": "Reject or block approval: exec_spec_unverified expands the trusted base unless separately proved; ledger it as TRUSTED or replace with a verified spec/exec bridge and remove PROVED claims depending on it.",
+      "files": [
+        "evals/fixtures/exec-spec-unverified-core.md"
+      ],
+      "assertions": [
+        "Status is REJECTED",
+        "Mentions exec_spec_unverified",
+        "Says TRUSTED or trusted base",
+        "Requires ledger or verified bridge",
+        "Cites evals/fixtures/exec-spec-unverified-core.md",
+        "Includes severity or BLOCKED classification",
+        "States an actionable required fix",
+        "Does not return APPROVED while unresolved findings remain",
+        "Cites exact fixture file:line or file:line-line evidence"
+      ]
+    },
+    {
+      "id": "clean-proof-approved-conditional",
+      "prompt": "Review the fixture for a supposedly clean `RingBuffer::push` proof packet. The packet contains only summarized claims (`exit 0`, `verifier summary success`, and `Trust scan: no hits`) rather than raw command output, source/proof snippets, trust-closure scan output, parser/token delta artifact, manifest opt-in evidence, or behavior-test output.",
+      "expected_output": "Reject/block approval because the packet is prompt-summarized evidence only. Require raw verifier output with Verus version and exit status, manifest Cargo-Verus opt-in evidence, both changed-file and verifier-closure trust-scan command/output, code-parity source/proof lines, parser/token delta evidence, and behavior-test output before any APPROVED verdict.",
+      "files": [
+        "evals/fixtures/clean-proof-approved-conditional.md"
+      ],
+      "assertions": [
+        "Status is REJECTED or BLOCKED, not APPROVED",
+        "Rejects prompt-summarized evidence",
+        "Requires raw verifier output, Verus version, and exit status",
+        "Requires manifest opt-in evidence plus changed-file and verifier-closure trust-scan command/output",
+        "Requires source/proof line evidence, parser/token delta evidence, and behavior-test output",
+        "Does not emit unresolved findings with APPROVED status",
+        "Cites evals/fixtures/clean-proof-approved-conditional.md",
+        "Includes severity or BLOCKED classification",
+        "States an actionable required fix",
+        "Does not return APPROVED while unresolved findings remain",
+        "Cites exact fixture file:line or file:line-line evidence"
+      ]
+    },
+    {
+      "id": "clean-proof-full-evidence-approved",
+      "prompt": "Review the fixture-backed complete evidence packet for `RingBuffer::push`. The fixture includes production/proof snippets, Cargo-Verus opt-in, raw verifier output with `--no-cheating`, changed-file and verifier-closure trust-scan output, parser-safe delta, behavior-test output, and an explicit `ACCEPTABLE`-only grade claim.",
+      "expected_output": "Approve only at ACCEPTABLE grade with explicit code parity chain, clean changed-file and verifier-closure trust scans, no TRUSTED boundaries, raw verifier/test evidence cited, Cargo-Verus opt-in cited, and zero findings. Do not claim PRODUCTION_USABLE or UPSTREAM_GRADE without full repo CI/fuzz/property/benchmark evidence and maintainer/domain-owner review.",
+      "files": [
+        "evals/fixtures/clean-proof-full-evidence-approved.md"
+      ],
+      "assertions": [
+        "Status is APPROVED",
+        "Mentions ACCEPTABLE grade and does not claim PRODUCTION_USABLE or UPSTREAM_GRADE",
+        "Cites production and proof fixture lines",
+        "Mentions raw verifier output and --no-cheating",
+        "Mentions clean changed-file and verifier-closure trust scans",
+        "Findings section is empty or no severity findings are present",
+        "Cites raw behavior-test output fixture lines",
+        "Cites Cargo-Verus opt-in fixture lines",
+        "Cites parser-safe delta fixture lines",
+        "Cites exact fixture file:line or file:line-line evidence"
+      ]
+    },
+    {
+      "id": "cfg-attr-verifier-trust-marker",
+      "prompt": "Review a trust-scan packet for a proof that uses conditional Verus attributes inside `cfg_attr`, including `#[cfg_attr(verus_keep_ghost, verifier::external_body)]` and `#[cfg_attr(verus_keep_ghost, verifier::external)]`. The regex scan reports clean and the proof report claims PROVED.",
+      "expected_output": "Reject/block: cfg_attr-wrapped verifier external markers are trust boundaries and a clean simple regex scan is insufficient; require parser/token-tree scan or expanded fallback coverage, trust ledger, and removal of PROVED claims.",
+      "files": [
+        "evals/fixtures/cfg-attr-verifier-trust-marker.md"
+      ],
+      "assertions": [
+        "Status is REJECTED or BLOCKED",
+        "Mentions cfg_attr verifier external marker",
+        "Says parser/token-tree scan or improved fallback is required",
+        "Requires trust ledger or removal of PROVED claim",
+        "Cites evals/fixtures/cfg-attr-verifier-trust-marker.md",
+        "Includes severity or BLOCKED classification",
+        "States an actionable required fix",
+        "Does not return APPROVED while unresolved findings remain",
+        "Cites exact fixture file:line or file:line-line evidence"
+      ]
+    },
+    {
+      "id": "spaced-multiline-verifier-attribute",
+      "prompt": "Review a proof packet where trust attributes are written with Rust token whitespace and multiline formatting: `#[verifier :: external_body]`, `#[verifier (external)]`, and a multiline `#[verifier( external_body )]`. The line regex scan reports clean.",
+      "expected_output": "Reject/block: token-spaced or multiline verifier attributes are the same trust markers; regex-only clean output is insufficient without parser/token-tree evidence. Require ledger or verified bodies and remove PROVED claims.",
+      "files": [
+        "evals/fixtures/spaced-multiline-verifier-attribute.md"
+      ],
+      "assertions": [
+        "Status is REJECTED or BLOCKED",
+        "Mentions spaced or multiline verifier attribute",
+        "Says regex-only clean scan is insufficient",
+        "Requires parser/token-tree evidence",
+        "Cites evals/fixtures/spaced-multiline-verifier-attribute.md",
+        "Includes severity or BLOCKED classification",
+        "States an actionable required fix",
+        "Does not return APPROVED while unresolved findings remain",
+        "Cites exact fixture file:line or file:line-line evidence"
+      ]
+    },
+    {
+      "id": "ai-exec-spec-drift",
+      "prompt": "Review an AI-generated Verus proof patch for `src/parser.rs:parse_packet`. The patch changes the executable body and strengthens the contract with `requires bytes.len() > 0`, then claims `PRODUCTION_USABLE` because `verus src/parser.rs --no-cheating` exits 0. No owner approved the exec/spec delta and no parser/token intactness report is attached.",
+      "expected_output": "Reject with a CRITICAL intactness/contract-delta finding: AI proof output changed executable code and strengthened preconditions without approval. Verifier pass is only PASS, not production-usable. Require proof-only patch or explicit approved contract/runtime delta plus parser/token intactness and CI evidence.",
+      "files": [
+        "evals/fixtures/ai-exec-spec-drift.md"
+      ],
+      "assertions": [
+        "Status is REJECTED or BLOCKED",
+        "Mentions exec or executable code drift",
+        "Mentions strengthened requires or contract delta",
+        "Mentions PRODUCTION_USABLE requires more than verifier pass",
+        "Requires explicit approval or proof-only patch",
+        "Requires parser/token intactness evidence",
+        "Cites exact fixture file:line or file:line-line evidence",
+        "Does not return APPROVED while unresolved findings remain",
+        "Includes severity or BLOCKED classification"
+      ]
+    },
+    {
+      "id": "pass-not-production-usable",
+      "prompt": "Review a Verus evidence packet for `src/ring.rs:RingBuffer::push`. The proof-only patch passes `cargo verus verify -p ring -- --no-cheating`, trust scan is clean, and parser-safe diff reports only proof blocks changed. The report claims `PRODUCTION_USABLE` and `UPSTREAM_GRADE`, but there is no Rust CI/test/fuzz evidence and no maintainer/domain-owner review.",
+      "expected_output": "Reject or downgrade the claimed grade: evidence may support ACCEPTABLE, but not PRODUCTION_USABLE or UPSTREAM_GRADE. Require full repo CI/test evidence for production-usable status and maintainer/domain-owner review for upstream-grade status. Cite the fixture evidence and missing evidence lines.",
+      "files": [
+        "evals/fixtures/pass-not-production-usable.md"
+      ],
+      "assertions": [
+        "Status is REJECTED or BLOCKED",
+        "Mentions PASS or ACCEPTABLE is not enough for production usable",
+        "Requires CI or Rust test evidence",
+        "Requires maintainer or domain-owner review for upstream grade",
+        "Cites exact fixture file:line or file:line-line evidence",
+        "Does not return APPROVED while unresolved findings remain",
+        "Includes severity or BLOCKED classification"
+      ]
+    },
+    {
+      "id": "nested-cfg-attr-trust-marker",
+      "prompt": "Review the fixture for a proof packet where a production function is hidden behind nested `cfg_attr(any(...), verifier::external_body)`. The packet's trust scan only looked for direct `#[verifier...]` attributes and reports clean, then claims the function is PROVED.",
+      "expected_output": "Reject/block because nested cfg_attr verifier attributes are trusted boundaries; the direct-attribute-only scan is incomplete. Require parser/token-tree cfg_attr classification or canonical scan coverage, a trust ledger or verified body, and removal of PROVED claims.",
+      "files": [
+        "evals/fixtures/nested-cfg-attr-trust-marker.md"
+      ],
+      "assertions": [
+        "Status is REJECTED or BLOCKED",
+        "Mentions nested cfg_attr",
+        "Mentions verifier::external_body",
+        "Says direct-attribute-only or regex-only scan is incomplete",
+        "Requires parser/token-tree evidence or canonical cfg_attr scan coverage",
+        "Requires trust ledger or real verified body",
+        "Does not return APPROVED while unresolved findings remain",
+        "Cites exact fixture file:line or file:line-line evidence",
+        "Includes severity or BLOCKED classification"
+      ]
+    },
+    {
+      "id": "real-vstd-hash-map-external-body",
+      "prompt": "Review the fixture for a proof report that imports vstd::hash_map::HashMap and claims map insertion behavior is PROVED because cargo verus verify -p app --no-cheating exits 0. The packet scans only src/app.rs and omits the verifier trust closure. Use the fixture evidence.",
+      "expected_output": "Reject or block approval: vstd HashMap methods at the cited fixture/source lines use #[verifier::external_body], so their behavior is imported TRUSTED boundary evidence, not an application PROVED fact. Require full verifier-closure trust scan, a trust ledger/TCB entry for vstd HashMap or an alternative verified data structure, and proof-to-code mapping showing whether insertion semantics are in the claimed behavior.",
+      "files": [
+        "evals/fixtures/real-vstd-hash-map-external-body.md"
+      ],
+      "assertions": [
+        "Status is REJECTED or BLOCKED",
+        "Mentions vstd HashMap or hash_map",
+        "Mentions verifier::external_body",
+        "Classifies imported vstd behavior as TRUSTED, not PROVED",
+        "Requires verifier-closure trust scan",
+        "Requires trust ledger or TCB entry",
+        "Cites exact fixture file:line or file:line-line evidence",
+        "Does not return APPROVED while unresolved findings remain",
+        "Includes severity or BLOCKED classification"
+      ]
+    }
+  ]
+}

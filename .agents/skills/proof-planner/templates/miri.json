@@ -1,0 +1,31 @@
+{
+  "schema_version": "proof-obligation/v1",
+  "id": "PO-NNN",
+  "requirement_id": "REQ-NNN",
+  "contract_clause": "C-NNN",
+  "domain_claim": "<one-sentence claim under test>",
+  "risk": "ub_safety",
+  "risk_tags": ["ub", "unsafe", "raw_pointer", "provenance"],
+  "verifier": "miri",
+  "artifact": "tests/miri/<target>.rs",
+  "target": "crate::path::to::unsafe_symbol",
+  "command": "MIRIFLAGS=\"-Zmiri-strict-provenance -Zmiri-many-seeds=0..8\" cargo +nightly miri test --test <target> --release",
+  "workdir": "/abs/path/to/bead-workspace",
+  "expected_evidence": "Miri reports no UB diagnostic across 8 seeded runs (test result: ok); provenance flags recorded; one cfg_attr(miri, ignore) test skipped and noted in trusted-base-plan.md under TB-NNN-skipped-tests.",
+  "assumptions": ["nightly toolchain pinned in rust-toolchain.toml"],
+  "model_bounds": {
+    "seeds": 8
+  },
+  "tool_metadata": {
+    "tool": "cargo-miri",
+    "version_pin": "nightly-2026-02-15",
+    "feature_flags": ["-Zmiri-strict-provenance", "-Zmiri-many-seeds"]
+  },
+  "trusted_base_refs": ["TB-NNN-skipped-tests", "TB-NNN-specialist-scoping"],
+  "required": true,
+  "behavior_affecting": true,
+  "mode": "verify-proof",
+  "owner_state": 4,
+  "rerun_from": 4,
+  "status": "planned"
+}

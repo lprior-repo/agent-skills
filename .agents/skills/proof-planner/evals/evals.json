@@ -1,12 +1,196 @@
 [
   {
-    "name": "temporal workflow plans TLA plus bridge",
-    "prompt": "Plan proof coverage for a lease/claim workflow with retries and cancellation.",
-    "expect": ["tla-plus required", "verifier-lane-decisions.jsonl", "proof-obligations.planned.jsonl", "proof-to-implementation-input.md"]
+    "name": "critical Rust invariant requires Verus",
+    "prompt": "Plan proof coverage for a pure Rust bounded counter invariant that must never underflow on tick.",
+    "expect": [
+      "verus required with behavior_affecting=true and target binding to production",
+      "kani required as companion for bounded symbolic cross-check",
+      "no external_body, no assume, no axiom, no copied harness model",
+      "proptest required as property-pressure companion",
+      "proof-obligation/v1 row cites exact command with version pin and expected marker",
+      "rust-refinement-obligation/v1 stub planned for source binding",
+      "no behavior waiver",
+      "no E_LANE_DECISION_MISSING, E_VERUS_DISCONNECTED_SPEC, E_KANI_COVER_ONLY"
+    ]
   },
   {
-    "name": "critical Rust invariant requires Verus",
-    "prompt": "Plan proof coverage for a pure Rust bounded counter invariant.",
-    "expect": ["verus required", "kani or proptest companion", "no behavior waiver"]
+    "name": "temporal workflow plans loom plus bridge (TLA+ removed)",
+    "prompt": "Plan proof coverage for a lease/claim workflow with retries, cancellation, and a drain protocol.",
+    "expect": [
+      "loom required with cfg(loom), --release, max_threads bound, LOOM_MAX_PREEMPTIONS set",
+      "kani required for bounded drain harness with kani::assert",
+      "proptest required as randomized pressure companion",
+      "rust-refinement-obligation/v1 stub planned for source binding",
+      "no tla-plus verifier in the plan (removed)",
+      "no behavior waiver"
+    ]
+  },
+  {
+    "name": "unsafe code requires Miri specialist scoping",
+    "prompt": "Plan proof coverage for a Rust arena allocator that exposes a raw-pointer alloc API.",
+    "expect": [
+      "miri required with MIRIFLAGS, nightly pin, and seed range",
+      "verus required for the ownership/provenance spec",
+      "proptest required as randomized pressure",
+      "Miri Specialist Scoping Note present in trusted-base-plan.md",
+      "complementary native sanitizer lane named (ASan or Valgrind)",
+      "skipped tests under cfg_attr(miri, ignore) enumerated",
+      "no E_MIRI_PATH_SKIPPED, E_VERUS_DISCONNECTED_SPEC"
+    ]
+  },
+  {
+    "name": "hostile parser input requires fuzz with oracle",
+    "prompt": "Plan proof coverage for a binary frame parser that decodes arbitrary bytes.",
+    "expect": [
+      "cargo-fuzz required with -max_total_time, -rss_limit_mb, --sanitizer",
+      "kani required for bounded rejection harness",
+      "verus required for the parse-spec round-trip",
+      "proptest required for typed-input property pressure",
+      "explicit oracle named (round-trip, differential, or metamorphic)",
+      "corpus preservation path noted",
+      "no E_FUZZ_NO_ORACLE, E_FUZZ_BUDGET_ABSENT"
+    ]
+  },
+  {
+    "name": "concurrency channel requires Loom production indirection",
+    "prompt": "Plan proof coverage for a multi-producer single-consumer queue with shutdown drain.",
+    "expect": [
+      "loom required using crate::sync::sync::* indirection (cfg(loom)-aware)",
+      "tla-plus required for the drain protocol temporal model",
+      "kani required for bounded drain harness",
+      "proptest required for randomized pressure",
+      "max_threads bounded; LOOM_MAX_PREEMPTIONS set; --release mandatory",
+      "cancellation, drop, timeout, and shutdown paths exercised",
+      "no E_LOOM_TOY_MODEL, E_LOOM_NOT_MODELED"
+    ]
+  },
+  {
+    "name": "refinement type requires Flux",
+    "prompt": "Plan proof coverage for an Offset newtype that must always be in [0, LEN).",
+    "expect": [
+      "flux-rs required with #[refined_by], #[invariant], #[field]",
+      "verus required as companion for the unbounded invariant",
+      "kani required as executable cross-check",
+      "negative or should_fail target paired",
+      "no broadening of #[trusted]/#[ignore]/extern_spec/opaque without paired trusted-base entry",
+      "nightly toolchain pinned with cargo-flux version",
+      "no E_FLUX_TRUST_ABUSE, E_FLUX_TOOLCHAIN_UNPINNED"
+    ]
+  },
+  {
+    "name": "anti-laundering: external_body rejected",
+    "prompt": "Plan proof coverage for a function where a writer would naturally want to use #[verifier::external_body] to skip proving the body.",
+    "expect": [
+      "obligation's command/target forbids external_body in expected_evidence",
+      "obligation requires exec fn body to mirror or directly call production code",
+      "no 'external_body is acceptable when' rationale in decision_reason",
+      "verifier triggers row cites implementation-binding rule 1 and rule 2",
+      "self-audit gate 4 rejects the plan if external_body appears"
+    ]
+  },
+  {
+    "name": "resource governance: bounded Kani run",
+    "prompt": "Plan proof coverage that requires a Kani run over a parser with input size up to 1024 bytes.",
+    "expect": [
+      "command uses -j 1 (no -j > 1)",
+      "model_bounds.mem_high and model_bounds.mem_max populated",
+      "no --no-default-checks, --no-memory-safety-checks, --no-overflow-checks, --no-unwinding-checks, --only-codegen, --no-codegen, --prove-safety-only",
+      "tool_metadata.version_pin set",
+      "model_bounds.unwind and model_bounds.input_size populated",
+      "expected_evidence cites VERIFICATION:- SUCCESSFUL marker",
+      "no E_RESOURCE_UNGOVERNED"
+    ]
+  },
+  {
+    "name": "anti-pattern: cover only Kani harness",
+    "prompt": "Plan proof coverage where a writer proposes a Kani harness with kani::cover! as the only assertion over a property claim.",
+    "expect": [
+      "obligation requires kani::assert or contract postcondition over the property",
+      "kani::cover allowed only as reachability evidence",
+      "expected_evidence mentions paired kani::assert or contract postcondition",
+      "self-audit gate 4 rejects the plan if cover is sole satisfaction",
+      "verifier triggers row cites implementation-binding rule 3"
+    ]
+  },
+  {
+    "name": "waiver: tooling unavailable is allowed; behavior waiver is not",
+    "prompt": "Plan proof coverage where cargo-kani is missing AND a writer proposes to waive a behavior-affecting Verus obligation.",
+    "expect": [
+      "cargo-kani row emitted with applicability=blocked_tooling and tooling_acquisition_ref",
+      "waiver-candidate/v1 row for cargo-kani with behavior_affecting=false, boundary_proof, compensating_evidence",
+      "no waiver-candidate/v1 row with behavior_affecting=true",
+      "verus obligation remains required with paired proof-obligation/v1 row",
+      "no E_BEHAVIOR_WAIVER, E_LANE_BLOCKED_TOOLING"
+    ]
+  },
+  {
+    "name": "validator: synthetic good plan passes with zero findings",
+    "prompt": "Run scripts/validate_plan.py against examples/good-plan and verify exit 0 with findings_total=0.",
+    "expect": [
+      "exit code 0",
+      "findings_total == 0",
+      "findings_blocker == 0",
+      "findings_major == 0",
+      "summary.status == 'PASS'",
+      "good plan has 5 obligations and 5 lane decisions paired"
+    ]
+  },
+  {
+    "name": "validator: synthetic bad plan fails with expected finding codes",
+    "prompt": "Run scripts/validate_plan.py against examples/bad-plan and verify exit 1 with at least one of each canonical finding code.",
+    "expect": [
+      "exit code 1",
+      "E_BEHAVIOR_WAIVER present (waiver has behavior_affecting=true)",
+      "E_VERUS_DISCONNECTED_SPEC present (verus obligation references assume/axiom)",
+      "E_KANI_COVER_ONLY OR E_KANI_ASSUMPTION_VACUITY present (kani harness is smoke-only)",
+      "E_LOOM_NOT_MODELED present (loom missing cfg loom)",
+      "E_MIRI_TOOLCHAIN_UNPINNED present (miri missing MIRIFLAGS)",
+      "E_FUZZ_BUDGET_ABSENT present (fuzz missing -max_total_time)",
+      "E_PROPTEST_BUDGET_ABSENT present (proptest missing PROPTEST_CASES)",
+      "E_BOUND_RELAXED_UNAUTHORIZED OR E_RESOURCE_UNGOVERNED present"
+    ]
+  },
+  {
+    "name": "schema discipline: every proof-obligation row has 22 required fields",
+    "prompt": "Verify that every proof-obligation/v1 row in the plan has all 22 required fields per references/obligation-schema.md.",
+    "expect": [
+      "all 22 fields present: schema_version, id, requirement_id, contract_clause, domain_claim, risk, risk_tags, verifier, artifact, target, command, workdir, expected_evidence, assumptions, model_bounds, tool_metadata, trusted_base_refs, required, behavior_affecting, mode, owner_state, rerun_from, status",
+      "no forbidden alias fields (layer, checker, claim)",
+      "status is one of planned or blocked_tooling for planner rows",
+      "verifier is one of verus, kani, flux-rs, loom, tla-plus, miri, cargo-fuzz, proptest",
+      "mode is one of verify-proof or verify-smoke"
+    ]
+  },
+  {
+    "name": "lane pairing: every required lane decision has a paired obligation",
+    "prompt": "Verify that for every verifier-lane-decision/v1 row with applicability=required, the required_obligation_ids list at least one id that exists in proof-obligations.planned.jsonl, and conversely every obligation is referenced by at least one required lane decision.",
+    "expect": [
+      "no E_LANE_OBLIGATION_MISSING findings",
+      "every required lane decision has non-empty required_obligation_ids",
+      "every obligation id appears in some required lane decision's required_obligation_ids",
+      "obligation verifier matches the lane decision verifier"
+    ]
+  },
+  {
+    "name": "trust marker discipline: every assumption has a ledger entry",
+    "prompt": "Verify that every proof-obligation with non-empty assumptions references at least one trusted-base-plan.md entry via trusted_base_refs, and that kani::cover!/Miri cfg_attr(miri, ignore)/Flux #[trusted]/Verus external_body triggers have ledger entries.",
+    "expect": [
+      "obligations with assumptions but no trusted_base_refs fail with E_TRUST_LEDGER_INCOMPLETE",
+      "Miri obligations with risk_tags ub/unsafe/ffi/raw_pointer/aliasing/provenance/layout require specialist scoping note in trusted_base_refs",
+      "Flux obligations broadening #[trusted]/#[ignore]/extern_spec/opaque have ledger entries",
+      "no E_TRUST_LEDGER_INCOMPLETE, E_MIRI_PATH_SKIPPED, E_FLUX_TRUST_ABUSE findings"
+    ]
+  },
+  {
+    "name": "waiver discipline: lifecycle fields are present and behavior is false",
+    "prompt": "Verify that every waiver-candidate/v1 row has behavior_affecting=false, boundary_proof citing a sibling obligation or external system, compensating_evidence with at least one reference, ISO-8601 expiry, and a named owner.",
+    "expect": [
+      "no waiver row has behavior_affecting=true (would be E_BEHAVIOR_WAIVER)",
+      "every waiver has non-empty boundary_proof",
+      "every waiver has non-empty compensating_evidence array",
+      "every waiver expiry matches /^\\d{4}-\\d{2}-\\d{2}/",
+      "every waiver owner is non-empty",
+      "no E_BEHAVIOR_WAIVER or E_WAIVER_LIFECYCLE_INVALID findings"
+    ]
   }
 ]

@@ -37,7 +37,7 @@ You are the **creative decomposition engine** for the planner skill. The Nushell
 When user asks to plan work:
 
 ```bash
-P="$HOME/.claude/skills/planner/planner.nu"
+P="$HOME/.agents/skills/planner/planner.nu"
 
 nu $P init --session-id <unique-id> --description "$(cat <<'EOF'
 <user's description of work>
@@ -384,7 +384,7 @@ Before submitting tasks, verify:
 
 ```bash
 # Step 1: Initialize
-P="$HOME/.claude/skills/planner/planner.nu"
+P="$HOME/.agents/skills/planner/planner.nu"
 nu $P init --session-id user-auth --description "Add JWT authentication"
 
 # Step 2: AI generates tasks (you do this)

@@ -1,6 +1,6 @@
 ---
 name: functional-rust
-description: "Strict functional-first Rust generator combining zero-panic purity (Data-Calc-Actions layering) and Holzmann NASA/JPL reliability. Use this skill whenever writing, fixing, or reviewing Rust code — especially for CI repairs, functional architecture, zero-unwrap enforcement, or bead workflow implementation."
+description: "Strict functional-first Rust generator for AI-assisted Rust: zero-panic purity (Data-Calc-Actions), type-driven design, newtypes, thiserror errors, and Holzmann NASA/JPL reliability. Use whenever writing, fixing, or reviewing Rust code — especially CI repairs, functional architecture, zero-unwrap enforcement, AI code hardening, or bead workflow implementation."
 ---
 
 ```jsonl
@@ -56,6 +56,7 @@ description: "Strict functional-first Rust generator combining zero-panic purity
 {"kind":"ref","file":"references/scott-ddd-types.md","use":"Strict DDD+types doctrine"}
 {"kind":"ref","file":"references/typing-refactor-checklist.md","use":"Stepwise primitive->type migration"}
 {"kind":"ref","file":"references/complete-workflow.md","use":"Full Data->Calc->Actions example"}
+{"kind":"ref","file":"references/rust-ai-verification-doctrine.md","use":"Rust+AI thesis: compiler/clippy/proofs as hallucination boundaries; concrete human reports over AI-sounding filler"}
 ```
 
 ### AI Developer Guardrails
@@ -69,6 +70,7 @@ You are acting as an AI Engineer under strict NASA/JPL Holzmann rules combined w
 5. **No `unwrap`:** You are physically incapable of typing `.unwrap()`, `.unwrap_or()`, or `.expect()`. Use `map_or_else` or `match`.
 6. **No Silent Errors:** You MUST return `Result` and propagate up, or explicitly log.
 7. **Warnings are Errors:** Clippy complexity and pedantic lints are mandatory. Zero warnings.
+8. **Rust Makes AI Trust Cheaper:** Treat the compiler, clippy, newtypes, `thiserror`, Cargo metadata, and proof/fuzz/model-check lanes as hallucination boundaries. Read `references/rust-ai-verification-doctrine.md` when the work is AI-generated, AI-reviewed, or policy/documentation-heavy.
 
 ### Mandatory Verification Gate
 You are strictly forbidden from considering a coding task "complete" until you have executed the following and received a `0` exit code.

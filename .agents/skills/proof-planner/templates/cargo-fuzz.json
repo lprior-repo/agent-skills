@@ -1,0 +1,32 @@
+{
+  "schema_version": "proof-obligation/v1",
+  "id": "PO-NNN",
+  "requirement_id": "REQ-NNN",
+  "contract_clause": "C-NNN",
+  "domain_claim": "<one-sentence claim under test>",
+  "risk": "hostile_input|parse_canonicalization",
+  "risk_tags": ["parser", "codec", "hostile_input", "fuzzable_canonicalization"],
+  "verifier": "cargo-fuzz",
+  "artifact": "fuzz/fuzz_targets/<target>.rs",
+  "target": "crate::path::to::symbol",
+  "command": "cargo fuzz run <target> --sanitizer=address -- -max_total_time=120 -rss_limit_mb=2048 -print_final_stats=1",
+  "workdir": "/abs/path/to/bead-workspace",
+  "expected_evidence": "Fuzz run reaches the 120s budget with no crash; #<N> NEW cov recorded; corpus preserved at <workdir>/fuzz/corpus/<target>; oracle is <round-trip|differential|metamorphic|verifier-vs-executor> per references/evidence-requirements.md.",
+  "assumptions": ["fuzz build uses --cfg fuzzing"],
+  "model_bounds": {
+    "max_total_time": 120,
+    "rss_limit_mb": 2048
+  },
+  "tool_metadata": {
+    "tool": "cargo-fuzz",
+    "version_pin": "cargo-fuzz@0.13",
+    "feature_flags": ["--sanitizer=address"]
+  },
+  "trusted_base_refs": [],
+  "required": true,
+  "behavior_affecting": true,
+  "mode": "verify-proof",
+  "owner_state": 4,
+  "rerun_from": 4,
+  "status": "planned"
+}

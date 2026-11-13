@@ -1,0 +1,35 @@
+{
+  "schema_version": "proof-obligation/v1",
+  "id": "PO-NNN",
+  "requirement_id": "REQ-NNN",
+  "contract_clause": "C-NNN",
+  "domain_claim": "<one-sentence claim under test>",
+  "risk": "rejection|bounded_transition|panic_freedom|...",
+  "risk_tags": ["bounded_state", "rejection"],
+  "verifier": "kani",
+  "artifact": "harnesses/kani/<harness>.rs",
+  "target": "crate::path::to::symbol",
+  "command": "cargo kani -j 1 --output-format=regular --harness <harness_name>",
+  "workdir": "/abs/path/to/bead-workspace",
+  "expected_evidence": "Kani reports VERIFICATION:- SUCCESSFUL for <harness_name> with check_failure=0; a paired kani::cover reachability entry proves the truncated-input branch is reachable.",
+  "assumptions": ["<each assumption needs a trusted_base_refs entry>"],
+  "model_bounds": {
+    "unwind": 16,
+    "input_size": 1024,
+    "mem_high": "20G",
+    "mem_max": "24G"
+  },
+  "tool_metadata": {
+    "tool": "cargo-kani",
+    "version_pin": "cargo-kani@0.65",
+    "feature_flags": [],
+    "solver": "cbmc"
+  },
+  "trusted_base_refs": ["TB-NNN-cover-reachability"],
+  "required": true,
+  "behavior_affecting": true,
+  "mode": "verify-proof",
+  "owner_state": 4,
+  "rerun_from": 4,
+  "status": "planned"
+}

@@ -1,0 +1,30 @@
+{
+  "schema_version": "proof-obligation/v1",
+  "id": "PO-NNN",
+  "requirement_id": "REQ-NNN",
+  "contract_clause": "C-NNN",
+  "domain_claim": "<one-sentence claim under test>",
+  "risk": "refinement|illegal_state|index_safety",
+  "risk_tags": ["refinement", "ownership", "index"],
+  "verifier": "flux-rs",
+  "artifact": "src/<module>.rs",
+  "target": "crate::path::to::symbol",
+  "command": "cargo flux --lib -p <crate> --features=verified",
+  "workdir": "/abs/path/to/bead-workspace",
+  "expected_evidence": "Flux check reports no postcondition failures for the named fn; no #[trusted]/#[ignore]/extern_spec/opaque broadened by this obligation; paired negative test <crate>::<negative_target> reports should_fail as expected.",
+  "assumptions": [],
+  "model_bounds": {},
+  "tool_metadata": {
+    "tool": "cargo-flux",
+    "version_pin": "flux@nightly-2026-02-15",
+    "solver": "liquid-fixpoint",
+    "backend": "z3"
+  },
+  "trusted_base_refs": [],
+  "required": true,
+  "behavior_affecting": true,
+  "mode": "verify-proof",
+  "owner_state": 4,
+  "rerun_from": 4,
+  "status": "planned"
+}

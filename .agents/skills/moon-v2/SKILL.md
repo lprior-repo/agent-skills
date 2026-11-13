@@ -1,6 +1,6 @@
 ---
 name: moon-v2
-description: "Moon v2 build system expert for Rust. Covers CI/CD, task design, 3-layer caching, and Holzman Rust lint gates."
+description: "Moon v2 build-system and CI triage expert for Rust. Use for `moon ci`, `.moon/`, failed CI reports, `fmt`, `check`, `test`, `lint-src`, source-length gates, task design, caching, and Holzman Rust zero-warning source gates."
 ---
 
 ```jsonl
@@ -8,6 +8,8 @@ description: "Moon v2 build system expert for Rust. Covers CI/CD, task design, 3
 {"kind":"claude_best_practice","id":"ci_gate_is_canonical","text":"CI GATE IS CANONICAL (MANDATORY): moon ci is the canonical gate for Moon v2. moon run :ci is only valid as a repo-specific alias when explicit root :ci task exists. Run tests in pipeline; don't enforce test implementation style through clippy."}
 {"kind":"claude_best_practice","id":"source_lint_zero_tolerance","text":"SOURCE LINT ZERO TOLERANCE (MANDATORY): Source code must have 0 clippy issues (no errors, no warnings, no clippy lints). moon ci fails if ANY clippy issue detected in source. Tests must compile and prove behavior; implementation style is lenient."}
 {"kind":"rule","id":"moon_ci_preferred","level":"warn","text":"Prefer moon ci over moon run :ci. moon ci is canonical in v2. Only use moon run :ci when a root :ci task is explicitly defined in repo.","bans":["moon run :ci as primary gate when root :ci task does not exist"],"preferred":["moon ci","moon run :<specific-task>"],"notes":["moon ci respects runInCI automatically. moon run :ci requires explicit :ci task definition to behave as expected."]}
+{"kind":"rule","id":"ci_triage_loop","level":"error","text":"Do not rerun full moon ci in a loop. Run one baseline, inspect the CI report, run targeted failing lanes until fixed, then run one final moon ci confirmation.","bans":["repeated full moon ci before targeted lane triage","claiming moon ci status from stale report data"],"preferred":["moon ci baseline","inspect .moon/cache/ciReport.json when present","moon run :<failing-task>","final moon ci"]}
+{"kind":"rule","id":"no_lazy_exceptions","level":"error","text":"Do not add source-line, clippy, source-length, or gate exceptions to make CI pass unless the user explicitly requests an exception after seeing the real fix option. Prefer fixing code, splitting files, removing dead code, or repairing tasks."}
 {"kind":"rule","id":"lint_src_zero_tolerance","level":"error","text":"ZERO CLIPPY ISSUES IN SOURCE CODE (MANDATORY): moon ci gate must fail if clippy reports ANY issue in source (errors, warnings, or lints). Source lint uses -W clippy::all to catch everything. Tests must compile and prove behavior; implementation style is lenient.","bans":["allowing clippy warnings in source code","allowing clippy lints in source code","allowing clippy errors in source code","running moon ci with any clippy issues in source"],"preferred":["moon run :lint-src (catches all clippy issues)","cargo clippy --lib --bins --examples -- -D warnings -W clippy::all"],"notes":["Source code must be flawless (0 issues). Tests must compile and prove behavior with exact assertions. Fix ALL source clippy issues before CI."]}
 {"kind":"rule","id":"lint_src_separate_from_tests","level":"warn","text":"Separate lint-src task from test tasks. Use dedicated lint-src task that runs clippy only on source targets (--lib --bins --examples) and excludes tests. Test implementation style is not gated by clippy.","bans":["adding test clippy style gates to build/test tasks"],"preferred":["moon run :lint-src","cargo clippy --lib --bins --examples -- -D warnings -W clippy::all"],"notes":["Tests are for behavior proof and exact assertions. Don't block test work due to test clippy/style warnings."]}
 {"kind":"rule","id":"holzman_rust_posture","level":"warn","text":"Maintain Holzman Rust posture with zero tolerance: deny warnings (-D warnings) + deny all clippy lints (-W clippy::all). Source code must be flawless, measurable, and panic-free.","bans":["allowing unwrap/expect in production code","suppressing clippy warnings or lints","ignoring any clippy issue in source code"],"preferred":["-D warnings -W clippy::all"],"notes":["ALL clippy lints are caught and treated as failures in source code. Tests must compile and prove behavior, but test implementation style is not clippy-gated."]}
@@ -36,6 +38,24 @@ You are an expert in **Moon v2** for Rust repositories. Moon is a build system t
 - **Toolchains** — v2 uses `.moon/toolchains.yml` (plural), not `.moon/toolchain.yml`
 - **Remote cache** — Optional AC+CAS via Bazel Remote API (supports `grpc://` and `http://`)
 - **Deep merge inheritance** — v2 merges global task configs sequentially (not shallow), respecting merge options
+
+## CI Triage Loop
+
+Use this loop for every `moon ci` repair, regardless of model or host:
+
+1. Run one baseline `moon ci` unless a fresh same-session CI report already exists.
+2. Inspect `.moon/cache/ciReport.json` when present and list failing task labels, statuses, and errors.
+3. For each failing lane, run the smallest targeted command, for example `moon run :fmt`, `moon run :check`, `moon run :test`, `moon run :verify-loom`, or the repo-specific script named by the task.
+4. Fix the root cause. Do not add allowlist, source-length, lint, or ignored-result exceptions unless the user explicitly approves that policy tradeoff after seeing the proper fix.
+5. Rerun the targeted lane that failed. Repeat only for that lane until it passes or a real blocker is proven.
+6. After all targeted lanes pass, run one final `moon ci` and report exact evidence.
+
+If a command times out, produces truncated output, or the report is missing, inspect the task-specific log or rerun the focused lane. Do not keep launching full CI as a diagnostic substitute.
+
+## Tool Discipline
+
+- Prefer structured reads and searches over shell truncation. Use `Read`/`Grep` where available; use shell `head`, `tail`, `cat`, or `ls` only when the host lacks a better tool or the command is itself the subject of the task.
+- When an edit or patch fails because context changed, read the current file region and recompute the edit. Do not retry stale line-numbered snippets.
 
 ## Workspace Configuration (.moon/workspace.yml)
 

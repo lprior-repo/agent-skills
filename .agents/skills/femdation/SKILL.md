@@ -1,6 +1,6 @@
 ---
 name: femdation
-description: "Aggressive work-conserving multi-bead dispatcher for the proof-first go-skill lifecycle. Keeps every unblocked bead active with direct specialist subagents while preserving gates, artifacts, retries, and landing order."
+description: "Aggressive work-conserving multi-bead dispatcher for the proof-first go-skill lifecycle. Keeps every unblocked bead active with direct named specialist subagents while preserving gates, artifacts, retries, and landing order."
 ---
 
 ```jsonl
@@ -10,6 +10,8 @@ description: "Aggressive work-conserving multi-bead dispatcher for the proof-fir
 {"kind":"principle","id":"phase_integrity","text":"Parallelism is global across beads, not permission to skip per-bead phases. Each bead advances only through the current go-skill whole-number states and only after required artifacts and evidence pass."}
 {"kind":"rule","id":"single_controller","text":"Run exactly one top-level femdation controller. Do not spawn master, go-skill, another femdation, per-bead controllers, or full-pipeline children."}
 {"kind":"rule","id":"direct_children_only","text":"Every child is a direct specialist child for exactly one bead and one state or safe same-state sublane. Child prompts must forbid nested Task/opencode delegation and nested orchestrators."}
+{"kind":"rule","id":"no_generic_specialists","text":"Do not launch specialist-labeled work through the generic/general agent. The delegated subagent must match the state delegate, or the bead blocks until the correct specialist exists or the user approves a degraded fallback."}
+{"kind":"rule","id":"routing_ledger_required","text":"Every child dispatch appends a JSONL routing-ledger record naming intended_skill, actual_agent/subagent_type, fallback status, inputs, outputs, dispatch evidence, and return evidence."}
 {"kind":"rule","id":"one_mutating_state_per_bead","text":"At most one mutating child may work on a bead at a time. Same-state fanout is allowed only for independent read-only reviews or independent verifier/gate lanes over frozen inputs."}
 {"kind":"rule","id":"aggressive_fill","text":"Launch all currently ready independent dispatches in one batch when the environment supports parallel tool calls. Minimum target occupancy is one active dispatch per unblocked bead, plus safe same-state fanout."}
 {"kind":"rule","id":"occupancy_target","text":"For 10 selected unblocked beads, target 10 active direct specialist children across their current lifecycle states. Anything less requires concrete evidence: blocked gate, serial landing wait, queued dispatch, active verification, resource cap, or terminal done."}
@@ -86,7 +88,7 @@ Unsafe fanout:
 
 ## Specialist Matrix
 
-Before dispatch, verify the specialist exists and the dispatch is for exactly one bead and one state.
+Before dispatch, verify the specialist exists and the dispatch is for exactly one bead and one state. Specialist-labeled work must not run through `general`, `build`, or another catch-all executor. If the named delegate is unavailable, block the bead with evidence or ask the user for an explicit degraded fallback.
 
 | Go State | Delegate |
 |---|---|
@@ -109,13 +111,23 @@ States 1 and 16 are controller verification states. Keep them small, evidence-ba
 
 ## Dispatch Manifest
 
-Every child launch must have a manifest checked before dispatch:
+Every child launch must have a manifest checked before dispatch and a matching `.beads/<bead-id>/routing-ledger.jsonl` record using the go-skill routing ledger contract:
 
 ```json
 {"bead_id":"<id>","state":4,"sublane":"proof-planning","delegate":"proof-planner","source_checkout":"<forbidden-path>","isolated_workdir":"<required-path>","inputs":[".beads/<id>/contract.md"],"outputs":[".beads/<id>/proof-strategy.md"],"attempt":1}
 ```
 
+Routing-ledger record shape:
+
+```json
+{"bead_id":"vb-example","state":4,"sublane":"proof-planning","intended_skill":"proof-planner","actual_agent":"proof-planner","actual_subagent_type":"proof-planner","fallback":false,"user_approved_fallback":false,"fallback_reason":null,"source_checkout":"/path/source","isolated_workdir":"/path/worktree","inputs":[".beads/vb-example/contract.md"],"expected_outputs":["proof-strategy.md","verifier-lane-decisions.jsonl"],"dispatch_evidence_ref":".beads/vb-example/dispatch/04-proof-planning.json","return_evidence_ref":null,"status":"dispatched"}
+```
+
 The task title, prompt, workdir, artifact paths, bead claim/status, and child output must name the same single bead ID. Any mismatch invalidates the dispatch and routes the bead to repair from the earliest contaminated state.
+
+The actual delegated agent/subagent must match the delegate in the Specialist Matrix. A task title such as `holzman-rust` is not sufficient evidence if the executor was `general`.
+
+The routing ledger must prove `actual_agent` and `actual_subagent_type` match the Specialist Matrix delegate. Missing ledger entries, malformed JSONL, mismatched bead/state, missing evidence refs, or unapproved catch-all fallback block the bead.
 
 Every child prompt must include this instruction:
 
@@ -169,6 +181,7 @@ test ! -e "<source-checkout-path-from-STATE>/.beads/<bead-id>"
 test -s .beads/<bead-id>/STATE.md
 test -s .beads/<bead-id>/baseline-report.md
 jq -c . .beads/<bead-id>/delivery-scope.jsonl >/dev/null
+jq -c . .beads/<bead-id>/routing-ledger.jsonl >/dev/null
 
 # Current-state gate: validate only the bead's current state/transition.
 "/home/lewis/.agents/skills/go-skill/tools/go-skill-v9-validate" --workspace "$(pwd -P)" --bead "<bead-id>" --state "<current-state>" --source-checkout "<source-checkout-path-from-STATE>" --skill-root /home/lewis/.agents/skills/go-skill --mirror-root /home/lewis/.opencode/skill/go-skill
@@ -180,9 +193,11 @@ For scheduler health, every active bead must have exactly one of: active child P
 
 Forbidden:
 - Claiming a child ran without a dispatch manifest and returned artifact evidence.
+- Claiming a child ran without a routing-ledger entry naming the intended and actual specialist.
 - Claiming a bead is busy when no child, queue entry, verification action, serial wait, or blocker exists.
 - Advancing a bead from a specialist summary without checking required files on disk.
 - Reusing a prompt, workdir, artifact path, or bead ID across parallel children.
+- Dispatching specialist-labeled work through `general`, `build`, or any catch-all agent without explicit degraded-fallback approval.
 - Letting throughput pressure skip proofs, tests, reviews, machine gates, truth/evidence approval, landing, or cleanup evidence.
 - Mutating source checkout bead artifacts or letting specialists work outside their isolated workspace.
 

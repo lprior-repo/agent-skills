@@ -1,8 +1,10 @@
 # agent-skills
 
-Portable AI-agent skills for OpenCode, Claude Code, and compatible agent runtimes.
+Portable AI-agent skills for Oh My Pi (OMP), OpenCode, Claude Code, and compatible agent runtimes.
 
 This repository is a checked-in snapshot of local `.agents` and OpenCode skill/agent runtime files. Within this repository, `.agents/skills/` is authoritative over the legacy top-level `skills/` mirror.
+
+OMP-managed skills are published in the same canonical collection, alongside skills installed under the local `.agents` runtime.
 
 ## What Is In This Repo
 
@@ -57,6 +59,8 @@ mkdir -p ~/.agents/skills
 cp -R .agents/skills/* ~/.agents/skills/
 ```
 
+OMP agents can use the global `.agents/skills/` installation above. `oh-my-pi` is an agent execution playbook: load `skill://oh-my-pi` to choose tools, reuse runtime state, coordinate independent work, and verify the actual task. It is not primarily a human onboarding tutorial.
+
 Install into Claude Code:
 
 ```bash
@@ -85,6 +89,8 @@ Use the skill whose boundary owns the decision.
 
 | Need | Start with |
 | --- | --- |
+| Operate OMP tools effectively while doing real work | `oh-my-pi` |
+| Run OMP-only Rust work on local GPUs | `local-gpu-coding` |
 | Deliver a bead end to end | `go-skill` |
 | Deliver many beads concurrently | `femdation` |
 | Map a codebase before proof or implementation | `explore` |
@@ -154,6 +160,7 @@ AI agents do the work. Deterministic tools, adversarial reviewers, raw command e
 | `formal-verifier` | Executes approved proof-obligation ledgers and records PASS, FAIL_LOCAL, FAIL_REGRESSION, WAIVED, or DEFERRED_GLOBAL evidence. | Proof obligations are approved and need actual verifier execution. |
 | `tla-plus` | Writes, reviews, and repairs TLA+/PlusCal specs, TLC models, invariants, liveness, and counterexample evidence. | The system has temporal behavior, protocols, schedulers, queues, retries, leases, or distributed workflows. |
 | `verus` | Engineers Verus specs and proofs with verifier-in-the-loop evidence and trusted-boundary hygiene. | Rust-local functions, invariants, state transitions, or proof obligations need Verus. |
+| `verus-reviewer` | Audits Verus proof claims, trusted boundaries, assumptions, and verifier evidence. | Existing Verus proofs need independent, evidence-backed review. |
 | `kani` | Designs and triages Kani bounded model checking harnesses for Rust execution paths. | You need bounded proof of arithmetic, indexing, parser, codec, state-machine, panic, or unsafe precondition behavior. |
 | `flux-rs` | Uses Flux refinement types for Rust invariants, signatures, predicates, and trusted boundary review. | Type-level refinements can make data constraints mechanically checked. |
 | `loom` | Models Rust concurrency interleavings with Loom and related schedule exploration. | Atomics, locks, cancellation, task coordination, or concurrent state machines need deterministic schedule pressure. |
@@ -167,6 +174,7 @@ AI agents do the work. Deterministic tools, adversarial reviewers, raw command e
 | `functional-rust` | Generates or repairs Rust with functional-core discipline, zero-panic policy, and NASA/JPL reliability rules. | Rust code needs strict safety, explicit errors, and clean data-calc-action layering. |
 | `holzman-rust` | Implements or optimizes Rust under Power of Ten plus performance, no-panic, bounded-resource, and evidence-first rules. | Production Rust, hot paths, CI repair, or safety-critical implementation needs a specialist. |
 | `moon-v2` | Designs Moon v2 build tasks, CI caching, and Rust quality gates. | You need Moon task layout, CI/CD setup, or cache-aware verification workflows. |
+| `rust-corpus-grounding` | Grounds Rust implementation and review decisions in an installed, page-citable corpus. | Rust claims need source-backed rules rather than recalled slogans; the corpus is an external prerequisite. |
 | `velocity` | Pushes high-throughput delivery while keeping TDD, functional core, CI, and modern engineering discipline intact. | You need faster execution without dropping quality gates. |
 
 ### Testing, QA, And Adversarial Review
@@ -188,10 +196,15 @@ AI agents do the work. Deterministic tools, adversarial reviewers, raw command e
 
 | Skill | What it does | Use it when |
 | --- | --- | --- |
+| `oh-my-pi` | Gives AI agents an OMP execution playbook for tools, persistent eval, subagents, artifacts, service lifecycle, and real verification. | The agent is doing tool-driven work, even when the user never mentions OMP. |
+| `local-gpu-coding` | Operates OMP-only Rust coding workflows on approved local RTX 5090/3090 models. | Rust work must stay within the configured local-model boundary. |
+| `diagnose-crash` | Investigates crashes using coredumps, debugger backtraces, and process evidence. | A program segfaults, aborts, or leaves a core dump. |
+| `disk-cleanup` | Finds and safely cleans generated artifacts, stale workspaces, and other reclaimable disk usage. | Disk pressure or build/cache growth needs evidence-backed cleanup. |
 | `dolt` | Operates and diagnoses Dolt-backed bead data, remotes, and corruption scenarios. | `bd` or Dolt-backed issue state is failing. |
 | `gastown` | Covers Gas Town rigs, polecats, convoys, runtimes, bead tracking, mail/nudges, formulas, and cross-rig coordination. | You are operating Gas Town or multi-agent work dispatch. |
 | `jj` | Guides Jujutsu workflows, workspaces, rebasing, revsets, and GitHub/Gerrit integration. | Version control work needs `jj` rather than raw git habits. |
 | `omarchy` | Handles end-user Linux desktop and window-manager customization for Hyprland, Waybar, Walker, terminals, themes, screenshots, idle, lock screen, and Omarchy commands. | You are changing desktop config, not developing Omarchy source code. |
+| `omarchy-app` | Builds Omarchy desktop apps with C++/Qt Quick, qmake6, and Arch packaging. | You need a native, single-binary Omarchy application. |
 | `opencode` | Explains OpenCode sessions, agents, providers, MCP servers, config, server mode, and GitHub integration. | You are configuring or operating OpenCode. |
 | `opencode-scheduler` | Creates, inspects, updates, runs, troubleshoots, and cleans recurring OpenCode jobs. | You need scheduled agent work or scheduler diagnostics. |
 | `rtk` | Installs, verifies, initializes, and diagnoses Rust Token Killer integrations across supported AI tools. | You need token-rewrite hooks or RTK wiring checked. |
@@ -225,11 +238,19 @@ AI agents do the work. Deterministic tools, adversarial reviewers, raw command e
 
 ## Maintenance Notes
 
-When refreshing the snapshot from a local machine, use a non-deleting sync from your runtime skill source and keep machine-private runtime state out of the repository:
+Refresh only loadable skill directories, without deleting repository-only skills. Include both authored and OMP-managed sources; keep runtime data and credentials out:
 
 ```bash
-rsync -a ~/.agents/skills/ .agents/skills/
+for root in "$HOME/.agents/skills" "$HOME/.omp/agent/managed-skills"; do
+  for source in "$root"/*; do
+    [ -f "$source/SKILL.md" ] || continue
+    rsync -a --no-links --exclude-from=.gitignore \
+      "$source/" ".agents/skills/${source##*/}/"
+  done
+done
 ```
+
+Run this from the repository root. A trailing source slash materializes an installed top-level skill directory; `--no-links` avoids copying machine-only links inside it. Do not add `--delete`. The exclusion list preserves authored references and eval definitions while omitting workspaces, eval runs, build products, caches, backups, and credentials. Repair broken installation links rather than publishing absolute links; the Omarchy snapshot contains portable files.
 
 Recommended checks after refresh:
 

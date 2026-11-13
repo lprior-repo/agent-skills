@@ -1,0 +1,43 @@
+{
+  "skill_name": "oh-my-pi",
+  "host_baseline": "OMP 18.19.0; documentation-only tasks; do not change live config or run model/provider requests outside the evaluation itself",
+  "evals": [
+    {
+      "id": "interrupted-session",
+      "prompt": "OMP crashed while two subagents were editing. I have /path/to/session.jsonl. What exact terminal command gets the unfinished work going again, and how is it different from --continue and --resume? Does using /tree, /fork, or checkpoint/rewind restore my working files? Explain without opening any real sessions or executing recovery.",
+      "expectations": [
+        "Recommends omp --restore /path/to/session.jsonl for continuation of interrupted work and recorded subagents, not merely selecting the conversation.",
+        "Distinguishes --continue and --resume from --restore without claiming crashed OS processes or kernel state resume exactly.",
+        "States conversation branching/checkpoint/rewind do not restore filesystem or process state.",
+        "Checks version-matched help or documentation and cites the evidence; does not perform recovery or inspect private session content."
+      ]
+    },
+    {
+      "id": "parallel-work-and-model-identity",
+      "prompt": "Explain, don't launch anything: I have two independent code changes, parser.ts and metrics.ts, and one integration owner. Show the OMP task call shape for parallel work. I need an exact approved local model, but it may be unavailable. I also need a dev server. Can I pass model at the batch top level, use tools as a built-in-tool allowlist, assume isolated checkouts, poll child status, or put async:true and timeout:0 on the named service? What should happen instead?",
+      "expectations": [
+        "Shows context plus tasks[], with model/agent per item and a meaningful solutionSpace.",
+        "Uses a placeholder for an exact currently approved model or a live advertised approved exact identity; no guessed role/glob/list or fallback.",
+        "Explains kernel-defined tools, explicit optional isolation, file ownership, and integration verification after workers finish.",
+        "Forbids automatic model substitution and status polling; works until blocked then waits on owned work.",
+        "Named service uses unique name and readiness with no async or command timeout; readiness timeout is separate.",
+        "Does not actually spawn tasks, start services, or edit files."
+      ]
+    },
+    {
+      "id": "temporary-settings-and-private-browser",
+      "prompt": "Teach me this OMP setup, without changing it. I want thinking hidden but not reasoning disabled, a config tweak just for this session, and a genuinely isolated browser for a smoke check while Chrome relay is enabled. Does --no-extensions disable explicit -e files? Is --max-cost a strict total-spend cap, and is exporting my conversation safe to post publicly? Give precise choices and the main traps.",
+      "expectations": [
+        "Distinguishes --hide-thinking from --thinking and does not equate display hiding with off.",
+        "Explains cfg://NAME/KEY session-only writes versus /save persistence and user approval, without performing any settings write.",
+        "Explains app:auto bypasses relay but can still use configured CDP/other backends; app:own or app:chromium chooses OMP-owned runtime, without opening a real browser.",
+        "States --no-extensions suppresses discovery but explicit -e files still load; dependencies/extensions execute code.",
+        "States in-flight requests may finish above --max-cost and print mode exits 3 on the cost stop.",
+        "Explains HTML exports contain raw private material and are not automatically redacted/encrypted; sharing needs authorization.",
+        "If illustrating cfg dispatch, uses the top-level write tool's path/content object; does not invent a TUI /save command or use the filesystem eval write helper for cfg URIs.",
+        "Does not select permission-relaxing yolo for an unspecified settings example or describe --trusted-extension as executing no code.",
+        "Grounds the answer in current source docs/help and does not print secrets or perform operational changes."
+      ]
+    }
+  ]
+}

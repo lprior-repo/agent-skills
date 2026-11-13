@@ -10,13 +10,13 @@ description: "Deterministic planning agent that decomposes complex work into ato
 The deterministic state machine lives at:
 
 ```
-~/.claude/skills/planner/planner.nu
+~/.agents/skills/planner/planner.nu
 ```
 
 All commands use this absolute path:
 
 ```bash
-P="$HOME/.claude/skills/planner/planner.nu"
+P="$HOME/.agents/skills/planner/planner.nu"
 nu $P plan --description-file /tmp/plan-desc.md
 nu $P validate --bead-id intent-cli-a1b2
 nu $P status
@@ -218,7 +218,7 @@ nu $P show-created my-feature
 ### Step 1: Initialize Planning Session
 
 ```bash
-P="$HOME/.claude/skills/planner/planner.nu"
+P="$HOME/.agents/skills/planner/planner.nu"
 
 # Create session
 nu $P init --session-id user-auth --description "$(cat <<'EOF'

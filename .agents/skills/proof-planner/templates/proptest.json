@@ -1,0 +1,31 @@
+{
+  "schema_version": "proof-obligation/v1",
+  "id": "PO-NNN",
+  "requirement_id": "REQ-NNN",
+  "contract_clause": "C-NNN",
+  "domain_claim": "<one-sentence claim under test>",
+  "risk": "equality|ordering|field_sensitivity",
+  "risk_tags": ["property", "ordering"],
+  "verifier": "proptest",
+  "artifact": "tests/proptest/<target>.rs",
+  "target": "crate::path::to::symbol",
+  "command": "PROPTEST_CASES=10000 cargo test --test <target> --release",
+  "workdir": "/abs/path/to/bead-workspace",
+  "expected_evidence": "Test passes for 10000 cases (test result: ok. 1 passed; 0 failed); strategy is non-vacuous (e.g., prop::collection::vec(any::<T>(), 0..1024)); anti-invariant asserts the property fails for at least one invalid input class.",
+  "assumptions": [],
+  "model_bounds": {
+    "cases": 10000,
+    "input_size": 1024
+  },
+  "tool_metadata": {
+    "tool": "proptest",
+    "version_pin": "proptest@1.5"
+  },
+  "trusted_base_refs": [],
+  "required": true,
+  "behavior_affecting": true,
+  "mode": "verify-proof",
+  "owner_state": 4,
+  "rerun_from": 4,
+  "status": "planned"
+}

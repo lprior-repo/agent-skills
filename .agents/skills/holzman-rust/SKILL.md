@@ -1,6 +1,6 @@
 ---
 name: holzman-rust
-description: "Power of Ten PLUS maximum-performance Rust skill. Applies Gerard J. Holzmann's NASA/JPL Power of 10 to Rust, then optimizes for lowest latency, highest throughput, bounded resource use, conditional prevalidated dense runtime IR, measured stack-vs-heap placement, cache-aware layout, static dispatch, safe SIMD, assembly/IR evidence, release provenance, unsafe-forbidden-by-default policy, zero unwrap/expect/panic/todo/unimplemented, and benchmark/profiler proof. Use for Rust implementation, optimization, safety-critical systems, low-level code, async hot paths, or performance review."
+description: "Power of Ten PLUS maximum-performance Rust skill. Use for Rust implementation, repair, CI failure triage, source lint, clippy, fmt, check/test failures, safety-critical systems, low-level code, async hot paths, optimization, or performance review. Applies Gerard J. Holzmann's NASA/JPL Power of 10, then optimizes for latency, throughput, bounded resources, dense runtime IR, measured storage placement, cache-aware layout, static dispatch, safe SIMD, assembly/IR evidence, release provenance, unsafe-forbidden-by-default policy, zero unwrap/expect/panic/todo/unimplemented, and benchmark/profiler proof."
 allowed-tools:
   - Read
   - Glob
@@ -49,6 +49,14 @@ Before giving Rust implementation, review, or performance advice, read the appli
 10. **Prove slow, execute fast** - compile human complexity into dense runtime artifacts; never run proof, fuzz, spec validation, or graph reasoning in production hot paths.
 11. **Pinned nightly, not floating nightly** - use checked-in `rust-toolchain.toml`, allow only `portable_simd` and `try_blocks` by default, and treat `RUSTC_BOOTSTRAP` as a policy violation.
 12. **CI gate is real** - do not report completion without actual command evidence or a clear blocker.
+
+## Harness Recovery And Waiver Discipline
+
+- After a compile, lint, fmt, test, proof, or CI failure, isolate the smallest failing lane, repair the root cause, rerun that lane, and only then rerun the canonical global gate.
+- Do not add allowlist/source-line/source-length/clippy exceptions, disable checks, silence warnings, or weaken scripts to make a gate pass unless the user explicitly approves that waiver after seeing the proper fix path.
+- If an edit fails because context changed, read the live file region and recompute the patch. Do not retry stale `oldString`, line-numbered snippets, or identical no-op edits.
+- Prefer host file/search tools over shell truncation for inspection. Use shell `head`, `tail`, `cat`, or `ls` only when they are the behavior under test or no better host tool exists.
+- Before finalizing after a long session, compaction, or many repair loops, re-check live git status, changed files, and the final command evidence instead of trusting memory.
 
 ## Verification Scope Boundary
 

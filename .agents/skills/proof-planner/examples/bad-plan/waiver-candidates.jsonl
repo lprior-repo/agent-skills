@@ -1,0 +1,1 @@
+{"schema_version": "waiver-candidate/v1", "id": "WVR-001", "requirement_id": "REQ-999", "contract_clause": "C-999", "reason": "too hard", "behavior_affecting": true, "boundary_proof": "", "compensating_evidence": [], "owner": "", "expiry": "tomorrow", "review_status": "proposed"}

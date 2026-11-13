@@ -1,6 +1,6 @@
 ---
 name: beads
-description: "Autonomous Execution Doctrine for `beads` issue tracker."
+description: "Beads issue-tracker discipline. Use when a repo has `.beads/`, bead IDs such as `vb-*`, `bd` commands, issue lifecycle, claiming/closing work, lost tracker state, Dolt sync, or session handoff. Do not use TodoWrite/markdown TODOs in beads repos."
 ---
 
 # Skill: bd
@@ -9,7 +9,7 @@ This skill configures the agent to use `bd` (beads) properly, avoiding common Gi
 
 ## CRITICAL RULES FOR BEADS
 
-1. **NO TODO.md or task lists**: `bd` is the exclusive issue tracking system.
+1. **NO TODO.md, TodoWrite, or side task lists in beads repos**: `bd` is the exclusive issue tracking system. If a host tool instruction asks for a todo list, beads wins for repositories that have `.beads/`.
 2. **Git vs Dolt Separation**: 
    - The `.beads/dolt/` directory and `.beads/backup/` directory MUST NEVER be committed to Git. They are the local runtime state of the Dolt database.
    - If they get committed to Git, branch switching will corrupt the database. They must be in `.gitignore`.
@@ -21,6 +21,20 @@ This skill configures the agent to use `bd` (beads) properly, avoiding common Gi
    - Run `bd update <id> --claim` to claim work atomically.
    - Run `bd close <id> --reason "Completed"` when done.
    - Use `discovered-from` to link new work: `bd create "..." --deps discovered-from:<parent-id>`
+
+## Trigger And Startup Discipline
+
+- In any workspace containing `.beads/`, load this skill before planning implementation, cleanup, reviews, verification, or session handoff.
+- Start by checking the actual tracker state with `bd ready`, `bd show <id>`, `bd status`, or the user-provided bead ID. Do not infer issue state from memory or prior transcripts.
+- If a `bd` command reports database, remote, embedded-mode, permission, or sync errors, load the `dolt` skill immediately and repair the data plane before changing issue state.
+- Claim before implementation, update or close after verified completion, and push bead state before ending a work session.
+- For non-repository user configuration work where beads are irrelevant, do not invent a bead; state that the work is outside the repo bead graph and proceed directly.
+
+## Artifact And Handoff Discipline
+
+- Before reporting completion, verify every named bead exists in live `bd` output and has the intended status.
+- Session summaries must include bead IDs, status changes, pushed/not-pushed state, and any follow-up beads created.
+- Do not use prose as the source of truth for follow-ups. If follow-up work is real and belongs to the repo, create or update a bead.
 
 ```jsonl
 {"k":"meta","s":"bd","v":"1.0.2","f":"jsonl-min"}

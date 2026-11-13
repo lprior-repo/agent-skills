@@ -1,0 +1,53 @@
+{
+  "skill_name": "oh-my-pi",
+  "purpose": "Agent execution checks, not human OMP tutorials. Use a private temporary directory and the current host schemas. Do not claim these expectations were executed without actual tool evidence.",
+  "fixture_contract": "Create runs.json and previous.json from fixture_data in a temporary directory. Substitute its actual absolute path for {fixture_dir}. Cases can share the Python kernel; preserve run_rows loaded by the first case. Never touch a real project, user configuration, accounts, or browser session.",
+  "fixture_data": {
+    "runs.json": [
+      {"id":"compile","status":"passed","elapsed_ms":12},
+      {"id":"unit","status":"failed","elapsed_ms":7},
+      {"id":"lint","status":"passed","elapsed_ms":5},
+      {"id":"ui","status":"failed","elapsed_ms":11},
+      {"id":"docs","status":"skipped","elapsed_ms":99}
+    ],
+    "previous.json": [
+      {"id":"unit","status":"passed","elapsed_ms":6},
+      {"id":"lint","status":"failed","elapsed_ms":4},
+      {"id":"net","status":"failed","elapsed_ms":8},
+      {"id":"docs","status":"skipped","elapsed_ms":99}
+    ]
+  },
+  "evals": [
+    {
+      "id": "cached-run-evidence",
+      "prompt": "Read {fixture_dir}/runs.json and tell me the failed run IDs in input order. Then, in a separate computation, total only their elapsed_ms. Keep the loaded data available for the next step. Do the analysis, not a tutorial about your tools.",
+      "expectations": [
+        "Uses actual read/eval tools on the supplied fixture; returns failed IDs [unit, ui] and failed duration 18 ms, excluding passed and skipped rows.",
+        "Keeps loaded data in the persistent Python kernel and reuses it in the second cell rather than loading the file again or switching kernels.",
+        "Prints only relevant evidence and answers the data question rather than explaining OMP or scanning configuration.",
+        "Does not delegate this small direct task, reset successful setup, or alter the input files."
+      ]
+    },
+    {
+      "id": "small-comparison-stays-inline",
+      "prompt": "Compare those current run results with {fixture_dir}/previous.json. Give me the newly failing and resolved IDs, each sorted alphabetically. Use as many agents as appropriate, and actually do the comparison.",
+      "expectations": [
+        "Reuses available current run data and reads only the missing previous results; if run independently, loads the required inputs once.",
+        "Returns newly failing [ui, unit] and resolved [lint, net], not merely total counts or status echoes.",
+        "Keeps this tiny comparison inline instead of spawning gratuitous workers or a second OMP process.",
+        "Does not mutate either input, inspect live settings, poll jobs, or substitute a plan for the result."
+      ]
+    },
+    {
+      "id": "owned-local-service-lifecycle",
+      "prompt": "Temporarily serve {fixture_dir} on localhost so you can fetch runs.json. Use a fresh service name and an automatically assigned available port, wait for readiness, read the actual HTTP response, and stop only the service you created. No browser is needed. Report the observed result, not instructions for me to run.",
+      "expectations": [
+        "Starts a real uniquely named service bound to 127.0.0.1, with a readiness log/port check and no async or command timeout; port 0 can request automatic allocation.",
+        "Obtains the actual ready port from the startup result or one necessary log read, not a polling loop or guessed fixed port.",
+        "Reads the actual localhost runs.json response and verifies it contains the supplied records; does not claim a UI/browser test.",
+        "Stops the owned service through its returned name/ID, preserves unrelated services, then removes only owned temporary proof files after use.",
+        "Does not change configuration, invoke credentials, launch additional model requests, or silently leave a server running."
+      ]
+    }
+  ]
+}

@@ -1,0 +1,29 @@
+{
+  "schema_version": "proof-obligation/v1",
+  "id": "PO-NNN",
+  "requirement_id": "REQ-NNN",
+  "contract_clause": "C-NNN",
+  "domain_claim": "<one-sentence claim under test>",
+  "risk": "arithmetic_overflow|index_safety|panic_freedom|refinement|...",
+  "risk_tags": ["rust_local", "pure_core", "arithmetic"],
+  "verifier": "verus",
+  "artifact": "verification/verus/<name>.rs",
+  "target": "crate::path::to::symbol",
+  "command": "verus --crate-type=lib --edition=2021 crates/<name>/src/lib.rs crates/<name>/verification/verus/<name>.rs",
+  "workdir": "/abs/path/to/bead-workspace",
+  "expected_evidence": "Verus reports Verification SUCCEEDED for the named exec fn; rg -n 'external_body|assume|axiom' verification/verus/ is empty.",
+  "assumptions": [],
+  "model_bounds": {},
+  "tool_metadata": {
+    "tool": "verus",
+    "version_pin": "verus@0.2024.10",
+    "solver": "z3"
+  },
+  "trusted_base_refs": [],
+  "required": true,
+  "behavior_affecting": true,
+  "mode": "verify-proof",
+  "owner_state": 4,
+  "rerun_from": 4,
+  "status": "planned"
+}

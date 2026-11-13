@@ -1,0 +1,25 @@
+{
+  "purpose": "Manual routing expectations for the agent-first skill. Positive operational needs do not require the user to mention OMP. These are not measured host-selection results.",
+  "cases": [
+    {"prompt":"Fix src/parser.rs, find its real callers, update them, and run the focused check.","should_trigger":true,"reason":"Agent uses runtime navigation/edit/verification alongside the Rust skill."},
+    {"prompt":"Compare these CI records using the Python data you already loaded; don't start from scratch.","should_trigger":true,"reason":"Persistent eval state and economical tool choice."},
+    {"prompt":"We have two substantial independent implementation slices and one integration owner. Execute them in parallel with the approved exact model.","should_trigger":true,"reason":"Task contracts, ownership, exact model identity, and result delivery."},
+    {"prompt":"Start the preview server, wait until it is ready, verify the page, and clean up only your own server.","should_trigger":true,"reason":"Named-service lifecycle and actual UI proof."},
+    {"prompt":"That command already ran and its output spilled. Inspect the error without running it again.","should_trigger":true,"reason":"Artifact URI and output reuse."},
+    {"prompt":"This SQL dump is huge. Query only the relevant records instead of dumping all of it into context.","should_trigger":true,"reason":"On-demand source selector discovery and bounded reads."},
+    {"prompt":"Smoke-check the UI without borrowing my signed-in Chrome tabs.","should_trigger":true,"reason":"Browser relay/runtime trust choice."},
+    {"prompt":"Use a structural codemod for this rename, not a blind text replacement.","should_trigger":true,"reason":"AST/LSP device discovery and safe mutation."},
+    {"prompt":"OMP crashed with child agents running. Recover the interrupted work safely.","should_trigger":true,"reason":"Runtime restoration and side-effect reconciliation."},
+    {"prompt":"Explain how to keep an OMP setting temporary; don't change it yet.","should_trigger":true,"reason":"Explicit OMP help remains supported, without unsolicited mutation."},
+    {"prompt":"Explain Rust ownership from this inline example; no tools or file changes.","should_trigger":false,"reason":"Domain reasoning alone; no runtime operation needed."},
+    {"prompt":"Write an OpenMP parallel for loop in C++ as an inline example.","should_trigger":false,"reason":"Different platform; OpenMP is not Oh My Pi."},
+    {"prompt":"Explain how Oh My Zsh plugins work, without changing my machine.","should_trigger":false,"reason":"Different platform; no OMP runtime need."},
+    {"prompt":"Give me suggested Starship prompt colors as plain text only.","should_trigger":false,"reason":"Requested content, not host operation."},
+    {"prompt":"Review this pasted TLA+ formula for liveness; do not run tools.","should_trigger":false,"reason":"Formal-methods skill, not runtime execution."},
+    {"prompt":"Draft a portable migration-review skill in the reply only; no installation.","should_trigger":false,"reason":"Skill-authoring content without OMP runtime integration."},
+    {"prompt":"Explain the difference between a process and a thread in two sentences.","should_trigger":false,"reason":"Knowledge answer, not actual process supervision."},
+    {"prompt":"Rewrite this pasted paragraph more clearly.","should_trigger":false,"reason":"Direct text transformation needs no runtime operation."},
+    {"prompt":"Explain MCP configuration for VS Code only; don't configure or inspect this host.","should_trigger":false,"reason":"Different host and an explicit no-mutation help request."},
+    {"prompt":"Explain Prometheus histogram quantiles conceptually; no repository work.","should_trigger":false,"reason":"Domain explanation, not runtime tool use."}
+  ]
+}

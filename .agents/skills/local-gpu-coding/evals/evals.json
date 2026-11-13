@@ -1,0 +1,37 @@
+{
+  "skill_name": "local-gpu-coding",
+  "scope": "Evaluation specifications, not evidence of successful execution.",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "In OMP, implement two substantial independent Rust changes with disjoint file ownership using my 5090 and 3090.",
+      "expected_output": "Native task batch with both exact local model selectors, concrete owned files and acceptance criteria; each worker successfully reads holzman-rust before Rust work. Coordinator verifies completed changes.",
+      "expectations": [
+        "Uses local-5090-ninfer/qwen3.8-27b-uncensored:high and local-3090-llama/qwen3.8-27b-uncensored:high.",
+        "Both worker transcripts show a successful holzman-rust read before any Rust edit.",
+        "Passes repository constraints explicitly; does not assume AGENTS.md inheritance.",
+        "No recursive delegation, direct HTTP, other coding harness, or Python tooling."
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "The 3090 returned Rust that fails the coordinator's ownership check. Here is the actual rustc diagnostic. Correct the assigned files locally.",
+      "expected_output": "Returns the diagnostic and violated contract to the 3090 after its preceding task ends, includes mandatory holzman-rust loading, preserves ownership and scope, and verifies the completed correction.",
+      "expectations": [
+        "Keeps the 3090 exact model selector rather than silently switching providers.",
+        "Requires the worker to load holzman-rust before editing.",
+        "Coordinator runs a relevant Rust-native check; worker prose is not a pass."
+      ]
+    },
+    {
+      "id": 3,
+      "prompt": "A local model is unavailable, per-task model selection is denied, or the worker cannot read holzman-rust. Continue the Rust task.",
+      "expected_output": "Reports the observed blocker for the affected lane and performs no Rust work without holzman-rust; no silent fallback or policy bypass.",
+      "expectations": [
+        "Does not bypass OMP with HTTP or another coding harness.",
+        "Does not install files outside ~/.agents, alter model policy, or restart services.",
+        "Does not claim automatic skill enforcement or unobserved successful execution."
+      ]
+    }
+  ]
+}

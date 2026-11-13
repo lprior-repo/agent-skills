@@ -10,8 +10,8 @@
 # AI generates task decomposition. Script ensures structure and validation.
 
 const SESSION_DIR = "~/.local/share/planner/sessions"
-const TASK_SCHEMA_PATH = "~/.claude/skills/planner/schemas/task-schema.cue"
-const BEAD_SCHEMA_PATH = "~/.claude/skills/planner/schemas/bead-template.cue"
+const TASK_SCHEMA_PATH = "~/.agents/skills/planner/schemas/task-schema.cue"
+const BEAD_SCHEMA_PATH = "~/.agents/skills/planner/schemas/bead-template.cue"
 
 # ── Repository Context Detection ──────────────────────────────────────────────
 
@@ -874,6 +874,77 @@ def "main create" [
   try { rm -f $temp_file } catch { }
 }
 
+def parse-bd-issue-id [bd_output: string]: nothing -> any {
+  let parsed = ($bd_output | parse -r '(?P<issue>vb-[a-z0-9]+)')
+  if ($parsed | is-empty) {
+    null
+  } else {
+    $parsed.0.issue
+  }
+}
+
+# Refresh already-created bd issues from the planner session.
+# This preserves created bd IDs and rewrites descriptions from expand-template.
+def "main refresh-created" [
+  session_id: string    # Session ID to refresh
+] {
+  validate-session-id $session_id
+  check-required-commands
+
+  mut session = (load-session $session_id)
+
+  if ($session.beads | columns | is-empty) {
+    error make {msg: $"Session '($session_id)' has no generated beads to refresh"}
+  }
+
+  mut refreshed = 0
+  mut skipped = 0
+  let temp_base = if ($env.TMPDIR? != null) { $env.TMPDIR } else if ($env.TEMP? != null) { $env.TEMP } else { "/tmp" }
+
+  for bead_id in ($session.beads | columns) {
+    let bead = ($session.beads | get $bead_id)
+    let task = ($session.tasks | get $bead.task_id)
+    let refreshed_yaml = (expand-template $task.data $bead_id)
+
+    $session.beads = ($session.beads | upsert $bead_id (
+      $bead
+      | upsert yaml $refreshed_yaml
+      | upsert refreshed_at (now-timestamp)
+    ))
+
+    if (($bead.status? | default "") != "CREATED") {
+      $skipped = $skipped + 1
+      continue
+    }
+
+    let issue_id = (parse-bd-issue-id ($bead.bd_id? | default ""))
+    if $issue_id == null {
+      print $"⚠️  Skipping ($bead_id): could not parse bd issue id from bd_id field"
+      $skipped = $skipped + 1
+      continue
+    }
+
+    let temp_file = ($temp_base | path join $"planner-refresh-($issue_id)-(random chars -l 8).md")
+    try {
+      $refreshed_yaml | save --force $temp_file
+      let result = (^bd update $issue_id --body-file $temp_file | complete)
+      if $result.exit_code != 0 {
+        try { rm -f $temp_file } catch { }
+        error make {msg: $"bd update failed for ($issue_id): ($result.stderr)"}
+      }
+      try { rm -f $temp_file } catch { }
+      $refreshed = $refreshed + 1
+    } catch { |err|
+      try { rm -f $temp_file } catch { }
+      error make {msg: $"Failed to refresh ($bead_id): ($err.msg)"}
+    }
+  }
+
+  $session.updated_at = (now-timestamp)
+  save-session $session
+  print $"✅ Refreshed ($refreshed) created bd issues from planner session ($session_id). Skipped: ($skipped)"
+}
+
 # Process entire session (generate, validate, create all tasks)
 def "main process" [
   session_id: string    # Session ID to process
@@ -1030,8 +1101,12 @@ def "main list" [] {
       continue
     }
 
+    let summary = ($session.summary? | default {})
+    let total_tasks = ($summary.total_tasks? | default 0)
+    let created = ($summary.created? | default 0)
+
     print $"• ($session.session_id)"
-    print $"  Status: ($session.status) | Tasks: ($session.summary.total_tasks) | Created: ($session.summary.created)"
+    print $"  Status: ($session.status) | Tasks: ($total_tasks) | Created: ($created)"
     print $"  ($session.description)"
     print ""
   }
@@ -1601,7 +1676,379 @@ def adversarial-review [task_data: record] {
 
 # ── Template Expansion ────────────────────────────────────────────────────────
 
+def md-item-text [value]: any -> string {
+  if ($value | describe) == "record" {
+    if "path" in $value {
+      $value.path
+    } else if "task" in $value {
+      $value.task
+    } else if "question" in $value {
+      $value.question
+    } else {
+      $value | to json -r
+    }
+  } else {
+    $value | into string
+  }
+}
+
+def md-list [items]: any -> string {
+  if ($items | is-empty) {
+    "- None specified. Research must fill this before implementation."
+  } else {
+    $items | each { |item| $"- (md-item-text $item)" } | str join "\n"
+  }
+}
+
+def md-numbered [items]: any -> string {
+  if ($items | is-empty) {
+    "1. None specified. Research must define the exact command before closure."
+  } else {
+    $items | enumerate | each { |item| $"($item.index + 1). ($item.item)" } | str join "\n"
+  }
+}
+
+def expand-template-markdown [task_data: record, bead_id: string]: nothing -> string {
+  let title = ($task_data.title? | default "Untitled planner bead")
+  let type = ($task_data.type? | default "task")
+  let priority = ($task_data.priority? | default 2)
+  let effort = ($task_data.effort? | default "2hr")
+  let description = ($task_data.description? | default "No task description supplied.")
+
+  let ears_ubiq = ($task_data.ears?.ubiquitous? | default [])
+  let ears_event = ($task_data.ears?.event_driven? | default [])
+  let ears_state = ($task_data.ears?.state_driven? | default [])
+  let ears_optional = ($task_data.ears?.optional? | default [])
+  let ears_unwanted = ($task_data.ears?.unwanted? | default [])
+  let ears_complex = ($task_data.ears?.complex? | default [])
+
+  let preconditions = ($task_data.contracts?.preconditions? | default [])
+  let postconditions = ($task_data.contracts?.postconditions? | default [])
+  let invariants = ($task_data.contracts?.invariants? | default [])
+
+  let research_files = ($task_data.research?.files? | default [])
+  let research_patterns = ($task_data.research?.patterns? | default [])
+  let research_questions = ($task_data.research?.questions? | default [])
+  let related_files = ($task_data.context?.related_files? | default $research_files)
+  let similar = ($task_data.context?.similar? | default ($task_data.context?.similar_implementations? | default []))
+
+  let happy_tests = ($task_data.tests?.happy? | default [])
+  let error_tests = ($task_data.tests?.error? | default [])
+  let edge_tests = ($task_data.tests?.edge? | default [])
+  let contract_tests = ($task_data.tests?.contract? | default [])
+
+  let phase_0 = ($task_data.implementation?.phase_0? | default [])
+  let phase_1 = ($task_data.implementation?.phase_1? | default [])
+  let phase_2 = ($task_data.implementation?.phase_2? | default [])
+  let phase_3 = ($task_data.implementation?.phase_3? | default [])
+  let phase_4 = ($task_data.implementation?.phase_4? | default [])
+
+  let anti_reads = ($task_data.anti_hallucination?.read_before_write? | default [])
+  let known_apis = ($task_data.anti_hallucination?.apis_that_exist? | default [])
+  let forbidden_apis = ($task_data.anti_hallucination?.apis_that_do_not_exist? | default [])
+  let no_placeholders = ($task_data.anti_hallucination?.no_placeholder_values? | default [])
+
+  let event_lines = if ($ears_event | is-empty) {
+    "- None specified. Add an event-driven requirement before implementation if this is not an epic."
+  } else {
+    $ears_event | each { |e| $"- Trigger: ($e.trigger)\n  - Shall: ($e.shall)" } | str join "\n"
+  }
+
+  let state_lines = if ($ears_state | is-empty) {
+    "- None specified."
+  } else {
+    $ears_state | each { |e| $"- State: ($e.state)\n  - Shall: ($e.shall)" } | str join "\n"
+  }
+
+  let optional_lines = if ($ears_optional | is-empty) {
+    "- None specified."
+  } else {
+    $ears_optional | each { |e| $"- Condition: ($e.condition)\n  - Shall: ($e.shall)" } | str join "\n"
+  }
+
+  let unwanted_lines = if ($ears_unwanted | is-empty) {
+    "- None specified. Add at least one unwanted requirement before implementation."
+  } else {
+    $ears_unwanted | each { |e| $"- Condition: ($e.condition)\n  - Shall not: ($e.shall_not)\n  - Because: ($e.because)" } | str join "\n"
+  }
+
+  let complex_lines = if ($ears_complex | is-empty) {
+    "- None specified."
+  } else {
+    $ears_complex | each { |e| $"- State: ($e.state)\n  - Trigger: ($e.trigger)\n  - Shall: ($e.shall)" } | str join "\n"
+  }
+
+  let anti_read_lines = if ($anti_reads | is-empty) {
+    md-list $research_files
+  } else {
+    $anti_reads | each { |entry| $"- ($entry.file) — must_read_first=($entry.must_read_first)" } | str join "\n"
+  }
+
+  return $"# BEAD: ($bead_id) — ($title)
+
+Planner generated: yes  
+Planner engine: `/home/lewis/.agents/skills/planner/planner.nu`  
+Type: `($type)`  
+Priority: `P($priority)`  
+Effort estimate: `($effort)`
+
+## Section 0: Clarifications
+
+Clarification status: `RESOLVED`
+
+Resolved clarifications:
+- This bead is generated from the active planner session and must be executed through the repository bead workflow.
+- The task scope is: ($description)
+- Implementation, tests, proofs, broad verification, and landing must occur in an isolated Git/JJ workspace, not the main coordination checkout.
+
+Open clarifications:
+- None at planning time. If research finds ambiguity, update this bead with `[NEEDS CLARIFICATION: ...]` and block before implementation.
+
+Assumptions:
+- The cited research files still exist when work starts.
+- Existing user changes are unrelated unless research proves otherwise.
+- Existing evidence is untrusted until raw command logs and exit statuses are checked.
+
+## Section 1: EARS Requirements
+
+Ubiquitous:
+(md-list $ears_ubiq)
+
+Event-driven:
+($event_lines)
+
+State-driven:
+($state_lines)
+
+Optional:
+($optional_lines)
+
+Unwanted:
+($unwanted_lines)
+
+Complex:
+($complex_lines)
+
+## Section 2: KIRK Contracts
+
+Preconditions:
+(md-list $preconditions)
+
+Postconditions:
+(md-list $postconditions)
+
+Invariants:
+(md-list $invariants)
+
+## Section 2.5: Research Requirements
+
+Files to read before writing:
+(md-list $research_files)
+
+Patterns to search:
+(md-list $research_patterns)
+
+Research questions:
+(md-list $research_questions)
+
+Research complete when:
+- Every file above has been opened and exact relevant source lines are recorded.
+- Every pattern above has been searched.
+- Duplicate or overlapping beads have been linked or explicitly ruled out.
+- The implementation scope has been reduced to the smallest correct change.
+
+## Section 3: Inversion Analysis
+
+Security failures:
+- Failure: unsupported proof, lint, or evidence claims hide a defect.
+- Prevention: require raw command logs, exact source refs, and independent review.
+- Test: truth-serum or black-hat review rejects unsupported claims.
+
+Data integrity failures:
+- Failure: the fix appears green while durable/recovery/evidence state remains inconsistent.
+- Prevention: write negative tests and exact assertions for the original failure mode.
+- Test: targeted regression plus category verification commands.
+
+Integration failures:
+- Failure: local targeted tests pass but Moon CI or formal gates fail.
+- Prevention: run targeted gates first, then canonical `moon ci`, and classify blockers honestly.
+- Test: final evidence includes both targeted logs and global gate status or accepted blocker.
+
+Usability failures:
+- Failure: future agents cannot resume work or audit the claim.
+- Prevention: maintain bead-local `STATE.md`, research notes, routing ledger, and evidence bundle.
+- Test: a new agent can reconstruct state from bead artifacts alone.
+
+## Section 4: ATDD Acceptance Tests
+
+Happy paths:
+(md-numbered $happy_tests)
+
+Error paths:
+(md-numbered $error_tests)
+
+Edge cases:
+(md-numbered $edge_tests)
+
+Contract tests:
+(md-numbered $contract_tests)
+
+## Section 5: E2E Tests
+
+Primary E2E scenario:
+1. Claim the bead.
+2. Create/verify isolated Git/JJ workspace.
+3. Execute the full go-skill lifecycle for this bead.
+4. Run targeted commands and `moon ci` or record accepted blocker evidence.
+5. Package evidence and close/push only after review approval.
+
+Expected E2E result:
+- The final bead update names files changed, tests/proofs run, raw evidence paths, review outcome, landing status, and push status.
+
+## Section 5.5: Verification Checkpoints
+
+Gate 0 — Research:
+- Research notes exist and include exact source refs.
+
+Gate 1 — Tests/proofs first:
+- A failing behavior test, proof obligation, evidence audit, or exact reproduction exists before implementation changes behavior.
+
+Gate 2 — Implementation:
+- The smallest correct fix is implemented without gate weakening.
+
+Gate 3 — Targeted verification:
+- Run all contract commands listed in Section 4, or record exact blockers.
+
+Gate 4 — Canonical verification:
+- Run `moon ci`, or record why current global state blocks it and which targeted gates passed.
+
+Gate 5 — Review and landing:
+- Black-hat/truth-serum/evidence review accepts the claim.
+- `bd dolt push` succeeds.
+- Code/evidence push succeeds when files changed.
+
+## Section 6: Implementation Tasks
+
+Phase 0 — Research:
+(md-list $phase_0)
+
+Phase 1 — Tests/proofs first:
+(md-list $phase_1)
+
+Phase 2 — Implementation:
+(md-list $phase_2)
+
+Phase 3 — Integration:
+(md-list $phase_3)
+
+Phase 4 — Verification and landing:
+(md-list $phase_4)
+
+## Section 7: Failure Modes
+
+- Symptom: targeted command passes but global CI fails.
+  - Likely cause: global readiness or unrelated existing failure.
+  - Debugging: inspect `.moon/cache/ciReport.json` when present and classify local/regression/global.
+- Symptom: proof passes but relies on `assume`, `external_body`, `trusted`, `cover!`, hardcoded structures, or shadow types.
+  - Likely cause: vacuous proof or proof laundering.
+  - Debugging: run trust and harness scans, then route back to proof planning/writing.
+- Symptom: evidence claims PASS but raw logs are missing.
+  - Likely cause: stale or hallucinated evidence.
+  - Debugging: require command, cwd, stdout/stderr, exit status, and tool version.
+- Symptom: workspace root checks disagree.
+  - Likely cause: invalid isolation setup.
+  - Debugging: stop before editing and create a compliant isolated workspace/clone.
+
+## Section 7.5: Anti-Hallucination Guard
+
+Read before write:
+($anti_read_lines)
+
+APIs/patterns believed to exist:
+(md-list $known_apis)
+
+APIs/patterns not to invent:
+(md-list $forbidden_apis)
+
+No placeholder values:
+(md-list $no_placeholders)
+
+Before claiming done:
+- Re-run `bd show <id>`.
+- Re-read changed files.
+- Confirm raw evidence exists.
+- Confirm bead status and Dolt push.
+
+## Section 7.6: Context Survival
+
+Required bead-local artifacts:
+- `.beads/<bead-id>/STATE.md`
+- `.beads/<bead-id>/research-notes.md`
+- `.beads/<bead-id>/routing-ledger.jsonl`
+- `.beads/<bead-id>/implementation.md`
+- `.beads/<bead-id>/verification-ledger.jsonl`
+- `.beads/<bead-id>/evidence-bundle.md`
+- `.beads/<bead-id>/truth-serum-report.md`
+
+Recovery instructions:
+- Start by reading `STATE.md`, then routing ledger, then the newest raw command evidence.
+- Resume from the first incomplete go-skill state. Do not skip based on prose summaries.
+
+## Section 8: Completion Checklist
+
+Tests/proofs:
+- [ ] Research notes complete.
+- [ ] Failing regression/proof/evidence reproduction exists where applicable.
+- [ ] Targeted verification passes with raw logs.
+- [ ] `moon ci` passes or blocker is recorded and accepted.
+
+Code/evidence:
+- [ ] No forbidden Rust constructs introduced.
+- [ ] No lint/proof/test gate weakened.
+- [ ] Evidence maps requirement -> source -> test/proof -> raw command.
+- [ ] Review findings are repaired or explicitly tracked.
+
+Tracker/landing:
+- [ ] Bead updated with evidence summary.
+- [ ] Bead closed only after full lifecycle completion.
+- [ ] `bd dolt push` succeeds.
+- [ ] Code/evidence pushed if files changed.
+
+## Section 9: Context
+
+Related files:
+(md-list $related_files)
+
+Similar implementations:
+(md-list $similar)
+
+Original task description:
+($description)
+
+## Section 10: AI Hints
+
+Do:
+- Keep the change smaller than the bead.
+- Prefer typed errors and exact assertions.
+- Use production-bound public APIs for behavior tests.
+- Capture raw command evidence.
+
+Do not:
+- Do not edit from the main checkout.
+- Do not invent tool output or bd IDs.
+- Do not weaken lint/proof/test gates.
+- Do not treat verifier harnesses as behavior tests.
+- Do not treat same-handle storage visibility as durability.
+
+Constitution:
+- Contract before proof plan; proof plan before proof writing; tests before implementation; implementation before evidence packaging; evidence before landing.
+- If the raw evidence does not support the claim, downgrade the claim or keep the bead open.
+"
+}
+
 def expand-template [task_data: record, bead_id: string] {
+  return (expand-template-markdown $task_data $bead_id)
+
   # Generate CUE format bead from task data
   # This expands the 16-section template with task-specific data
 

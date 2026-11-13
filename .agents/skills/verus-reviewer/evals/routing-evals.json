@@ -1,0 +1,20 @@
+{
+  "skill_name": "verus-reviewer",
+  "evals": [
+    {
+      "id": "review-only-routes-to-verus-reviewer",
+      "prompt": "A user asks: 'Review this Verus proof packet, trust ledger, cargo verus log, and proof-to-Rust mapping for laundering. Do not edit code.' Select the skill and state what workflow is out of scope.",
+      "expected_output": "Route to verus-reviewer for review/evidence/audit work. Do not start the verus writing/repair workflow unless the user asks to write or repair proofs after review findings.",
+      "files": [
+        "SKILL.md",
+        "../verus/SKILL.md"
+      ],
+      "assertions": [
+        "Chooses verus-reviewer for review/evidence/audit prompt",
+        "Says writing or repairing proofs belongs to verus",
+        "Does not enter proof-writing workflow",
+        "Cites exact skill file:line or file:line-line evidence"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,34 @@
+{
+  "schema_version": "proof-obligation/v1",
+  "id": "PO-NNN",
+  "requirement_id": "REQ-NNN",
+  "contract_clause": "C-NNN",
+  "domain_claim": "<one-sentence claim under test>",
+  "risk": "concurrency_interleaving|cancellation_safety|shutdown_drain",
+  "risk_tags": ["concurrency", "channel", "shutdown"],
+  "verifier": "loom",
+  "artifact": "tests/loom/<model>.rs",
+  "target": "crate::path::to::Type",
+  "command": "RUSTFLAGS=\"--cfg loom\" LOOM_MAX_PREEMPTIONS=3 LOOM_MAX_BRANCHES=20000 cargo test --test <model> --release",
+  "workdir": "/abs/path/to/bead-workspace",
+  "expected_evidence": "Loom test passes across all explored schedules (test result: ok); harness uses crate::sync::sync::* (cfg(loom)-aware); cancellation, drop, timeout, and shutdown paths exercised.",
+  "assumptions": ["bounded message count", "bounded waiters"],
+  "model_bounds": {
+    "threads": 4,
+    "unwind": 8,
+    "preemptions": 3,
+    "branches": 20000
+  },
+  "tool_metadata": {
+    "tool": "loom",
+    "version_pin": "loom@0.7",
+    "feature_flags": ["futures", "checkpoint"]
+  },
+  "trusted_base_refs": [],
+  "required": true,
+  "behavior_affecting": true,
+  "mode": "verify-proof",
+  "owner_state": 4,
+  "rerun_from": 4,
+  "status": "planned"
+}

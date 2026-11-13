@@ -14,7 +14,7 @@ Deterministic planning agent that decomposes complex work into atomic beads usin
 
 ```bash
 # Set script path
-P="$HOME/.claude/skills/planner/planner.nu"
+P="$HOME/.agents/skills/planner/planner.nu"
 
 # Initialize planning session
 nu $P init --session-id my-feature --description "Add user authentication"

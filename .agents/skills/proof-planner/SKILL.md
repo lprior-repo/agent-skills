@@ -1,66 +1,68 @@
 ---
 name: proof-planner
-description: "Plan implementation-bound proof coverage from accepted Rust domain/type contracts. Defaults Rust behavior to Verus/Kani/Flux/proptest, adds Loom/fuzz only by risk profile, and writes machine-readable obligations only. Never writes proof artifacts or production code."
+description: "Plan implementation-bound proof coverage from accepted Rust domain/type contracts. TLA+ is removed; temporal workflows are covered by loom+proptest. Writes planned artifacts only; never writes proof/model/harness code, production Rust, tests, or final reviewer disposition. State 4."
 ---
 
 # Proof Planner
 
-Convert accepted domain/type contracts into an executable proof architecture. If a verifier lane applies, plan it. If it does not apply, prove that with `verifier-lane-decisions.jsonl`. Do not write reviewer dispositions; `proof-plan-reviewer` owns `verifier-lane-review.jsonl`.
+Contract-bound, machine-checkable architect of proof coverage. Anti-laundering is fail-closed.
 
-## Owns
+**TLA+ removed.** The temporal-workflow shape uses loom + proptest. There is no `tla-plus` verifier lane.
 
-- `proof-strategy.md`
-- `verifier-lane-matrix.md`
-- `verifier-lane-decisions.jsonl`
-- `proof-coverage-matrix.md`
-- `proof-obligations.planned.jsonl`
-- `trusted-base-plan.md`
-- `waiver-candidates.md`
-- `waiver-candidates.jsonl`
-- `proof-to-implementation-input.md`
+## Rust Validator
+
+A deterministic gate runner in `scripts/` (Rust crate, no Python) emits JSONL
+findings for every plan-quality gate. Build with `cargo build --release` from
+`scripts/`; emits `validate-plan` and `quick-validate` binaries. See `README.md`.
+
+## Owns (State 4)
+
+- proof-strategy.md, verifier-lane-matrix.md, verifier-lane-decisions.jsonl, proof-coverage-matrix.md, proof-obligations.planned.jsonl, trusted-base-plan.md, waiver-candidates.md, waiver-candidates.jsonl, proof-to-implementation-input.md
+- All schema-version-conformant
 
 ## Does Not Own
 
-- Proof/model/harness artifacts.
-- Production Rust, tests, CI edits, or proof review approval.
-- Behavior-affecting waivers.
-- Reviewer disposition or approval artifacts.
+- Proof/model/harness code (proof-writer)
+- Production Rust, tests, CI (holzman-rust, test-*, landing-skill)
+- Reviewer dispositions, lane acceptances, STATUS headers (proof-plan-reviewer, proof-reviewer)
+- Behavior-affecting waivers (E_BEHAVIOR_WAIVER is fatal)
+- Final proof ledger closure (formal-verifier authority)
 
-## Workflow
+## EARS Contract
 
-1. Read `contract.md`, domain/type/workflow artifacts, `proof-seeds.jsonl`, `traceability-matrix.jsonl`, and `delivery-scope.jsonl`.
-2. For every `(requirement_id, contract_clause, proof_seed_id)`, select a lane profile from `verification-lane-policy.md`. Rust-local behavior defaults to Verus, Kani, Flux, and proptest; add Loom or cargo-fuzz only when the seed's risk tags require them.
-3. For every required lane, create `proof-obligation/v1` rows with exact artifact, target, command, workdir, bounds, assumptions, expected evidence, owner state, and rerun state.
-4. For every non-applicable lane, cite concrete evidence; vague "not needed" rationale is invalid.
-5. For every known assumption, stub, bound, trusted surface, or model reduction, add trusted-base planning notes.
-6. Put non-behavior exceptions only in waiver candidate artifacts. Never waive behavior.
-7. Prepare `proof-to-implementation-input.md` so the bridge can map proof claims to Rust source/test/harness obligations.
+Invariants:
+- One `verifier-lane-decision/v1` row per (req, cc, seed, verifier) tuple required by seed risk; no silent omission
+- `applicability: required` requires accompanying `proof-obligation/v1` with matching `behavior_affecting`
+- Default-profile verifiers (Verus, Kani, Flux, proptest) with `applicability: not_applicable` need `non_applicability_evidence_refs` with concrete artifact hashes
+- Never emit behavior-affecting waiver-candidate
+- Source refs must be `path::symbol` form; prose-only invalid
 
-## Lane Policy
+Event-driven:
+- New `proof-seed/v1` row → emit at least one `verifier-lane-decision/v1` row per required verifier
+- `waiver-candidate/v1` row → bound to a `proof-obligation/v1` row with matching `requirement_id`+`contract_clause`
+- `proof-obligation/v1` row marked `required: true` → must have non-empty `evidence_command`+`expected_evidence`
 
-- Verus/Kani/Flux/proptest are the default Rust-behavior forcing lanes. If one is not applicable, the lane decision must explain why in source-specific terms.
-- Loom is required for implementation concurrency/interleaving/cancellation/shutdown risks.
-- Unsafe/provenance/UB-sensitive risks are specialist-blocker risks unless the user explicitly scopes dedicated UB evidence.
-- cargo-fuzz is required for hostile input, parsers, codecs, persisted bytes, IPC, and fuzzable canonicalization boundaries.
-- Proof obligations for implementation behavior must target production functions or extracted production helpers. A duplicated model is model evidence only.
+State changes:
+- Owner `state` is `4`
+- `rerun_from: 4` for all obligations
+- Mapping status: `planned` (State 4) or `verified` (State 12)
+- Behavior-affecting rows require reviewer disposition at State 4b
 
-## Required References
+Anti-laundering:
+- No `assume`, `axiom`, `admit`, `external_body` in executable proof code
+- No `cover!`-as-proof
+- No copied harness models without bridge row
+- No generic waivers
 
-- `../go-skill/references/proof-schemas.md`
-- `../go-skill/references/proof-pipeline-contract.md`
-- `../go-skill/references/verification-lane-policy.md`
-- `../go-skill/references/evidence-standards.md`
-- `references/defense-depth-matrix.md`
-- `references/lane-decision-guide.md`
-- `references/waiver-planning-guide.md`
+## Handoff
 
-## Failure Behavior
+- `proof-plan-reviewer` at State 4b dispositions each lane decision
+- `proof-writer` at State 5 authors proofs/harnesses
+- `proof-to-implementation` at State 7 produces bridge map
+- `formal-verifier` at State 12 executes and closes ledger
 
-Reject your own plan as incomplete when a required profile lane is omitted, any required command is generic, any behavior-affecting waiver appears, any proof seed lacks traceability, or an implementation claim targets a copied harness model instead of production code.
+## Report
 
-## Final Response
+Bead ID, invocation_id, current state; artifacts with schema_version+SHA-256; lane profile; non-applicable lanes with evidence; waiver candidates; handoff to State 4b.
 
-Report artifacts written, required lanes, non-applicable lanes with evidence, waiver candidates, and blockers. Do not claim anything has passed.
-
-## ANTI-VERIFICATION LAUNDERING MANDATE
-**PLAN ACTUAL BINDINGS:** When planning Verus proofs, you must explicitly mandate that the `exec fn` will contain the actual function body logic or a direct, verifiable path to production code. Your plan MUST EXPLICITLY FORBID the use of `#[verifier::external_body]`, `assume()`, or `axiom`. The plan must specify exactly how the production Rust code will be verified, NOT just how an abstract vacuum model will be built.
+Never claim approved. Never claim PASS. Reviewer owns disposition; formal verifier owns closure.
