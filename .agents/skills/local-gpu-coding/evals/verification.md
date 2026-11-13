@@ -9,7 +9,7 @@ Observed with `omp skill list --json`:
 - `local-gpu-coding` is a real directory, not a symlink.
 - The former managed-skills directory and foreign-harness discovery link are absent.
 - No custom OMP agent definitions were added.
-- `jq` successfully parsed the three evaluation specifications in `evals.json`; that does not mean those scenarios passed.
+- `jq` successfully parsed seven uniquely numbered evaluation specifications in `evals.json`; that does not mean all seven scenarios passed.
 
 ## Native worker startup
 
@@ -32,6 +32,18 @@ Both native routes implemented the same dependency-free, `no_std` Rust parser ag
 - **3090:** initial 20/21 tests; first repair failed compilation. The next repair request exhausted 10 retries with an unsupported-image HTTP 500, despite no image blocks in the stored transcript. **Not a passing coding run.** The outgoing request payload was not captured, so the infrastructure cause remains unconfirmed.
 
 Source snapshots, raw gate logs, provider errors and reproducible commands are retained in that run. No other model or harness was substituted. This single-task experiment establishes neither general coding parity nor a throughput advantage.
+
+## Local Rust grounding
+
+Run: [`runs/grounding-v4rimG/`](runs/grounding-v4rimG/). Baseline files, frozen rubric, native discovery output, retrieval observations and worker failures are preserved there.
+
+Local implementation/test bodies were inspected without running their tests or modifying reference repositories. No Python or new retrieval service was used. Historical run artifacts retain the earlier protocol; current task instructions and evaluation definitions use repository code and tests.
+
+First native async/storage packets loaded the root skills and found useful sources, but skipped target instructions and applicable references and overstated unrun-test evidence. They were rejected rather than recorded as passes. The skill now requires explicit common/case read plans, actual code-body reads, qualified claims and transcript-checked acceptance. The async explicit-list retry completed the required reads; the storage retry still skipped common prerequisites. See [first-pass and retry findings](runs/grounding-v4rimG/read-plan-review.md).
+
+The final `PacketStorage3090` transcript shows all common and case-specific reads, including Holzman and its selected reference, after dispatch explicitly pointed to both packet files. This closes the observed read-coverage gap, not semantic correctness: the packet still overgeneralized an aborted-state check and a pre-commit fault hook, which were not accepted as proof. [Final results and limitations](runs/grounding-v4rimG/results.md).
+
+These are source-grounding/protocol checks, not Rust implementation tests or a paired baseline-versus-grounded coding benchmark. Candidate locations were supplied by the coordinator; this is not blind retrieval evaluation.
 
 ## Limits
 

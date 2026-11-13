@@ -32,6 +32,48 @@
         "Does not install files outside ~/.agents, alter model policy, or restart services.",
         "Does not claim automatic skill enforcement or unobserved successful execution."
       ]
+    },
+    {
+      "id": 4,
+      "prompt": "Prepare a local GPU Rust task for bounded async work and cancellation. Inspect the browser code and tests in track-scrapper-v2 without editing that repository.",
+      "expected_output": "A compact evidence packet with mandatory Rust skills plus async-rust-reviewer, a real bounded-channel implementation and a cancellation behavior test, with version constraints and unverified-test status.",
+      "expectations": [
+        "Reads holzman-rust, functional-rust, the selected async skill and applicable repository instructions in the worker.",
+        "Uses native OMP reads of relevant implementation and tests without Python.",
+        "Explains a concrete cancellation invariant from source and test assertions, not only filenames.",
+        "Does not load loom merely because the task is async, claim tests passed, or modify reference repositories."
+      ]
+    },
+    {
+      "id": 5,
+      "prompt": "Prepare a local GPU task for strict Fjall journal durability. Inspect velvet-ballistics implementation, manifests and tests without changing that repository.",
+      "expected_output": "A packet selecting fjall plus the mandatory Rust skills, verifying the actual Fjall dependency version and pairing real commit/reopen code with behavior assertions.",
+      "expectations": [
+        "Worker reads selected skills and real source contents before deriving the packet.",
+        "Reads the relevant manifest and actual commit/reopen function bodies and test assertions.",
+        "Distinguishes orderly reopen behavior from power-loss durability proof.",
+        "Flags incompatible or incomplete examples rather than copying them as known-correct code."
+      ]
+    },
+    {
+      "id": 6,
+      "prompt": "Prepare a Rust atomic-ordering change using the target repository's atomics and concurrency tests. It has no Tokio and no unsafe code. Inspect the ordering behavior before proposing an implementation.",
+      "expected_output": "Mandatory Rust skills plus loom; actual atomic operations and relevant concurrency test assertions, with unverified assumptions identified. No automatic async, Miri, UI or storage skill loading.",
+      "expectations": [
+        "Selects skills by task evidence, not every dependency in the repository.",
+        "Reads the actual atomic operations and tests and separates observed source behavior from target-specific assumptions.",
+        "Does not claim model-checking or tests were executed during source discovery."
+      ]
+    },
+    {
+      "id": 7,
+      "prompt": "A required implementation path is missing and a scoped search finds no relevant behavior test. Ground the Rust task without inventing evidence or adding dependencies.",
+      "expected_output": "Uses native OMP reads and scoped source discovery, checks the actual manifest and records missing evidence or consults version-matched documentation.",
+      "expectations": [
+        "Does not invoke Python, introduce another coding harness or add dependencies.",
+        "Does not fabricate source filenames, function behavior or test results.",
+        "Does not treat an empty result or a failed query as proof that a technical claim is correct."
+      ]
     }
   ]
 }
